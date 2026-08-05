@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novedades DPSN — Selección de módulo</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="seleccion-page">
+  <div class="seleccion-header">
+    <div class="escudo-mini">PNA</div>
+    <h1>¿A qué módulo querés ingresar?</h1>
+    <p id="saludoUsuario">—</p>
+  </div>
+
+  <div class="tarjetas-modulo">
+    <div class="tarjeta-modulo" id="tarjetaOficinas">
+      <div class="icono">🏢</div>
+      <h2>Oficinas DPSN</h2>
+      <span class="rol-tag" id="rolOficinas">—</span>
+    </div>
+    <div class="tarjeta-modulo" id="tarjetaGuardias">
+      <div class="icono">🕑</div>
+      <h2>Guardias DPSN</h2>
+      <span class="rol-tag" id="rolGuardias">—</span>
+    </div>
+  </div>
+
+  <div class="seleccion-footer">
+    <button id="btnSalir" type="button">Cerrar sesión</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/roles.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const usuario = requerirSesion();
+  if (usuario) {
+    document.getElementById('saludoUsuario').textContent =
+      (usuario.jerarquia ? usuario.jerarquia + " " : "") + (usuario.nombre || usuario.email);
+
+    const permOf = obtenerPermiso(usuario, ModuloAcceso.OFICINAS);
+    const permGu = obtenerPermiso(usuario, ModuloAcceso.GUARDIAS);
+
+    configurarTarjeta('tarjetaOficinas', 'rolOficinas', permOf, 'oficinas');
+    configurarTarjeta('tarjetaGuardias', 'rolGuardias', permGu, 'guardias');
+  }
+
+  function configurarTarjeta(idTarjeta, idRolTag, permiso, modulo) {
+    const tarjeta = document.getElementById(idTarjeta);
+    const rolTag = document.getElementById(idRolTag);
+
+    if (!permiso) {
+      tarjeta.classList.add('deshabilitada');
+      rolTag.textContent = 'Sin acceso';
+      rolTag.className = 'rol-tag lectura';
+      return;
+    }
+
+    rolTag.textContent = permiso === 'admin' ? 'Administrador' : 'Solo lectura';
+    rolTag.className = 'rol-tag ' + (permiso === 'admin' ? 'admin' : 'lectura');
+
+    tarjeta.addEventListener('click', () => {
+      sessionStorage.setItem('novedades_dpsn_modulo', modulo);
+      window.location.href = 'dashboard.html';
+    });
+  }
+
+  document.getElementById('btnSalir').addEventListener('click', cerrarSesion);
+</script>
+</body>
+</html>

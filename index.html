@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novedades DPSN — Ingreso</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-crest">
+      <div class="escudo">PNA</div>
+      <p>Prefectura Naval Argentina</p>
+      <h1>Dirección de Policía de Seguridad<br>de la Navegación</h1>
+      <span class="sistema">Sistema de Novedades DPSN</span>
+    </div>
+
+    <div class="tipo-acceso">
+      <button type="button" class="activo" data-tipo="admin">Administrador</button>
+      <button type="button" data-tipo="lector">Solo visualización</button>
+    </div>
+
+    <div class="login-error" id="loginError"></div>
+
+    <form id="formLogin">
+      <div class="campo">
+        <label for="email">Usuario (correo)</label>
+        <input type="email" id="email" placeholder="ej: apellido.nombre@pna.gob.ar" required autocomplete="username">
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <input type="password" id="clave" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-ingresar">Ingresar al sistema</button>
+    </form>
+
+    <div class="login-footer">Uso interno — DPSN · PNA</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/roles.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // Toggle visual del tipo de acceso (informativo; el permiso real
+  // lo determina el perfil del usuario en Firestore, no este botón)
+  document.querySelectorAll('.tipo-acceso button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tipo-acceso button').forEach(x => x.classList.remove('activo'));
+      b.classList.add('activo');
+    });
+  });
+
+  // Si ya hay sesión activa, saltar directo a selección de módulo
+  if (obtenerSesion()) {
+    window.location.href = "seleccion.html";
+  }
+
+  const form = document.getElementById('formLogin');
+  const errorBox = document.getElementById('loginError');
+
+  function mostrarError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errorBox.style.display = 'none';
+    const email = document.getElementById('email').value;
+    const clave = document.getElementById('clave').value;
+    iniciarSesion(email, clave, mostrarError);
+  });
+</script>
+</body>
+</html>
