@@ -21,24 +21,85 @@ function tagEstado(estado) {
 }
 
 // ---------- Inicio / resumen del día ----------
+function contarInspeccionesGrupo(grupo) {
+  let n = 0;
+  Object.values(grupo.porDependencia).forEach(lista => { n += lista.length; });
+  return n;
+}
+
+function calcularTotalesExtraordinarias() {
+  const arg = D.inspeccionesExtraordinarias.argentina;
+  const ext = D.inspeccionesExtraordinarias.extranjera;
+  const diarioArg = contarInspeccionesGrupo(arg);
+  const diarioExt = contarInspeccionesGrupo(ext);
+  return {
+    diarioArg, diarioExt,
+    anualArg: arg.acumuladoAnualPrevio + diarioArg,
+    anualExt: ext.acumuladoAnualPrevio + diarioExt
+  };
+}
+
+function calcularResumenCategorias() {
+  const cat = { pesquerosOtros: 0, porAveria: 0, cargaPasaje: 0, convoyesExtr: 0, convoyArgentino: 0 };
+  [D.inspeccionesExtraordinarias.argentina, D.inspeccionesExtraordinarias.extranjera].forEach(grupo => {
+    Object.values(grupo.porDependencia).forEach(lista => {
+      lista.forEach(insp => {
+        const c = insp.categoria || 'pesquerosOtros';
+        if (cat[c] !== undefined) cat[c]++;
+      });
+    });
+  });
+  return cat;
+}
+
+function contarOtros() {
+  let n = 0;
+  Object.values(D.otros.porDependencia).forEach(lista => { n += lista.length; });
+  return n;
+}
+
+function contarLicenciasTotal() {
+  const L = D.licencias;
+  return L.anuales.length + L.medicas.length + L.tareasAdecuadas.length +
+    L.extraordinaria.length + L.comisiones.length + L.noComputables.length;
+}
+
 function renderInicio() {
-  const r = D.inspeccionesExtraordinarias.resumen;
+  const tot = calcularTotalesExtraordinarias();
   const rp = D.estadoRectorPuerto.resumen;
-  const pctDiario = rp.factiblesDiario ? ((rp.inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(1) : '0.0';
-  const pctAnual = rp.factiblesAnual ? ((rp.inspeccionadosAnual / rp.factiblesAnual) * 100).toFixed(1) : '0.0';
 
   return `
     <div class="tarjeta">
       <h2>Resumen del parte</h2>
       <div class="grid-resumen">
-        <div class="stat"><div class="valor">${r.totalDiario}</div><div class="etiqueta">Insp. extraord. hoy</div></div>
+        <div class="stat"><div class="valor">${tot.diarioArg}</div><div class="etiqueta">Insp. Extraord. B. Argentina</div></div>
+        <div class="stat"><div class="valor">${tot.diarioExt}</div><div class="etiqueta">Insp. Extraord. B. Extranjera</div></div>
         <div class="stat"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
-        <div class="stat"><div class="valor">${pctDiario}%</div><div class="etiqueta">% PSC hoy</div></div>
-        <div class="stat"><div class="valor">${pctAnual}%</div><div class="etiqueta">% PSC anual</div></div>
         <div class="stat"><div class="valor">${contarCasos(D.casosMAS)}</div><div class="etiqueta">Casos MAS pendientes</div></div>
         <div class="stat"><div class="valor">${contarCasos(D.casosSAR)}</div><div class="etiqueta">Casos SAR pendientes</div></div>
+        <div class="stat"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
+        <div class="stat"><div class="valor">${D.dragas.length}</div><div class="etiqueta">Dragas operando</div></div>
+        <div class="stat"><div class="valor">${D.buquesDetencion.length}</div><div class="etiqueta">Buques con detención</div></div>
+        <div class="stat"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
       </div>
     </div>
+
+    <div class="tarjeta">
+      <h2>Altura de Agua y Calados de Navegación</h2>
+      ${renderTablaGenerica(['Punto de control', 'Fecha', 'Altura', 'Escala'],
+        D.alturaAgua.lecturas.map(a => [a.punto, a.fecha, a.altura, a.escala]))}
+      <div style="margin-top:14px;">
+        ${renderTablaGenerica(['Tramo', 'Referencia', 'Calado'],
+          D.alturaAgua.calados.map(c => [c.tramo, c.referencia, c.calado]))}
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Dragas Operando en Jurisdicción <span class="contador">${D.dragas.length}</span></h2>
+      ${renderTablaGenerica(['Draga', 'Días operando'],
+        D.dragas.map(d => [d.nombre, d.dias]))}
+    </div>
+
     <div class="tarjeta">
       <h2>Guardia</h2>
       <div style="display:flex; gap:40px; flex-wrap:wrap;">
@@ -90,27 +151,39 @@ function renderInspeccionesPorDependencia(bloque, tituloResumen) {
 }
 
 function renderExtraordinarias() {
-  const r = D.inspeccionesExtraordinarias.resumen;
+  const tot = calcularTotalesExtraordinarias();
+  const cat = calcularResumenCategorias();
+  const arg = D.inspeccionesExtraordinarias.argentina;
+  const ext = D.inspeccionesExtraordinarias.extranjera;
+
   return `
     <div class="tarjeta">
-      <h2>Inspecciones Extraordinarias — Bandera Argentina <span class="contador">${Object.values(D.inspeccionesExtraordinarias.porDependencia).flat().length} hoy</span></h2>
-      ${renderInspeccionesPorDependencia(D.inspeccionesExtraordinarias)}
+      <h2>Inspecciones Extraordinarias — Bandera Argentina <span class="contador">${tot.diarioArg} hoy</span></h2>
+      ${Object.keys(arg.porDependencia).length
+        ? renderInspeccionesPorDependencia(arg)
+        : '<div class="placeholder-panel">NIL — sin novedades para bandera argentina en este parte.</div>'}
     </div>
     <div class="tarjeta">
-      <h2>Resumen de inspecciones</h2>
+      <h2>Inspecciones Extraordinarias — Bandera Extranjera <span class="contador">${tot.diarioExt} hoy</span></h2>
+      ${Object.keys(ext.porDependencia).length
+        ? renderInspeccionesPorDependencia(ext)
+        : '<div class="placeholder-panel">NIL — sin novedades para bandera extranjera en este parte.</div>'}
+    </div>
+    <div class="tarjeta">
+      <h2>Resumen de inspecciones <span style="font-size:10px; font-weight:400; text-transform:none; color:var(--gris-500);">(cálculo automático)</span></h2>
       <div class="grid-resumen">
-        <div class="stat"><div class="valor">${r.pesquerosOtros}</div><div class="etiqueta">Pesqueros/otros</div></div>
-        <div class="stat"><div class="valor">${r.porAveria}</div><div class="etiqueta">Por avería</div></div>
-        <div class="stat"><div class="valor">${r.cargaPasaje}</div><div class="etiqueta">Carga/Pasaje</div></div>
-        <div class="stat"><div class="valor">${r.convoyesExtr}</div><div class="etiqueta">Convoyes/buq. extr.</div></div>
-        <div class="stat"><div class="valor">${r.convoyArgentino}</div><div class="etiqueta">Convoy B/ARG</div></div>
-        <div class="stat"><div class="valor">${r.totalDiario}</div><div class="etiqueta">Total diario</div></div>
-        <div class="stat"><div class="valor">${r.totalAnual}</div><div class="etiqueta">Total anual</div></div>
+        <div class="stat"><div class="valor">${cat.pesquerosOtros}</div><div class="etiqueta">Pesqueros/otros</div></div>
+        <div class="stat"><div class="valor">${cat.porAveria}</div><div class="etiqueta">Por avería</div></div>
+        <div class="stat"><div class="valor">${cat.cargaPasaje}</div><div class="etiqueta">Carga/Pasaje</div></div>
+        <div class="stat"><div class="valor">${cat.convoyesExtr}</div><div class="etiqueta">Convoyes/buq. extr.</div></div>
+        <div class="stat"><div class="valor">${cat.convoyArgentino}</div><div class="etiqueta">Convoy B/ARG</div></div>
+        <div class="stat"><div class="valor">${tot.diarioArg + tot.diarioExt}</div><div class="etiqueta">Total diario</div></div>
+        <div class="stat"><div class="valor">${tot.anualArg + tot.anualExt}</div><div class="etiqueta">Total anual</div></div>
       </div>
-    </div>
-    <div class="tarjeta">
-      <h2>Inspecciones Extraordinarias — Bandera Extranjera</h2>
-      <div class="placeholder-panel">NIL — sin novedades para bandera extranjera en este parte.</div>
+      <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
+        El total diario y el total anual se calculan solos a partir de las inspecciones cargadas — no se ingresan a mano.
+        El diario se reinicia cada día; el anual es correlativo (suma lo acumulado + lo cargado hoy).
+      </p>
     </div>
   `;
 }
@@ -223,11 +296,6 @@ function renderTablaGenerica(columnas, filas) {
   return html;
 }
 
-function renderAlturaAgua() {
-  const filas = D.alturaAgua.map(a => [a.punto, a.fecha, a.altura, a.escala]);
-  return `<div class="tarjeta"><h2>Altura de Agua</h2>${renderTablaGenerica(['Punto de control', 'Fecha', 'Altura', 'Escala'], filas)}</div>`;
-}
-
 function renderBuquesDetencion() {
   const filas = D.buquesDetencion.map(b => [b.numero, b.dependencia, b.buque, b.fecha, b.tipoInsp, b.deficiencias]);
   return `<div class="tarjeta"><h2>Buques con Detención</h2>${renderTablaGenerica(['N.º', 'Dependencia', 'Buque', 'Fecha', 'Tipo Insp.', 'Deficiencias'], filas)}</div>`;
@@ -310,13 +378,15 @@ const PESTANAS = [
   { id: 'casos-mas', grupo: 'Parte diario', etiqueta: 'Casos MAS', render: renderCasosMAS },
   { id: 'casos-sar', grupo: 'Parte diario', etiqueta: 'Casos SAR', render: renderCasosSAR },
   { id: 'otros', grupo: 'Parte diario', etiqueta: 'Otros', render: renderOtros },
-  { id: 'altura-agua', grupo: 'Gestión', etiqueta: 'Altura de Agua', render: renderAlturaAgua },
+  { id: 'estadisticas', grupo: 'Análisis', etiqueta: 'Estadísticas', render: renderEstadisticas },
   { id: 'buques-detencion', grupo: 'Gestión', etiqueta: 'Buques con Detención', render: renderBuquesDetencion },
   { id: 'insp-tecnicas', grupo: 'Gestión', etiqueta: 'Inspecciones Técnicas', render: renderInspeccionesTecnicas },
   { id: 'control-gestion', grupo: 'Gestión', etiqueta: 'Div. Control de Gestión', render: renderDivisionControlGestion },
   { id: 'licencias', grupo: 'Gestión', etiqueta: 'Licencias', render: renderLicencias },
   { id: 'guardia', grupo: 'Gestión', etiqueta: 'Relevo de Guardia', render: renderGuardia }
 ];
+
+let PESTANAS_ACTUALES = [];
 
 function iniciarDashboard() {
   const usuario = requerirSesion();
@@ -337,9 +407,27 @@ function iniciarDashboard() {
   document.getElementById('fechaParte').textContent = D.fechaParte;
   document.body.classList.toggle('modo-lectura', soloLectura);
 
+  // Botón de exportación global: solo tiene sentido en Guardias
+  // (el parte diario completo). En Oficinas, cada oficina exporta
+  // su propio contenido desde su panel.
+  const btnExportar = document.getElementById('btnExportarGlobal');
+  if (modulo === 'guardias') {
+    btnExportar.classList.remove('oculto');
+    btnExportar.onclick = abrirModalExportarGuardia;
+  } else {
+    btnExportar.classList.add('oculto');
+  }
+
+  PESTANAS_ACTUALES = modulo === 'oficinas'
+    ? OFICINAS_LIST.map(of => ({
+        id: of.id, grupo: 'Oficinas DPSN', etiqueta: of.nombre,
+        render: () => renderOficina(of, soloLectura)
+      }))
+    : PESTANAS;
+
   // Armar sidebar agrupado
   const grupos = {};
-  PESTANAS.forEach(p => { (grupos[p.grupo] = grupos[p.grupo] || []).push(p); });
+  PESTANAS_ACTUALES.forEach(p => { (grupos[p.grupo] = grupos[p.grupo] || []).push(p); });
   const sidebar = document.getElementById('sidebarTabs');
   sidebar.innerHTML = '';
   Object.entries(grupos).forEach(([grupo, tabs]) => {
@@ -353,7 +441,7 @@ function iniciarDashboard() {
     btn.addEventListener('click', () => mostrarPestana(btn.dataset.id));
   });
 
-  mostrarPestana(PESTANAS[0].id);
+  mostrarPestana(PESTANAS_ACTUALES[0].id);
   document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
   document.getElementById('btnVolverModulos').addEventListener('click', () => {
     window.location.href = 'seleccion.html';
@@ -361,9 +449,10 @@ function iniciarDashboard() {
 }
 
 function mostrarPestana(id) {
-  const pestana = PESTANAS.find(p => p.id === id);
+  const pestana = PESTANAS_ACTUALES.find(p => p.id === id);
   if (!pestana) return;
 
+  sessionStorage.setItem('novedades_dpsn_tab_actual', id);
   document.querySelectorAll('.tab-link').forEach(b => b.classList.toggle('activo', b.dataset.id === id));
   document.getElementById('tituloPanel').textContent = pestana.etiqueta;
   document.getElementById('contenidoPanel').innerHTML = pestana.render();

@@ -8,38 +8,50 @@ const DATOS_EJEMPLO = {
 
   fechaParte: "03/08/2026 0700 a 04/08/2026 0700",
 
+  // Inspecciones Extraordinarias separadas por bandera. El total
+  // diario se cuenta solo (cantidad de items cargados hoy) y el
+  // total anual = acumuladoAnualPrevio (lo acumulado hasta ayer)
+  // + el total diario de hoy. Nada de esto se tipea a mano.
   inspeccionesExtraordinarias: {
-    bandera: "argentina", // o "extranjera"
-    porDependencia: {
-      "FORM": [
-        {
-          tipo: "inicial",
-          buque: { tipo: "L/M", nombre: "CORINA", matricula: "0467-M", bandera: "ARGENTINA" },
-          nota: ""
-        },
-        {
-          tipo: "inicial",
-          buque: { tipo: "L/M", nombre: "VAP", matricula: "BOCA0306", bandera: "ARGENTINA" },
-          nota: ""
-        }
-      ],
-      "ZARA": [
-        {
-          tipo: "seguimiento",
-          fechaInspMasDetallada: "02/08/2026",
-          buque: { tipo: "B/A", nombre: "IRIS", matricula: "01644", bandera: "ARGENTINA" },
-          asunto: 'CASO MAS PZDE Nº 22/26 — Inconveniente en máquina',
-          deficiencias: [
-            { codigo: "10", descripcion: "MMPP (YANMAR 1187) presenta falla en Turbo. Se reemplazó turbo del MMPP." },
-            { codigo: "10", descripcion: "Salvavidas circular en popa sin identificación. Se verificó identificación." },
-            { codigo: "10", descripcion: "Extintor de incendio en Sala de Máquinas descargado. Se reemplazó extintor." },
-            { codigo: "10", descripcion: "Dos chalecos salvavidas sin identificación del buque. Se verificó identificación." }
-          ],
-          nota: ""
-        }
-      ]
+    argentina: {
+      acumuladoAnualPrevio: 589,
+      porDependencia: {
+        "FORM": [
+          {
+            tipo: "inicial",
+            categoria: "cargaPasaje",
+            buque: { tipo: "L/M", nombre: "CORINA", matricula: "0467-M", bandera: "ARGENTINA" },
+            nota: ""
+          },
+          {
+            tipo: "inicial",
+            categoria: "cargaPasaje",
+            buque: { tipo: "L/M", nombre: "VAP", matricula: "BOCA0306", bandera: "ARGENTINA" },
+            nota: ""
+          }
+        ],
+        "ZARA": [
+          {
+            tipo: "seguimiento",
+            categoria: "porAveria",
+            fechaInspMasDetallada: "02/08/2026",
+            buque: { tipo: "B/A", nombre: "IRIS", matricula: "01644", bandera: "ARGENTINA" },
+            asunto: 'CASO MAS PZDE Nº 22/26 — Inconveniente en máquina',
+            deficiencias: [
+              { codigo: "10", descripcion: "MMPP (YANMAR 1187) presenta falla en Turbo. Se reemplazó turbo del MMPP." },
+              { codigo: "10", descripcion: "Salvavidas circular en popa sin identificación. Se verificó identificación." },
+              { codigo: "10", descripcion: "Extintor de incendio en Sala de Máquinas descargado. Se reemplazó extintor." },
+              { codigo: "10", descripcion: "Dos chalecos salvavidas sin identificación del buque. Se verificó identificación." }
+            ],
+            nota: ""
+          }
+        ]
+      }
     },
-    resumen: { pesquerosOtros: 0, porAveria: 2, cargaPasaje: 0, convoyesExtr: 0, convoyArgentino: 0, totalDiario: 2, totalAnual: 591 }
+    extranjera: {
+      acumuladoAnualPrevio: 0,
+      porDependencia: {} // NIL en este parte
+    }
   },
 
   estadoRectorPuerto: {
@@ -143,8 +155,30 @@ const DATOS_EJEMPLO = {
     }
   },
 
-  alturaAgua: [
-    { punto: "Puerto Rosario", fecha: "03/08/2026", altura: "2.97", escala: "C" }
+  // Altura de agua + calados de navegación (ya no es pestaña
+  // aparte: se muestra dentro del resumen de Inicio).
+  alturaAgua: {
+    lecturas: [
+      { punto: "Puerto Rosario", fecha: "03/08/2026", altura: "2.97", escala: "C" }
+    ],
+    calados: [
+      { tramo: "San Lorenzo Norte y Centro", referencia: "EP. Bella Vista / Copello Km 452,6", calado: "10.89" },
+      { tramo: "San Lorenzo Sur, Rosario y Arroyo Seco", referencia: "Fighiera Km 384", calado: "11.17" }
+    ]
+  },
+
+  // Dragas operando en jurisdicción. Nombres y días operando
+  // tomados de la captura de referencia que compartiste — el
+  // resto de columnas se completa cuando tengamos el dato real.
+  dragas: [
+    { nombre: "B/A DOÑA LU...", dias: 26 },
+    { nombre: "Draga NIÑA D...", dias: 4 },
+    { nombre: "Draga PANCH...", dias: 4 },
+    { nombre: "DASA IGMO...", dias: 4 },
+    { nombre: "Draga GLORI...", dias: 43 },
+    { nombre: "Draga ALFON...", dias: 5 },
+    { nombre: "Draga PANTA", dias: 5 },
+    { nombre: "Draga ORTELL...", dias: 5 }
   ],
 
   buquesDetencion: [

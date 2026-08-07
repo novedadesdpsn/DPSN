@@ -60,7 +60,20 @@ novedades-dpsn/
 └── README.md
 ```
 
-## Notas
+## Cómo subir el repositorio a GitHub y publicarlo (GitHub Pages)
 
-- El diseño toma la paleta institucional (azul marino / dorado) y evita depender de imágenes externas — todo funciona con HTML/CSS/JS puro, sin necesidad de instalar nada ni usar build tools, para que sea simple de mantener y desplegar en GitHub Pages.
-- Los botones "Editar", "+ Agregar caso" y "+ Agregar bloque" están deshabilitados a propósito: se activan cuando conectemos la escritura real a Firestore.
+1. Con el Gmail nuevo, entrá a [github.com](https://github.com) y creá una cuenta (si no la tenés ya).
+2. Click en **"New repository"**. Nombre sugerido: `novedades-dpsn`. Dejalo en **Público** o **Privado** — con Privado, GitHub Pages también funciona, pero te va a pedir que el repo tenga GitHub Pages habilitado para organizaciones/plan pago en algunos casos; si da problemas, lo hacemos Público (de todos modos, quien no tenga login del sistema no puede ver los datos, así que no es un problema de seguridad real).
+3. Subí todo el contenido de esta carpeta (`novedades-dpsn/`) al repositorio. Se puede hacer:
+   - Desde la web de GitHub: botón "Add file" > "Upload files", y arrastrás todos los archivos y carpetas (manteniendo la estructura `css/`, `js/`, `assets/`).
+   - O con Git desde la terminal, si preferís (`git init`, `git remote add origin ...`, `git add .`, `git commit`, `git push`).
+4. Una vez subido: **Settings** (del repositorio) > **Pages** (en el menú de la izquierda) > en "Branch" elegís `main` y la carpeta `/ (root)` > Save.
+5. GitHub te va a dar una URL del tipo `https://tu-usuario.github.io/novedades-dpsn/`. Puede demorar 1-2 minutos en estar activa la primera vez.
+6. Esa URL es la que vas a compartir con el personal para que entren al sistema.
+
+**Importante**: la carpeta `apps-script/` (el puente con Google Sheets) NO va dentro de este repositorio de GitHub — ese código se pega directamente en el editor de Apps Script de tu Google Sheet (Extensiones > Apps Script), como se explica en el propio archivo `apps-script/Code.gs`.
+
+## Puente con Google Sheets (Apps Script)
+
+En `apps-script/Code.gs` está el script que sincroniza tu hoja de cálculo con Firestore cada vez que se edita una celda. Incluye instrucciones detalladas de configuración (cuenta de servicio de Firebase, propiedades del script, trigger de edición) en los comentarios del propio archivo. Por ahora tiene armado el mapeo de la hoja "InspeccionesExtraordinarias" como modelo — vamos agregando el resto de las hojas (Casos MAS, Casos SAR, Estado Rector de Puerto, Licencias, etc.) siguiendo el mismo patrón, una vez que confirmemos cómo van a estar organizadas tus planillas reales.
+
