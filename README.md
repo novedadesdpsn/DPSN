@@ -2,78 +2,75 @@
 
 Sistema de traspaso de novedades diario — Dirección de Policía de Seguridad de la Navegación (DPSN), Prefectura Naval Argentina.
 
-## Estado actual (versión 1 — esqueleto navegable)
-
-Esta primera versión ya tiene:
-- Pantalla de login (`index.html`)
-- Pantalla de selección de módulo: **Oficinas DPSN** / **Guardias DPSN** (`seleccion.html`), habilitada según los permisos del usuario
-- Dashboard con **todas las pestañas** definidas hasta ahora, mostrando **datos de ejemplo** tomados del parte del 03/08/2026, para que se pueda ver cómo va a quedar la interfaz:
-  - Inicio (resumen del día)
-  - Inspecciones Extraordinarias (Bandera Argentina / Extranjera)
-  - Inspecciones por Estado Rector de Puerto
-  - Casos MAS
-  - Casos SAR
-  - Otros
-  - Altura de Agua
-  - Buques con Detención
-  - Inspecciones Técnicas
-  - División Control de Gestión
-  - Licencias (Anual, Médica, Tareas Adecuadas, Extraordinaria, Comisiones, No Computables)
-  - Relevo de Guardia (Saliente / Entrante)
-
-**Todavía NO está conectado a Firebase real** (login funciona en "modo demo") ni a Google Sheets/Firestore. Eso es el paso siguiente.
-
-## Cómo probarlo ahora (modo demo)
-
-1. Abrí `index.html` en el navegador (o subilo a GitHub Pages).
-2. Ingresá con:
-   - Usuario: `demo@pna.gob.ar`
-   - Contraseña: `demo1234`
-3. Vas a poder navegar entre Oficinas DPSN y Guardias DPSN (el usuario demo tiene administrador en ambos) y recorrer todas las pestañas.
-
-Este modo demo se desactiva solo en cuanto completes las credenciales reales en `js/firebase-config.js`.
-
-## Próximos pasos (en orden)
-
-1. **Crear el proyecto de Firebase** con el Gmail nuevo (instrucciones detalladas dentro de `js/firebase-config.js`).
-2. **Completar `js/firebase-config.js`** con las credenciales reales.
-3. **Cargar los usuarios** en la colección `usuarios` de Firestore, con su estructura de permisos (ver comentarios en `js/roles.js`).
-4. **Reemplazar los datos de ejemplo** (`js/datos-ejemplo.js`) por lectura en vivo desde Firestore (`onSnapshot`).
-5. **Armar el puente Google Sheets/Docs → Firestore** con Google Apps Script, para que sigas cargando la información como ya lo hacés hoy (planilla/documento) y se refleje solo en el sistema.
-6. **Subir a GitHub Pages** para que el sistema tenga una URL pública (solo accesible con login).
-
 ## Estructura del proyecto
 
 ```
 novedades-dpsn/
-├── index.html          # Login
-├── seleccion.html       # Selección de módulo (Oficinas / Guardias)
-├── dashboard.html        # Dashboard con todas las pestañas
-├── css/
-│   └── style.css         # Estilos (paleta institucional PNA)
+├── index.html              # Login (DNI + contraseña)
+├── dashboard.html            # Único módulo: parte diario completo
+├── css/style.css
 ├── js/
-│   ├── firebase-config.js  # Credenciales de Firebase (completar)
-│   ├── roles.js             # Modelo de permisos por usuario
-│   ├── auth.js               # Login / sesión / modo demo
-│   ├── datos-ejemplo.js       # Datos de muestra para previsualizar
-│   └── app.js                  # Render de pestañas y paneles
-└── README.md
+│   ├── firebase-config.js      # Credenciales de Firebase (completar)
+│   ├── roles.js                 # Modelo de permisos
+│   ├── auth.js                    # Login con DNI / sesión / modo demo
+│   ├── datos-ejemplo.js             # Datos de muestra iniciales
+│   ├── datos-guardia.js               # Carga directa + persistencia local
+│   ├── mapa-buques.js                   # Mapa de buques con detención
+│   ├── codigos.js                         # Códigos de deficiencia
+│   ├── estadisticas.js                      # Pestaña Estadísticas
+│   ├── asistente.js                           # Buscador por buque/fecha
+│   ├── integraciones-config.js                  # Config del guardado en Drive
+│   ├── exportacion-texto.js                       # Contenido limpio para el PDF
+│   ├── pdf-export.js                                # Generación del PDF
+│   └── app.js                                         # Navegación y paneles
+├── embeds/
+│   ├── mapa-inspectores.html    # Mapa de inspectores (ver más abajo)
+│   └── tablero-inspectores.html # Panel completo con filtros
+├── data/listado-inspectores.xlsx  # Fuente de datos del mapa de inspectores
+├── apps-script/Code.gs           # Puente Sheets/Drive → Firestore
+└── GUIA_GOOGLE_SHEETS.md          # Columnas de cada hoja de cálculo
 ```
 
-## Cómo subir el repositorio a GitHub y publicarlo (GitHub Pages)
+## Cómo probarlo ahora (modo demo)
 
-1. Con el Gmail nuevo, entrá a [github.com](https://github.com) y creá una cuenta (si no la tenés ya).
-2. Click en **"New repository"**. Nombre sugerido: `novedades-dpsn`. Dejalo en **Público** o **Privado** — con Privado, GitHub Pages también funciona, pero te va a pedir que el repo tenga GitHub Pages habilitado para organizaciones/plan pago en algunos casos; si da problemas, lo hacemos Público (de todos modos, quien no tenga login del sistema no puede ver los datos, así que no es un problema de seguridad real).
-3. Subí todo el contenido de esta carpeta (`novedades-dpsn/`) al repositorio. Se puede hacer:
-   - Desde la web de GitHub: botón "Add file" > "Upload files", y arrastrás todos los archivos y carpetas (manteniendo la estructura `css/`, `js/`, `assets/`).
-   - O con Git desde la terminal, si preferís (`git init`, `git remote add origin ...`, `git add .`, `git commit`, `git push`).
-4. Una vez subido: **Settings** (del repositorio) > **Pages** (en el menú de la izquierda) > en "Branch" elegís `main` y la carpeta `/ (root)` > Save.
-5. GitHub te va a dar una URL del tipo `https://tu-usuario.github.io/novedades-dpsn/`. Puede demorar 1-2 minutos en estar activa la primera vez.
-6. Esa URL es la que vas a compartir con el personal para que entren al sistema.
+Abrí `index.html`. Mientras `js/firebase-config.js` tenga las claves de ejemplo, el login acepta:
+- DNI: `30123456`
+- Contraseña: `demo1234`
 
-**Importante**: la carpeta `apps-script/` (el puente con Google Sheets) NO va dentro de este repositorio de GitHub — ese código se pega directamente en el editor de Apps Script de tu Google Sheet (Extensiones > Apps Script), como se explica en el propio archivo `apps-script/Code.gs`.
+## El mapa de inspectores (columna derecha de Inicio)
 
-## Puente con Google Sheets (Apps Script)
+`embeds/mapa-inspectores.html` se genera a partir de `data/listado-inspectores.xlsx`. Cuando necesites actualizar los inspectores por dependencia, actualizás ese Excel y volvés a generar el mapa con el mismo proceso que se usó para crearlo la primera vez (Folium/Python), reemplazando el archivo en `embeds/`. El botón "Ver panel" abre `embeds/tablero-inspectores.html`, el listado completo con filtros.
 
-En `apps-script/Code.gs` está el script que sincroniza tu hoja de cálculo con Firestore cada vez que se edita una celda. Incluye instrucciones detalladas de configuración (cuenta de servicio de Firebase, propiedades del script, trigger de edición) en los comentarios del propio archivo. Por ahora tiene armado el mapeo de la hoja "InspeccionesExtraordinarias" como modelo — vamos agregando el resto de las hojas (Casos MAS, Casos SAR, Estado Rector de Puerto, Licencias, etc.) siguiendo el mismo patrón, una vez que confirmemos cómo van a estar organizadas tus planillas reales.
+## Conectar Firebase de verdad (reemplaza el modo demo)
 
+1. Con tu Gmail nuevo, entrá a [console.firebase.google.com](https://console.firebase.google.com) y creá un proyecto.
+2. **Authentication** > "Sign-in method" > habilitá "Correo electrónico/contraseña".
+3. **Firestore Database** > "Crear base de datos" > modo producción.
+4. **Configuración del proyecto** > "Tus apps" > Web (`</>`) > copiá el objeto y pegalo en `js/firebase-config.js`.
+5. **Authentication > Users > Add user**: el login pide **DNI**, pero Firebase solo acepta e-mails. En el campo "Email" de cada usuario poné `{DNI}@dpsn.pna.gob.ar` (ej: `30123456@dpsn.pna.gob.ar`). A la persona solo le decís su DNI y la contraseña.
+6. Por cada usuario, copiá su **UID** y en Firestore creá `usuarios/{uid}`:
+   ```
+   { nombre: "Apellido, Nombre", jerarquia: "PR", administradorGlobal: false, permisos: { guardias: "admin" } }
+   ```
+
+## Carga directa de datos (sin depender de Google Sheets)
+
+Inspecciones Extraordinarias, Estado Rector de Puerto, Casos MAS, Casos SAR y los Buques con Detención del mapa se cargan directamente desde el dashboard (botones "+ Agregar..."). Se guardan en el navegador (localStorage): sobreviven a un refresco de página o a cerrar el navegador, pero por ahora quedan en esa computadora puntual — no se sincronizan todavía entre usuarios distintos. Eso llega cuando esta misma lógica se conecte a Firestore en lugar de localStorage.
+
+## Guardar copia del PDF exportado en Drive
+
+Ver `apps-script/Code.gs` (función `doPost`) y completar `js/integraciones-config.js` con la URL del despliegue y el ID de la carpeta de Drive.
+
+## Vincular Google Sheets (opcional, alternativa a la carga directa)
+
+Ver `GUIA_GOOGLE_SHEETS.md` para las columnas exactas de cada hoja, y `apps-script/Code.gs` para el puente hacia Firestore.
+
+## Cómo subir a GitHub Pages
+
+1. Creá un repositorio (ej: `novedades-dpsn`) y subí todo el contenido de esta carpeta manteniendo la estructura.
+2. **Settings > Pages** > Branch `main`, carpeta `/ (root)` > Save.
+3. GitHub te da una URL tipo `https://tu-usuario.github.io/novedades-dpsn/` — esa es la que compartís con el personal.
+
+## Asistente de Búsqueda
+
+Busca por nombre de buque o por fecha cruzando Inspecciones Extraordinarias, PSC, Casos MAS y SAR. Es un buscador por coincidencia de texto sobre los datos ya cargados — no una inteligencia artificial conversacional (eso requeriría un servidor propio con clave de API).

@@ -187,6 +187,11 @@ const DATOS_EJEMPLO = {
     { numero: 3, dependencia: "PZMN — BBLA", buque: 'L/M "IMPACIENTE" (0783)', fecha: "23/05/2026", tipoInsp: "ID", deficiencias: "Cód. 30 (12) / Cód. 17 (21)" }
   ],
 
+  // Buques con detención con posición geográfica, para el mapa
+  // interactivo de Inicio. Se carga con el botón "+ Agregar nuevo"
+  // y queda guardado en el navegador (localStorage).
+  buquesDetencionMapa: [],
+
   inspeccionesTecnicas: [
     {
       especialidad: "CASCO",

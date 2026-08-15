@@ -3,6 +3,7 @@
 // ============================================================
 
 const D = DATOS_EJEMPLO; // alias corto
+let SOLO_LECTURA_ACTUAL = false;
 
 function esc(html) {
   const d = document.createElement('div');
@@ -69,42 +70,55 @@ function renderInicio() {
   const rp = D.estadoRectorPuerto.resumen;
 
   return `
-    <div class="tarjeta">
-      <h2>Resumen del parte</h2>
-      <div class="grid-resumen">
-        <div class="stat"><div class="valor">${tot.diarioArg}</div><div class="etiqueta">Insp. Extraord. B. Argentina</div></div>
-        <div class="stat"><div class="valor">${tot.diarioExt}</div><div class="etiqueta">Insp. Extraord. B. Extranjera</div></div>
-        <div class="stat"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
-        <div class="stat"><div class="valor">${contarCasos(D.casosMAS)}</div><div class="etiqueta">Casos MAS pendientes</div></div>
-        <div class="stat"><div class="valor">${contarCasos(D.casosSAR)}</div><div class="etiqueta">Casos SAR pendientes</div></div>
-        <div class="stat"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
-        <div class="stat"><div class="valor">${D.dragas.length}</div><div class="etiqueta">Dragas operando</div></div>
-        <div class="stat"><div class="valor">${D.buquesDetencion.length}</div><div class="etiqueta">Buques con detención</div></div>
-        <div class="stat"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
+    <div class="inicio-grid">
+      <div class="inicio-col inicio-col-mapa">
+        <div class="tarjeta mapa-tarjeta">
+          <h2>Buques con Detención <span class="contador">${D.buquesDetencionMapa.length}</span></h2>
+          <div id="mapaBuquesDetencion" class="mapa-contenedor"></div>
+          ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-top:10px; width:100%;" onclick="uiAgregarBuqueDetencionMapa()">+ Agregar nuevo</button>` : ''}
+        </div>
       </div>
-    </div>
 
-    <div class="tarjeta">
-      <h2>Altura de Agua y Calados de Navegación</h2>
-      ${renderTablaGenerica(['Punto de control', 'Fecha', 'Altura', 'Escala'],
-        D.alturaAgua.lecturas.map(a => [a.punto, a.fecha, a.altura, a.escala]))}
-      <div style="margin-top:14px;">
-        ${renderTablaGenerica(['Tramo', 'Referencia', 'Calado'],
-          D.alturaAgua.calados.map(c => [c.tramo, c.referencia, c.calado]))}
+      <div class="inicio-col inicio-col-resumen">
+        <div class="tarjeta">
+          <h2>Resumen del parte</h2>
+          <div class="grid-resumen">
+            <div class="stat acc-1"><div class="valor">${tot.diarioArg}</div><div class="etiqueta">Insp. Extraord. Argentina</div></div>
+            <div class="stat acc-2"><div class="valor">${tot.diarioExt}</div><div class="etiqueta">Insp. Extraord. Extranjera</div></div>
+            <div class="stat acc-3"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
+            <div class="stat acc-4"><div class="valor">${contarCasos(D.casosMAS)}</div><div class="etiqueta">Casos MAS pendientes</div></div>
+            <div class="stat acc-5"><div class="valor">${contarCasos(D.casosSAR)}</div><div class="etiqueta">Casos SAR pendientes</div></div>
+            <div class="stat acc-1"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
+            <div class="stat acc-2"><div class="valor">${D.buquesDetencionMapa.length}</div><div class="etiqueta">Buques con detención</div></div>
+            <div class="stat acc-3"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Altura de Agua y Calados de Navegación</h2>
+          ${renderTablaGenerica(['Punto de control', 'Fecha', 'Altura', 'Escala'],
+            D.alturaAgua.lecturas.map(a => [a.punto, a.fecha, a.altura, a.escala]))}
+          <div style="margin-top:14px;">
+            ${renderTablaGenerica(['Tramo', 'Referencia', 'Calado'],
+              D.alturaAgua.calados.map(c => [c.tramo, c.referencia, c.calado]))}
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Guardia</h2>
+          <div style="display:flex; gap:40px; flex-wrap:wrap;">
+            ${renderGuardiaLista('Saliente', D.guardia.saliente)}
+            ${renderGuardiaLista('Entrante', D.guardia.entrante)}
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="tarjeta">
-      <h2>Dragas Operando en Jurisdicción <span class="contador">${D.dragas.length}</span></h2>
-      ${renderTablaGenerica(['Draga', 'Días operando'],
-        D.dragas.map(d => [d.nombre, d.dias]))}
-    </div>
-
-    <div class="tarjeta">
-      <h2>Guardia</h2>
-      <div style="display:flex; gap:40px; flex-wrap:wrap;">
-        ${renderGuardiaLista('Saliente', D.guardia.saliente)}
-        ${renderGuardiaLista('Entrante', D.guardia.entrante)}
+      <div class="inicio-col inicio-col-mapa">
+        <div class="tarjeta mapa-tarjeta">
+          <h2>Inspectores por Dependencia</h2>
+          <iframe src="embeds/mapa-inspectores.html" class="mapa-embed" title="Mapa de inspectores por dependencia"></iframe>
+          <button class="btn-secundario" type="button" style="margin-top:10px; width:100%;" onclick="window.open('embeds/tablero-inspectores.html','_blank')">Ver panel</button>
+        </div>
       </div>
     </div>
   `;
@@ -119,15 +133,23 @@ function contarCasos(bloque) {
 }
 
 // ---------- Inspecciones extraordinarias / Estado Rector de Puerto ----------
-function renderInspeccionesPorDependencia(bloque, tituloResumen) {
+function renderInspeccionesPorDependencia(bloque, contexto) {
   let html = '';
   Object.entries(bloque.porDependencia).forEach(([dep, lista]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)} (${lista.length})</summary>`;
-    lista.forEach(insp => {
+    lista.forEach((insp, idx) => {
+      const onclickEliminar = contexto === 'psc'
+        ? `eliminarInspeccionPSC('${dep}',${idx})`
+        : `eliminarInspeccionExtraordinaria('${contexto}','${dep}',${idx})`;
       html += `<div class="item-insp">
-        ${tagTipo(insp.tipo)}
-        <strong>${esc(insp.buque.tipo)} "${esc(insp.buque.nombre)}"</strong>
-        (${esc(insp.buque.matricula)}) — B/${esc(insp.buque.bandera)}`;
+        <div style="display:flex; justify-content:space-between; gap:8px;">
+          <div>
+            ${tagTipo(insp.tipo)}
+            <strong>${esc(insp.buque.tipo)} "${esc(insp.buque.nombre)}"</strong>
+            (${esc(insp.buque.matricula)}) — B/${esc(insp.buque.bandera)}
+          </div>
+          ${!SOLO_LECTURA_ACTUAL ? `<button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="${onclickEliminar}">✕</button>` : ''}
+        </div>`;
       if (insp.tipo === 'seguimiento' && insp.fechaInspMasDetallada) {
         html += ` <span style="color:var(--gris-500)">— ID previa: ${esc(insp.fechaInspMasDetallada)}</span>`;
       }
@@ -160,14 +182,16 @@ function renderExtraordinarias() {
     <div class="tarjeta">
       <h2>Inspecciones Extraordinarias — Bandera Argentina <span class="contador">${tot.diarioArg} hoy</span></h2>
       ${Object.keys(arg.porDependencia).length
-        ? renderInspeccionesPorDependencia(arg)
+        ? renderInspeccionesPorDependencia(arg, 'argentina')
         : '<div class="placeholder-panel">NIL — sin novedades para bandera argentina en este parte.</div>'}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionExtraordinaria('argentina')">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Inspecciones Extraordinarias — Bandera Extranjera <span class="contador">${tot.diarioExt} hoy</span></h2>
       ${Object.keys(ext.porDependencia).length
-        ? renderInspeccionesPorDependencia(ext)
+        ? renderInspeccionesPorDependencia(ext, 'extranjera')
         : '<div class="placeholder-panel">NIL — sin novedades para bandera extranjera en este parte.</div>'}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionExtraordinaria('extranjera')">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Resumen de inspecciones <span style="font-size:10px; font-weight:400; text-transform:none; color:var(--gris-500);">(cálculo automático)</span></h2>
@@ -195,7 +219,8 @@ function renderEstadoRectorPuerto() {
   return `
     <div class="tarjeta">
       <h2>Inspecciones por Estado Rector del Puerto</h2>
-      ${renderInspeccionesPorDependencia(D.estadoRectorPuerto)}
+      ${renderInspeccionesPorDependencia(D.estadoRectorPuerto, 'psc')}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionPSC()">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Resumen PSC (Port State Control)</h2>
@@ -220,10 +245,11 @@ function renderCasosMAS() {
   let html = `<div class="tarjeta"><h2>Casos MAS</h2>`;
   Object.entries(D.casosMAS.porDependencia).forEach(([dep, casos]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
-    casos.forEach(c => { html += renderTarjetaCaso(c, false); });
+    casos.forEach((c, idx) => { html += renderTarjetaCaso(c, false, dep, idx); });
     html += `</details>`;
   });
-  html += `<button class="btn-primario" type="button" disabled title="Se habilita al conectar Firestore">+ Agregar caso</button></div>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" onclick="uiAgregarCaso('MAS')">+ Agregar caso</button>`;
+  html += `</div>`;
   return html;
 }
 
@@ -231,14 +257,16 @@ function renderCasosSAR() {
   let html = `<div class="tarjeta"><h2>Casos SAR</h2>`;
   Object.entries(D.casosSAR.porDependencia).forEach(([dep, casos]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
-    casos.forEach(c => { html += renderTarjetaCaso(c, true); });
+    casos.forEach((c, idx) => { html += renderTarjetaCaso(c, true, dep, idx); });
     html += `</details>`;
   });
-  html += `<button class="btn-primario" type="button" disabled title="Se habilita al conectar Firestore">+ Agregar caso</button></div>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" onclick="uiAgregarCaso('SAR')">+ Agregar caso</button>`;
+  html += `</div>`;
   return html;
 }
 
-function renderTarjetaCaso(c, esSAR) {
+function renderTarjetaCaso(c, esSAR, dependencia, indice) {
+  const tipo = esSAR ? 'SAR' : 'MAS';
   return `
     <div class="tarjeta" style="margin-bottom:12px; background:var(--gris-100);">
       <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;">
@@ -254,7 +282,11 @@ function renderTarjetaCaso(c, esSAR) {
       <div style="margin-top:4px; font-size:13px; color:var(--rojo);"><strong>Novedad:</strong> ${esc(c.novedad)}</div>
       <div style="margin-top:4px; font-size:13px;"><strong>Características:</strong> ${esc(c.caracteristicas)}</div>
       <div style="margin-top:4px; font-size:13px;"><strong>Situación:</strong> ${esc(c.situacion)}</div>
-      <div style="margin-top:8px;"><button class="btn-secundario" type="button" disabled>Editar</button></div>
+      ${!SOLO_LECTURA_ACTUAL ? `
+      <div style="margin-top:8px; display:flex; gap:8px;">
+        <button class="btn-secundario" type="button" onclick="uiEditarCaso('${tipo}','${dependencia}',${indice})">Editar</button>
+        <button class="btn-secundario" type="button" onclick="eliminarCaso('${tipo}','${dependencia}',${indice})">Eliminar</button>
+      </div>` : ''}
     </div>
   `;
 }
@@ -358,18 +390,6 @@ function renderGuardiaLista(titulo, lista) {
   `;
 }
 
-function renderGuardia() {
-  return `
-    <div class="tarjeta">
-      <h2>Relevo de Guardia</h2>
-      <div style="display:flex; gap:50px; flex-wrap:wrap;">
-        ${renderGuardiaLista('Guardia Saliente', D.guardia.saliente)}
-        ${renderGuardiaLista('Guardia Entrante', D.guardia.entrante)}
-      </div>
-    </div>
-  `;
-}
-
 // ---------- Registro de pestañas ----------
 const PESTANAS = [
   { id: 'inicio', grupo: 'Parte diario', etiqueta: 'Inicio', render: renderInicio },
@@ -379,81 +399,57 @@ const PESTANAS = [
   { id: 'casos-sar', grupo: 'Parte diario', etiqueta: 'Casos SAR', render: renderCasosSAR },
   { id: 'otros', grupo: 'Parte diario', etiqueta: 'Otros', render: renderOtros },
   { id: 'estadisticas', grupo: 'Análisis', etiqueta: 'Estadísticas', render: renderEstadisticas },
+  { id: 'asistente', grupo: 'Análisis', etiqueta: 'Asistente de Búsqueda', render: renderAsistente },
   { id: 'buques-detencion', grupo: 'Gestión', etiqueta: 'Buques con Detención', render: renderBuquesDetencion },
   { id: 'insp-tecnicas', grupo: 'Gestión', etiqueta: 'Inspecciones Técnicas', render: renderInspeccionesTecnicas },
   { id: 'control-gestion', grupo: 'Gestión', etiqueta: 'Div. Control de Gestión', render: renderDivisionControlGestion },
-  { id: 'licencias', grupo: 'Gestión', etiqueta: 'Licencias', render: renderLicencias },
-  { id: 'guardia', grupo: 'Gestión', etiqueta: 'Relevo de Guardia', render: renderGuardia }
+  { id: 'licencias', grupo: 'Gestión', etiqueta: 'Licencias', render: renderLicencias }
 ];
-
-let PESTANAS_ACTUALES = [];
 
 function iniciarDashboard() {
   const usuario = requerirSesion();
   if (!usuario) return;
 
-  const modulo = sessionStorage.getItem('novedades_dpsn_modulo');
-  if (!modulo || !puedeVer(usuario, modulo)) {
-    window.location.href = 'seleccion.html';
+  if (!puedeVer(usuario)) {
+    alert('Tu usuario no tiene acceso al sistema. Contactá al administrador.');
+    cerrarSesion();
     return;
   }
-  const soloLectura = !puedeEditar(usuario, modulo);
+  const soloLectura = !puedeEditar(usuario);
+  SOLO_LECTURA_ACTUAL = soloLectura;
 
   document.getElementById('nombreUsuario').textContent =
-    (usuario.jerarquia ? usuario.jerarquia + ' ' : '') + (usuario.nombre || usuario.email);
+    (usuario.jerarquia ? usuario.jerarquia + ' ' : '') + (usuario.nombre || usuario.dni);
   document.getElementById('rolPill').textContent = soloLectura ? 'Solo lectura' : 'Administrador';
-  document.getElementById('moduloActual').textContent =
-    modulo === 'oficinas' ? 'Oficinas DPSN' : 'Guardias DPSN';
-  document.getElementById('fechaParte').textContent = D.fechaParte;
   document.body.classList.toggle('modo-lectura', soloLectura);
 
-  // Botón de exportación global: solo tiene sentido en Guardias
-  // (el parte diario completo). En Oficinas, cada oficina exporta
-  // su propio contenido desde su panel.
-  const btnExportar = document.getElementById('btnExportarGlobal');
-  if (modulo === 'guardias') {
-    btnExportar.classList.remove('oculto');
-    btnExportar.onclick = abrirModalExportarGuardia;
-  } else {
-    btnExportar.classList.add('oculto');
-  }
+  document.getElementById('btnExportarGlobal').onclick = abrirModalExportarGuardia;
 
-  PESTANAS_ACTUALES = modulo === 'oficinas'
-    ? OFICINAS_LIST.map(of => ({
-        id: of.id, grupo: 'Oficinas DPSN', etiqueta: of.nombre,
-        render: () => renderOficina(of, soloLectura)
-      }))
-    : PESTANAS;
-
-  // Armar sidebar agrupado
-  const grupos = {};
-  PESTANAS_ACTUALES.forEach(p => { (grupos[p.grupo] = grupos[p.grupo] || []).push(p); });
-  const sidebar = document.getElementById('sidebarTabs');
-  sidebar.innerHTML = '';
-  Object.entries(grupos).forEach(([grupo, tabs]) => {
-    sidebar.innerHTML += `<div class="grupo-titulo">${esc(grupo)}</div>`;
-    tabs.forEach(t => {
-      sidebar.innerHTML += `<button class="tab-link" data-id="${t.id}">${esc(t.etiqueta)}</button>`;
-    });
-  });
-
-  sidebar.querySelectorAll('.tab-link').forEach(btn => {
+  // Armar la barra de pestañas superior
+  const nav = document.getElementById('tabsNav');
+  nav.innerHTML = PESTANAS.map(t =>
+    `<button class="tab-link" data-id="${t.id}">${esc(t.etiqueta)}</button>`
+  ).join('');
+  nav.querySelectorAll('.tab-link').forEach(btn => {
     btn.addEventListener('click', () => mostrarPestana(btn.dataset.id));
   });
 
-  mostrarPestana(PESTANAS_ACTUALES[0].id);
+  mostrarPestana(PESTANAS[0].id);
   document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
-  document.getElementById('btnVolverModulos').addEventListener('click', () => {
-    window.location.href = 'seleccion.html';
-  });
 }
 
 function mostrarPestana(id) {
-  const pestana = PESTANAS_ACTUALES.find(p => p.id === id);
+  const pestana = PESTANAS.find(p => p.id === id);
   if (!pestana) return;
 
   sessionStorage.setItem('novedades_dpsn_tab_actual', id);
   document.querySelectorAll('.tab-link').forEach(b => b.classList.toggle('activo', b.dataset.id === id));
-  document.getElementById('tituloPanel').textContent = pestana.etiqueta;
   document.getElementById('contenidoPanel').innerHTML = pestana.render();
+
+  if (id === 'inicio') inicializarMapaBuquesDetencion();
+}
+
+function refrescarPestanaActual() {
+  const idActual = sessionStorage.getItem('novedades_dpsn_tab_actual');
+  if (idActual) mostrarPestana(idActual);
 }

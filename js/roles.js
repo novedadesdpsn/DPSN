@@ -1,65 +1,36 @@
 // ============================================================
 // MODELO DE ROLES — Novedades DPSN
 // ============================================================
-// Cada usuario tiene UN documento en la colección "usuarios" de
-// Firestore, con esta forma:
+// Un solo módulo (ya no existe Oficinas). Cada usuario tiene un
+// documento en la colección "usuarios" de Firestore:
 //
 // usuarios/{uid}:
 // {
 //   nombre: "Apellido, Nombre",
 //   jerarquia: "PR",
-//   permisos: {
-//     oficinas: "admin" | "lector" | null,
-//     guardias: "admin" | "lector" | null
-//   },
-//   administradorGlobal: true | false   // Director, jefes de depto/división
+//   administradorGlobal: true | false,   // Director, jefes de depto/división
+//   permisos: { guardias: "admin" | "lector" | null }
 // }
 //
-// Un usuario puede tener admin en un módulo y lector en el otro
-// (o los dos iguales, o acceso a uno solo). administradorGlobal
-// en true implica admin en ambos módulos sin importar "permisos".
+// administradorGlobal en true implica admin sin importar "permisos".
 // ============================================================
 
-const ModuloAcceso = {
-  OFICINAS: "oficinas",
-  GUARDIAS: "guardias"
-};
+const NivelPermiso = { ADMIN: "admin", LECTOR: "lector", NINGUNO: null };
 
-const NivelPermiso = {
-  ADMIN: "admin",
-  LECTOR: "lector",
-  NINGUNO: null
-};
-
-/**
- * Devuelve el nivel de permiso efectivo de un usuario para un módulo.
- * @param {object} usuario - documento de Firestore del usuario
- * @param {string} modulo - "oficinas" | "guardias"
- * @returns {"admin"|"lector"|null}
- */
-function obtenerPermiso(usuario, modulo) {
+function obtenerPermiso(usuario) {
   if (!usuario) return null;
   if (usuario.administradorGlobal) return NivelPermiso.ADMIN;
-  return (usuario.permisos && usuario.permisos[modulo]) || null;
+  return (usuario.permisos && usuario.permisos.guardias) || null;
 }
 
-function puedeVer(usuario, modulo) {
-  return obtenerPermiso(usuario, modulo) !== null;
-}
-
-function puedeEditar(usuario, modulo) {
-  return obtenerPermiso(usuario, modulo) === NivelPermiso.ADMIN;
-}
+function puedeVer(usuario) { return obtenerPermiso(usuario) !== null; }
+function puedeEditar(usuario) { return obtenerPermiso(usuario) === NivelPermiso.ADMIN; }
 
 // Usuario de ejemplo para poder previsualizar el sistema sin
-// Firebase todavía conectado. Se reemplaza por el usuario real
-// una vez que auth.js esté leyendo de Firestore.
+// Firebase todavía conectado.
 const USUARIO_DEMO = {
   nombre: "Piccoli, Leonardo Agustín",
   jerarquia: "OP",
   administradorGlobal: false,
-  permisos: {
-    oficinas: "admin",
-    guardias: "admin"
-  }
+  permisos: { guardias: "admin" }
 };

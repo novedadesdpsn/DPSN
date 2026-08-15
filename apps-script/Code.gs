@@ -45,9 +45,112 @@ function alEditarHoja(e) {
   const hoja = e.range.getSheet().getName();
   if (hoja === 'InspeccionesExtraordinarias') {
     sincronizarInspeccionesExtraordinarias();
+  } else if (hoja === 'CasosMAS') {
+    sincronizarCasosMAS();
+  } else if (hoja === 'Licencias') {
+    sincronizarLicencias();
   }
-  // Acá se van a ir agregando los "if" para las demás hojas:
-  // CasosMAS, CasosSAR, EstadoRectorPuerto, Licencias, etc.
+  // Para el resto de las hojas (EstadoRectorPuerto, CasosSAR, Otros,
+  // AlturaAgua, Dragas, BuquesDetencion, InspeccionesTecnicas,
+  // ControlGestion, Guardia, y cada hoja de Oficinas) se agrega un
+  // "else if" más, siguiendo el mismo patrón que estas dos: leer
+  // filas con encabezados, armar el objeto, y llamar a
+  // escribirEnFirestore() con la ruta correspondiente. La guía
+  // completa con las columnas exactas de cada hoja está en
+  // GUIA_GOOGLE_SHEETS.md.
+}
+
+/** Patrón "agrupado por dependencia + estado" — sirve de modelo para CasosSAR también. */
+function sincronizarCasosMAS() {
+  const hoja = SpreadsheetApp.getActive().getSheetByName('CasosMAS');
+  const filas = hoja.getDataRange().getValues();
+  const encabezados = filas.shift();
+
+  const porDependencia = {};
+  filas.filter(f => f.some(c => c !== '')).forEach(fila => {
+    const it = {};
+    encabezados.forEach((col, i) => { it[col] = fila[i]; });
+    const dep = it.Dependencia || 'SIN_DEP';
+    if (!porDependencia[dep]) porDependencia[dep] = [];
+    porDependencia[dep].push({
+      estado: String(it.Estado || 'pendiente').toLowerCase(),
+      titulo: it.Titulo || '',
+      asunto: it.Asunto || '',
+      posicion: it.Posicion || '',
+      novedad: it.Novedad || '',
+      caracteristicas: it.Caracteristicas || '',
+      situacion: it.Situacion || ''
+    });
+  });
+
+  escribirEnFirestore('parteDiario/casosMAS', { porDependencia });
+}
+
+/** Patrón "plano con columna de categoría" — sirve de modelo para Dragas, BuquesDetencion, ControlGestion, InspeccionesTecnicas, etc. */
+function sincronizarLicencias() {
+  const hoja = SpreadsheetApp.getActive().getSheetByName('Licencias');
+  const filas = hoja.getDataRange().getValues();
+  const encabezados = filas.shift();
+
+  const licencias = { anuales: [], medicas: [], tareasAdecuadas: [], extraordinaria: [], comisiones: [], noComputables: [] };
+  const mapaCategoria = {
+    anual: 'anuales', medica: 'medicas', tareasadecuadas: 'tareasAdecuadas',
+    extraordinaria: 'extraordinaria', comisiones: 'comisiones', nocomputable: 'noComputables'
+  };
+
+  filas.filter(f => f.some(c => c !== '')).forEach(fila => {
+    const it = {};
+    encabezados.forEach((col, i) => { it[col] = fila[i]; });
+    const clave = mapaCategoria[String(it.Categoria || '').toLowerCase().replace(/\s/g, '')];
+    if (!clave) return;
+    licencias[clave].push({
+      jerarquia: it.Jerarquia || '',
+      nombre: it.Nombre || '',
+      inicia: it.Inicia || '',
+      vence: it.Vence || ''
+    });
+  });
+
+  escribirEnFirestore('parteDiario/licencias', licencias);
+}
+
+/**
+ * ============================================================
+ * GUARDAR EL PDF EXPORTADO EN GOOGLE DRIVE
+ * ============================================================
+ * El dashboard, además de descargar el PDF al navegador, le hace
+ * un POST a este mismo script (desplegado como "Aplicación web")
+ * con el archivo en base64. Esta función lo recibe y lo guarda en
+ * la carpeta de Drive que vos indiques.
+ *
+ * CÓMO DESPLEGARLO:
+ * 1. En el editor de Apps Script: Implementar > Nueva implementación.
+ * 2. Tipo: "Aplicación web".
+ * 3. Ejecutar como: "Yo" (tu cuenta — así el archivo se guarda con
+ *    tus permisos de Drive, sin pedirle login a cada usuario).
+ * 4. Quién tiene acceso: "Cualquier usuario" (el propio sistema
+ *    ya controla el acceso con el login de Firebase; esta URL solo
+ *    recibe el PDF, no expone datos).
+ * 5. Copiá la URL que te da y pegala en
+ *    js/integraciones-config.js (APPS_SCRIPT_WEBAPP_URL).
+ * 6. Reemplazá también CARPETA_DRIVE_ID en ese mismo archivo con
+ *    el ID de la carpeta de Drive (lo sacás de la URL de la carpeta:
+ *    drive.google.com/drive/folders/ESTE_ES_EL_ID).
+ * ============================================================
+ */
+function doPost(e) {
+  try {
+    const datos = JSON.parse(e.postData.contents);
+    const carpeta = DriveApp.getFolderById(datos.carpetaId);
+    const bytes = Utilities.base64Decode(datos.archivoBase64);
+    const blob = Utilities.newBlob(bytes, 'application/pdf', datos.nombreArchivo);
+    carpeta.createFile(blob);
+    return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function sincronizarInspeccionesExtraordinarias() {

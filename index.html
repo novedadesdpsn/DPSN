@@ -9,41 +9,39 @@
 <body>
 
 <div class="login-page">
-  <div class="login-banner">
-    <img src="assets/icon-001.png" alt="Prefectura Naval Argentina">
-    <div class="titulo-banner">
-      <p class="linea1">Prefectura Naval Argentina</p>
-      <p class="linea2">Dirección de Policía de Seguridad de la Navegación</p>
-      <span class="linea3">Sistema de Novedades DPSN</span>
-    </div>
-    <img src="assets/icon-002.png" alt="Dirección de Policía de Seguridad de la Navegación">
-  </div>
+  <div class="login-stage" id="loginStage">
 
-  <div class="login-card">
-    <div class="login-crest">
-      <h1>Iniciar sesión</h1>
+    <div class="login-logo-central" id="loginLogo">
+      <img src="assets/icon-002-transparente.png" alt="Dirección de Policía de Seguridad de la Navegación">
     </div>
 
-    <div class="tipo-acceso">
-      <button type="button" class="activo" data-tipo="admin">Administrador</button>
-      <button type="button" data-tipo="lector">Solo visualización</button>
-    </div>
-
-    <div class="login-error" id="loginError"></div>
-
-    <form id="formLogin">
-      <div class="campo">
-        <label for="email">Usuario </label>
-        <input type="email" id="email" placeholder="ej: 12345678" required autocomplete="username">
+    <div class="login-card" id="loginCard">
+      <div class="login-crest">
+        <h1>Iniciar sesión</h1>
       </div>
-      <div class="campo">
-        <label for="clave">Contraseña</label>
-        <input type="password" id="clave" placeholder="••••••••" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn-ingresar">Ingresar al sistema</button>
-    </form>
 
-    <div class="login-footer">Uso interno — DPSN · PNA</div>
+      <div class="tipo-acceso">
+        <button type="button" class="activo" data-tipo="admin">Administrador</button>
+        <button type="button" data-tipo="lector">Solo visualización</button>
+      </div>
+
+      <div class="login-error" id="loginError"></div>
+
+      <form id="formLogin">
+        <div class="campo">
+          <label for="dni">DNI</label>
+          <input type="text" id="dni" placeholder="Ej: 30123456" required inputmode="numeric" pattern="[0-9]*" autocomplete="username">
+        </div>
+        <div class="campo">
+          <label for="clave">Contraseña</label>
+          <input type="password" id="clave" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-ingresar">Ingresar al sistema</button>
+      </form>
+
+      <div class="login-footer">Prefectura Naval Argentina</div>
+    </div>
+
   </div>
 </div>
 
@@ -54,8 +52,6 @@
 <script src="js/roles.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  // Toggle visual del tipo de acceso (informativo; el permiso real
-  // lo determina el perfil del usuario en Firestore, no este botón)
   document.querySelectorAll('.tipo-acceso button').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('.tipo-acceso button').forEach(x => x.classList.remove('activo'));
@@ -63,9 +59,23 @@
     });
   });
 
-  // Si ya hay sesión activa, saltar directo a selección de módulo
   if (obtenerSesion()) {
-    window.location.href = "seleccion.html";
+    window.location.href = "dashboard.html";
+  }
+
+  // Animación de entrada: el escudo aparece centrado y, después de
+  // una pausa, se corre a la izquierda y achica mientras aparece la
+  // tarjeta de login a la derecha. Ya vista una vez en esta pestaña,
+  // no se repite (arranca directo en la posición final).
+  const stage = document.getElementById('loginStage');
+  const YA_VISTA = sessionStorage.getItem('novedades_dpsn_intro_vista');
+  if (YA_VISTA) {
+    stage.classList.add('sin-transicion', 'docked');
+  } else {
+    setTimeout(() => {
+      stage.classList.add('docked');
+      sessionStorage.setItem('novedades_dpsn_intro_vista', '1');
+    }, 1400);
   }
 
   const form = document.getElementById('formLogin');
@@ -79,9 +89,9 @@
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     errorBox.style.display = 'none';
-    const email = document.getElementById('email').value;
+    const dni = document.getElementById('dni').value;
     const clave = document.getElementById('clave').value;
-    iniciarSesion(email, clave, mostrarError);
+    iniciarSesion(dni, clave, mostrarError);
   });
 </script>
 </body>

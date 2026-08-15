@@ -60,7 +60,7 @@
   const usuario = requerirSesion();
   if (usuario) {
     document.getElementById('saludoUsuario').textContent =
-      (usuario.jerarquia ? usuario.jerarquia + " " : "") + (usuario.nombre || usuario.email);
+      (usuario.jerarquia ? usuario.jerarquia + " " : "") + (usuario.nombre || usuario.dni);
 
     const permOf = obtenerPermiso(usuario, ModuloAcceso.OFICINAS);
     const permGu = obtenerPermiso(usuario, ModuloAcceso.GUARDIAS);
