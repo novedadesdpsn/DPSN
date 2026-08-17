@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novedades DPSN — Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="dash">
+  <div class="dash-topbar">
+    <div class="marca">
+      <div class="escudo-mini"><img src="assets/icon-001.png" alt="Prefectura Naval Argentina"></div>
+    </div>
+    <div class="usuario-info">
+      <span id="nombreUsuario">—</span>
+      <span class="rol-pill" id="rolPill">—</span>
+      <button type="button" id="btnExportarGlobal">Exportar PDF</button>
+      <a href="https://gis.prefecturanaval.gob.ar/gc" target="_blank" rel="noopener" id="btnGuardacostas" style="text-decoration:none;">Guardacostas 4.0</a>
+      <button type="button" id="btnCerrarSesion">Salir</button>
+    </div>
+  </div>
+
+  <nav class="dash-tabs-nav" id="tabsNav"><!-- se completa por JS --></nav>
+
+  <main class="dash-contenido">
+    <div id="contenidoPanel"><!-- se completa por JS --></div>
+  </main>
+
+  <button type="button" id="fabAsistente" class="fab-asistente oculto" onclick="abrirPanelAsistente()" title="Asistente">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"></circle>
+      <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+    </svg>
+  </button>
+
+  <div id="panelAsistente" class="panel-asistente oculto">
+    <div class="panel-asistente-header">
+      <div class="asistente-tabs">
+        <button type="button" class="asistente-tab activo" data-tab="buscar" onclick="cambiarPestanaAsistente('buscar')">Buscar</button>
+        <button type="button" class="asistente-tab" data-tab="estadisticas" onclick="cambiarPestanaAsistente('estadisticas')">Estadísticas</button>
+      </div>
+      <button type="button" onclick="cerrarPanelAsistente()" class="panel-asistente-cerrar">✕</button>
+    </div>
+    <div class="panel-asistente-cuerpo" id="asistenteCuerpo"><!-- se completa por JS --></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/roles.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/datos-ejemplo.js"></script>
+<script src="js/codigos.js"></script>
+<script src="js/formulario-inspeccion.js"></script>
+<script src="js/datos-guardia.js"></script>
+<script src="js/mapa-buques.js"></script>
+<script src="js/estadisticas.js"></script>
+<script src="js/asistente.js"></script>
+<script src="js/integraciones-config.js"></script>
+<script src="js/exportacion-texto.js"></script>
+<script src="js/pdf-export.js"></script>
+<script src="js/app.js"></script>
+<script>iniciarDashboard();</script>
+</body>
+</html>

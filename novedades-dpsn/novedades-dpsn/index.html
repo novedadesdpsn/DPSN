@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novedades DPSN — Ingreso</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-stage" id="loginStage">
+
+    <div class="login-logo-central" id="loginLogo">
+      <img src="assets/icon-002-transparente.png" alt="Dirección de Policía de Seguridad de la Navegación">
+    </div>
+
+    <div class="login-card" id="loginCard">
+      <div class="login-crest">
+        <h1>Iniciar sesión</h1>
+      </div>
+
+      <div class="tipo-acceso">
+        <button type="button" class="activo" data-tipo="admin">Administrador</button>
+        <button type="button" data-tipo="lector">Solo visualización</button>
+      </div>
+
+      <div class="login-error" id="loginError"></div>
+
+      <form id="formLogin">
+        <div class="campo">
+          <label for="dni">DNI</label>
+          <input type="text" id="dni" placeholder="Ej: 30123456" required inputmode="numeric" pattern="[0-9]*" autocomplete="username">
+        </div>
+        <div class="campo">
+          <label for="clave">Contraseña</label>
+          <input type="password" id="clave" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-ingresar">Ingresar al sistema</button>
+      </form>
+
+      <div class="login-footer">Prefectura Naval Argentina</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/roles.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  document.querySelectorAll('.tipo-acceso button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tipo-acceso button').forEach(x => x.classList.remove('activo'));
+      b.classList.add('activo');
+    });
+  });
+
+  if (obtenerSesion()) {
+    window.location.href = "dashboard.html";
+  }
+
+  // Animación de entrada: el escudo aparece centrado y, después de
+  // una pausa, se corre a la izquierda y achica mientras aparece la
+  // tarjeta de login a la derecha. Ya vista una vez en esta pestaña,
+  // no se repite (arranca directo en la posición final).
+  const stage = document.getElementById('loginStage');
+  const YA_VISTA = sessionStorage.getItem('novedades_dpsn_intro_vista');
+  if (YA_VISTA) {
+    stage.classList.add('sin-transicion', 'docked');
+  } else {
+    setTimeout(() => {
+      stage.classList.add('docked');
+      sessionStorage.setItem('novedades_dpsn_intro_vista', '1');
+    }, 1400);
+  }
+
+  const form = document.getElementById('formLogin');
+  const errorBox = document.getElementById('loginError');
+
+  function mostrarError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errorBox.style.display = 'none';
+    const dni = document.getElementById('dni').value;
+    const clave = document.getElementById('clave').value;
+    iniciarSesion(dni, clave, mostrarError);
+  });
+</script>
+</body>
+</html>
