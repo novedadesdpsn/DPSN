@@ -138,29 +138,31 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
   Object.entries(bloque.porDependencia).forEach(([dep, lista]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)} (${lista.length})</summary>`;
     lista.forEach((insp, idx) => {
-      const onclickEliminar = contexto === 'psc'
-        ? `eliminarInspeccionPSC('${dep}',${idx})`
-        : `eliminarInspeccionExtraordinaria('${contexto}','${dep}',${idx})`;
+      const esPSC = contexto === 'psc';
+      const onclickEliminar = esPSC ? `eliminarInspeccionPSC('${dep}',${idx})` : `eliminarInspeccionExtraordinaria('${contexto}','${dep}',${idx})`;
+      const onclickEditar = esPSC ? `uiEditarInspeccionPSC('${dep}',${idx})` : `uiEditarInspeccionExtraordinaria('${contexto}','${dep}',${idx})`;
       html += `<div class="item-insp">
         <div style="display:flex; justify-content:space-between; gap:8px;">
           <div>
-            ${tagTipo(insp.tipo)}
+            ${insp.tipo === 'seguimiento'
+              ? `<span class="tag seguimiento">IS de ID Fecha ${esc(insp.fechaInspMasDetallada || '—')}</span>`
+              : tagTipo(insp.tipo)}
             <strong>${esc(insp.buque.tipo)} "${esc(insp.buque.nombre)}"</strong>
             (${esc(insp.buque.matricula)}) — B/${esc(insp.buque.bandera)}
           </div>
-          ${!SOLO_LECTURA_ACTUAL ? `<button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="${onclickEliminar}">✕</button>` : ''}
+          ${!SOLO_LECTURA_ACTUAL ? `<div style="display:flex; gap:4px; flex-shrink:0;">
+            <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="${onclickEditar}">Editar</button>
+            <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="${onclickEliminar}">✕</button>
+          </div>` : ''}
         </div>`;
-      if (insp.tipo === 'seguimiento' && insp.fechaInspMasDetallada) {
-        html += ` <span style="color:var(--gris-500)">— ID previa: ${esc(insp.fechaInspMasDetallada)}</span>`;
-      }
-      if (insp.asunto) html += `<div style="margin-top:4px;">${esc(insp.asunto)}</div>`;
+      if (insp.asunto) html += `<div style="margin-top:4px;">Ref. Caso MAS: ${esc(insp.asunto)}</div>`;
       if (insp.tipo === 'inicial') {
-        html += `<div style="margin-top:4px; color:var(--verde); font-weight:600;">Sin registrar deficiencias</div>`;
+        html += `<div style="margin-top:4px; color:var(--acento); font-weight:600;">Sin registrar deficiencias</div>`;
       }
       if (insp.deficiencias && insp.deficiencias.length) {
         html += `<ul style="margin:6px 0 0 18px; padding:0;">`;
-        insp.deficiencias.forEach(d => {
-          html += `<li><strong>Cód. ${esc(d.codigo)}</strong> — ${esc(d.descripcion)}</li>`;
+        insp.deficiencias.forEach(g => {
+          html += `<li>${esc(textoGrupoDeficiencia(g))}</li>`;
         });
         html += `</ul>`;
       }
@@ -296,21 +298,24 @@ function renderOtros() {
   let html = `<div class="tarjeta"><h2>Otros</h2>`;
   Object.entries(D.otros.porDependencia).forEach(([dep, bloques]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
-    bloques.forEach(b => {
+    bloques.forEach((b, idx) => {
+      const btnEliminar = !SOLO_LECTURA_ACTUAL ? `<button type="button" class="btn-secundario" style="padding:2px 8px; float:right;" onclick="eliminarOtro('${dep}',${idx})">✕</button>` : '';
       if (b.tipoBloque === 'texto') {
-        html += `<div class="item-insp"><strong>${esc(b.titulo)}</strong><p style="margin:6px 0 0;">${esc(b.contenido)}</p></div>`;
+        html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong><p style="margin:6px 0 0;">${esc(b.contenido)}</p></div>`;
       } else if (b.tipoBloque === 'tabla') {
-        html += `<div class="item-insp"><strong>${esc(b.titulo)}</strong>${renderTablaGenerica(b.columnas, b.filas)}</div>`;
+        html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong>${renderTablaGenerica(b.columnas, b.filas)}</div>`;
       }
     });
     html += `</details>`;
   });
-  html += `
-    <div style="display:flex; gap:10px; margin-top:10px;">
-      <button class="btn-secundario" type="button" disabled>+ Agregar bloque de texto</button>
-      <button class="btn-secundario" type="button" disabled>+ Agregar bloque de tabla</button>
-    </div>
-  </div>`;
+  if (!SOLO_LECTURA_ACTUAL) {
+    html += `
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="btn-secundario" type="button" onclick="uiAgregarOtroTexto()">+ Agregar bloque de texto</button>
+        <button class="btn-secundario" type="button" onclick="uiAgregarOtroTabla()">+ Agregar bloque de tabla</button>
+      </div>`;
+  }
+  html += `</div>`;
   return html;
 }
 
@@ -329,15 +334,28 @@ function renderTablaGenerica(columnas, filas) {
 }
 
 function renderBuquesDetencion() {
-  const filas = D.buquesDetencion.map(b => [b.numero, b.dependencia, b.buque, b.fecha, b.tipoInsp, b.deficiencias]);
-  return `<div class="tarjeta"><h2>Buques con Detención</h2>${renderTablaGenerica(['N.º', 'Dependencia', 'Buque', 'Fecha', 'Tipo Insp.', 'Deficiencias'], filas)}</div>`;
+  let html = `<div class="tarjeta"><h2>Buques con Detención <span class="contador">${D.buquesDetencion.length}</span></h2>`;
+  html += `<table class="tabla-datos"><thead><tr>
+    <th>N.º</th><th>Dependencia</th><th>Buque</th><th>Fecha</th><th>Tipo Insp.</th><th>Deficiencias</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+  </tr></thead><tbody>`;
+  D.buquesDetencion.forEach((b, idx) => {
+    html += `<tr>
+      <td>${esc(b.numero)}</td><td>${esc(b.dependencia)}</td><td>${esc(b.buque)}</td>
+      <td>${esc(b.fecha)}</td><td>${esc(b.tipoInsp)}</td><td>${esc(b.deficiencias)}</td>
+      ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarBuqueDetencionTabla(${idx})">✕</button></td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarBuqueDetencionTabla()">+ Agregar buque</button>`;
+  html += `</div>`;
+  return html;
 }
 
 function renderInspeccionesTecnicas() {
-  let html = `<div class="tarjeta"><h2>Inspecciones Técnicas</h2><table class="tabla-datos"><thead><tr>
-    <th>Especialidad</th><th>Embarcación/Empresa</th><th>Requerimiento</th><th>Lugar</th><th>Inspector/MOI</th>
+  let html = `<div class="tarjeta"><h2>Inspecciones Técnicas <span class="contador">${D.inspeccionesTecnicas.length}</span></h2><table class="tabla-datos"><thead><tr>
+    <th>Especialidad</th><th>Embarcación/Empresa</th><th>Requerimiento</th><th>Lugar</th><th>Inspector/MOI</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
   </tr></thead><tbody>`;
-  D.inspeccionesTecnicas.forEach(i => {
+  D.inspeccionesTecnicas.forEach((i, idx) => {
     html += `<tr>
       <td>${esc(i.especialidad)}</td>
       <td>${esc(i.embarcacion)}</td>
@@ -351,33 +369,59 @@ function renderInspeccionesTecnicas() {
           Regreso: ${esc(i.regreso.fechaHora)} · Vuelo ${esc(i.regreso.vuelo)} · ${esc(i.regreso.destino)}
         </div>` : ''}
       </td>
+      ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarInspeccionTecnica(${idx})">✕</button></td>` : ''}
     </tr>`;
   });
-  html += `</tbody></table></div>`;
+  html += `</tbody></table>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarInspeccionTecnica()">+ Agregar inspección prevista</button>`;
+  html += `</div>`;
   return html;
 }
 
 function renderDivisionControlGestion() {
-  const filas = D.divisionControlGestion.map(a => [a.tipoAuditoria, a.embarcacion, a.alcance, a.lugar, a.auditor]);
-  return `<div class="tarjeta"><h2>División Control de Gestión</h2>${renderTablaGenerica(['Tipo de auditoría', 'Embarcación/Empresa', 'Alcance', 'Lugar', 'Auditor'], filas)}</div>`;
+  let html = `<div class="tarjeta"><h2>División Control de Gestión <span class="contador">${D.divisionControlGestion.length}</span></h2>`;
+  html += `<table class="tabla-datos"><thead><tr>
+    <th>Tipo de auditoría</th><th>Embarcación/Empresa</th><th>Alcance</th><th>Lugar</th><th>Auditor</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+  </tr></thead><tbody>`;
+  D.divisionControlGestion.forEach((a, idx) => {
+    html += `<tr>
+      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}</td>
+      ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarAuditoria(${idx})">✕</button></td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarAuditoria()">+ Agregar auditoría</button>`;
+  html += `</div>`;
+  return html;
 }
 
 function renderLicencias() {
   const secciones = [
-    ['Licencia Anual', D.licencias.anuales],
-    ['Licencia Médica', D.licencias.medicas],
-    ['Tareas Adecuadas', D.licencias.tareasAdecuadas],
-    ['Licencia Extraordinaria', D.licencias.extraordinaria],
-    ['Comisiones', D.licencias.comisiones],
-    ['Licencias No Computables', D.licencias.noComputables]
+    ['Licencia Anual', D.licencias.anuales, 'anuales'],
+    ['Licencia Médica', D.licencias.medicas, 'medicas'],
+    ['Tareas Adecuadas', D.licencias.tareasAdecuadas, 'tareasAdecuadas'],
+    ['Licencia Extraordinaria', D.licencias.extraordinaria, 'extraordinaria'],
+    ['Comisiones', D.licencias.comisiones, 'comisiones'],
+    ['Licencias No Computables', D.licencias.noComputables, 'noComputables']
   ];
   let html = '';
-  secciones.forEach(([titulo, lista]) => {
-    const filas = lista.map(l => [l.jerarquia, l.nombre, l.inicia, l.vence]);
-    html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>
-      ${lista.length ? renderTablaGenerica(['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'], filas) : '<div class="placeholder-panel">Sin registros</div>'}
-    </div>`;
+  secciones.forEach(([titulo, lista, clave]) => {
+    html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>`;
+    if (lista.length) {
+      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th><th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+      lista.forEach((l, idx) => {
+        html += `<tr>
+          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}</td><td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
+          ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button></td>` : ''}
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    } else {
+      html += '<div class="placeholder-panel">Sin registros</div>';
+    }
+    html += `</div>`;
   });
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" onclick="uiAgregarLicencia()">+ Agregar licencia</button>`;
   return html;
 }
 
@@ -398,8 +442,6 @@ const PESTANAS = [
   { id: 'casos-mas', grupo: 'Parte diario', etiqueta: 'Casos MAS', render: renderCasosMAS },
   { id: 'casos-sar', grupo: 'Parte diario', etiqueta: 'Casos SAR', render: renderCasosSAR },
   { id: 'otros', grupo: 'Parte diario', etiqueta: 'Otros', render: renderOtros },
-  { id: 'estadisticas', grupo: 'Análisis', etiqueta: 'Estadísticas', render: renderEstadisticas },
-  { id: 'asistente', grupo: 'Análisis', etiqueta: 'Asistente de Búsqueda', render: renderAsistente },
   { id: 'buques-detencion', grupo: 'Gestión', etiqueta: 'Buques con Detención', render: renderBuquesDetencion },
   { id: 'insp-tecnicas', grupo: 'Gestión', etiqueta: 'Inspecciones Técnicas', render: renderInspeccionesTecnicas },
   { id: 'control-gestion', grupo: 'Gestión', etiqueta: 'Div. Control de Gestión', render: renderDivisionControlGestion },
@@ -447,6 +489,10 @@ function mostrarPestana(id) {
   document.getElementById('contenidoPanel').innerHTML = pestana.render();
 
   if (id === 'inicio') inicializarMapaBuquesDetencion();
+
+  const fab = document.getElementById('fabAsistente');
+  if (fab) fab.classList.toggle('oculto', id !== 'inicio');
+  if (id !== 'inicio') cerrarPanelAsistente();
 }
 
 function refrescarPestanaActual() {

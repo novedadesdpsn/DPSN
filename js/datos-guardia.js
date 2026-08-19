@@ -10,7 +10,7 @@
 // ============================================================
 
 const CLAVE_DATOS_GUARDIA = 'novedades_dpsn_datos_guardia';
-const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa'];
+const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias'];
 
 function persistirDatosGuardia() {
   const paquete = {};
@@ -86,19 +86,6 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
   });
 }
 
-function camposComunesBuque(prefijo) {
-  return [
-    { id: 'dependencia', label: 'Dependencia (sigla)' },
-    { id: 'buqueTipo', label: 'Tipo de buque (L/M, B/P, B/M, B/T...)' },
-    { id: 'buqueNombre', label: 'Nombre del buque' },
-    { id: 'matricula', label: 'Matrícula / IMO / MMSI' },
-    { id: 'bandera', label: 'Bandera' },
-    { id: 'codigosDeficiencia', label: 'Códigos de deficiencia (separados por coma, vacío si no hay)' },
-    { id: 'fechaInspMasDetallada', label: 'Fecha de la Inspección Más Detallada (solo si es Seguimiento)' },
-    { id: 'nota', label: 'Nota', tipo: 'textarea' }
-  ];
-}
-
 function construirDeficiencias(textoCodigos) {
   return (textoCodigos || '').split(',').map(c => c.trim()).filter(Boolean)
     .map(codigo => ({ codigo, descripcion: descripcionCodigo(codigo) }));
@@ -106,31 +93,38 @@ function construirDeficiencias(textoCodigos) {
 
 // ---------- Inspecciones Extraordinarias ----------
 function uiAgregarInspeccionExtraordinaria(bandera) {
-  abrirModalFormulario('Agregar inspección extraordinaria', [
-    { id: 'tipo', label: 'Tipo de inspección', tipo: 'select', opciones: [
-      { valor: 'inicial', etiqueta: 'Inicial' }, { valor: 'detallada', etiqueta: 'Más detallada' }, { valor: 'seguimiento', etiqueta: 'Seguimiento' }
-    ]},
-    { id: 'categoria', label: 'Categoría (para el resumen)', tipo: 'select', opciones: [
-      { valor: 'pesquerosOtros', etiqueta: 'Pesqueros/Otros' }, { valor: 'porAveria', etiqueta: 'Por avería' },
-      { valor: 'cargaPasaje', etiqueta: 'Buque de Carga/Pasaje' }, { valor: 'convoyesExtr', etiqueta: 'Convoyes/Buques Extr.' },
-      { valor: 'convoyArgentino', etiqueta: 'Convoy B/ARG' }
-    ]},
-    ...camposComunesBuque(),
-    { id: 'asunto', label: 'Asunto (si corresponde)', tipo: 'textarea' }
-  ], {}, (datos) => {
-    const grupo = bandera === 'argentina' ? D.inspeccionesExtraordinarias.argentina : D.inspeccionesExtraordinarias.extranjera;
-    const dep = datos.dependencia || 'SIN_DEP';
-    if (!grupo.porDependencia[dep]) grupo.porDependencia[dep] = [];
-    grupo.porDependencia[dep].push({
-      tipo: datos.tipo, categoria: datos.categoria,
-      buque: { tipo: datos.buqueTipo, nombre: datos.buqueNombre, matricula: datos.matricula, bandera: datos.bandera },
-      deficiencias: construirDeficiencias(datos.codigosDeficiencia),
-      fechaInspMasDetallada: datos.fechaInspMasDetallada,
-      asunto: datos.asunto,
-      nota: datos.nota
-    });
-    persistirDatosGuardia();
-    refrescarPestanaActual();
+  abrirFormularioInspeccionEstandar({
+    titulo: 'Agregar inspección extraordinaria',
+    etiquetasTipo: { inicial: 'Inicial (II)', detallada: 'Más Detallada (ID)', seguimiento: 'Seguimiento (IS)' },
+    incluirCategoria: true,
+    onGuardar: (datos) => {
+      const grupo = bandera === 'argentina' ? D.inspeccionesExtraordinarias.argentina : D.inspeccionesExtraordinarias.extranjera;
+      const dep = datos.dependencia;
+      if (!grupo.porDependencia[dep]) grupo.porDependencia[dep] = [];
+      grupo.porDependencia[dep].push(datos);
+      persistirDatosGuardia();
+      refrescarPestanaActual();
+    }
+  });
+}
+
+function uiEditarInspeccionExtraordinaria(bandera, dependencia, indice) {
+  const grupo = bandera === 'argentina' ? D.inspeccionesExtraordinarias.argentina : D.inspeccionesExtraordinarias.extranjera;
+  const actual = grupo.porDependencia[dependencia][indice];
+  abrirFormularioInspeccionEstandar({
+    titulo: 'Editar inspección extraordinaria',
+    etiquetasTipo: { inicial: 'Inicial (II)', detallada: 'Más Detallada (ID)', seguimiento: 'Seguimiento (IS)' },
+    incluirCategoria: true,
+    valores: { ...actual, dependencia },
+    onGuardar: (datos) => {
+      grupo.porDependencia[dependencia].splice(indice, 1);
+      if (!grupo.porDependencia[dependencia].length) delete grupo.porDependencia[dependencia];
+      const nuevaDep = datos.dependencia;
+      if (!grupo.porDependencia[nuevaDep]) grupo.porDependencia[nuevaDep] = [];
+      grupo.porDependencia[nuevaDep].push(datos);
+      persistirDatosGuardia();
+      refrescarPestanaActual();
+    }
   });
 }
 
@@ -145,25 +139,36 @@ function eliminarInspeccionExtraordinaria(bandera, dependencia, indice) {
 
 // ---------- Estado Rector de Puerto ----------
 function uiAgregarInspeccionPSC() {
-  abrirModalFormulario('Agregar inspección PSC', [
-    { id: 'tipo', label: 'Tipo de inspección', tipo: 'select', opciones: [
-      { valor: 'inicial', etiqueta: 'IISD — Inicial sin deficiencias' },
-      { valor: 'detallada', etiqueta: 'IICD — Inicial con deficiencia' },
-      { valor: 'seguimiento', etiqueta: 'IS — Seguimiento' }
-    ]},
-    ...camposComunesBuque()
-  ], {}, (datos) => {
-    const dep = datos.dependencia || 'SIN_DEP';
-    if (!D.estadoRectorPuerto.porDependencia[dep]) D.estadoRectorPuerto.porDependencia[dep] = [];
-    D.estadoRectorPuerto.porDependencia[dep].push({
-      tipo: datos.tipo,
-      buque: { tipo: datos.buqueTipo, nombre: datos.buqueNombre, matricula: datos.matricula, bandera: datos.bandera },
-      deficiencias: construirDeficiencias(datos.codigosDeficiencia),
-      fechaInspMasDetallada: datos.fechaInspMasDetallada,
-      nota: datos.nota
-    });
-    persistirDatosGuardia();
-    refrescarPestanaActual();
+  abrirFormularioInspeccionEstandar({
+    titulo: 'Agregar inspección PSC',
+    etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
+    incluirCategoria: false,
+    onGuardar: (datos) => {
+      const dep = datos.dependencia;
+      if (!D.estadoRectorPuerto.porDependencia[dep]) D.estadoRectorPuerto.porDependencia[dep] = [];
+      D.estadoRectorPuerto.porDependencia[dep].push(datos);
+      persistirDatosGuardia();
+      refrescarPestanaActual();
+    }
+  });
+}
+
+function uiEditarInspeccionPSC(dependencia, indice) {
+  const actual = D.estadoRectorPuerto.porDependencia[dependencia][indice];
+  abrirFormularioInspeccionEstandar({
+    titulo: 'Editar inspección PSC',
+    etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
+    incluirCategoria: false,
+    valores: { ...actual, dependencia },
+    onGuardar: (datos) => {
+      D.estadoRectorPuerto.porDependencia[dependencia].splice(indice, 1);
+      if (!D.estadoRectorPuerto.porDependencia[dependencia].length) delete D.estadoRectorPuerto.porDependencia[dependencia];
+      const nuevaDep = datos.dependencia;
+      if (!D.estadoRectorPuerto.porDependencia[nuevaDep]) D.estadoRectorPuerto.porDependencia[nuevaDep] = [];
+      D.estadoRectorPuerto.porDependencia[nuevaDep].push(datos);
+      persistirDatosGuardia();
+      refrescarPestanaActual();
+    }
   });
 }
 
@@ -232,6 +237,160 @@ function eliminarCaso(tipo, dependencia, indice) {
   const bloque = tipo === 'SAR' ? D.casosSAR : D.casosMAS;
   bloque.porDependencia[dependencia].splice(indice, 1);
   if (!bloque.porDependencia[dependencia].length) delete bloque.porDependencia[dependencia];
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Otros ----------
+function uiAgregarOtroTexto() {
+  abrirModalFormulario('Agregar bloque de texto — Otros', [
+    { id: 'dependencia', label: 'Dependencia (sigla)' },
+    { id: 'titulo', label: 'Título' },
+    { id: 'contenido', label: 'Contenido', tipo: 'textarea' }
+  ], {}, (datos) => {
+    const dep = datos.dependencia || 'SIN_DEP';
+    if (!D.otros.porDependencia[dep]) D.otros.porDependencia[dep] = [];
+    D.otros.porDependencia[dep].push({ tipoBloque: 'texto', titulo: datos.titulo, contenido: datos.contenido });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiAgregarOtroTabla() {
+  abrirModalFormulario('Agregar bloque de tabla — Otros', [
+    { id: 'dependencia', label: 'Dependencia (sigla)' },
+    { id: 'titulo', label: 'Título' },
+    { id: 'columnas', label: 'Columnas (separadas por coma)', default: 'Concepto, Detalle, Fecha' }
+  ], {}, (datos) => {
+    const dep = datos.dependencia || 'SIN_DEP';
+    const columnas = (datos.columnas || '').split(',').map(c => c.trim()).filter(Boolean);
+    if (!D.otros.porDependencia[dep]) D.otros.porDependencia[dep] = [];
+    D.otros.porDependencia[dep].push({ tipoBloque: 'tabla', titulo: datos.titulo, columnas, filas: [columnas.map(() => '')] });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarOtro(dependencia, indice) {
+  if (!confirm('¿Eliminar este bloque?')) return;
+  D.otros.porDependencia[dependencia].splice(indice, 1);
+  if (!D.otros.porDependencia[dependencia].length) delete D.otros.porDependencia[dependencia];
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Buques con Detención (tabla del parte) ----------
+function uiAgregarBuqueDetencionTabla() {
+  abrirModalFormulario('Agregar buque con detención', [
+    { id: 'dependencia', label: 'Dependencia' },
+    { id: 'buque', label: 'Buque (nombre y matrícula)' },
+    { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
+    { id: 'tipoInsp', label: 'Tipo de inspección (ej: ID)' },
+    { id: 'deficiencias', label: 'Deficiencias (ej: Cód. 30 (02) / Cód. 17 (02))' }
+  ], {}, (datos) => {
+    D.buquesDetencion.push({
+      numero: D.buquesDetencion.length + 1,
+      dependencia: datos.dependencia, buque: datos.buque, fecha: datos.fecha,
+      tipoInsp: datos.tipoInsp, deficiencias: datos.deficiencias
+    });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarBuqueDetencionTabla(indice) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  D.buquesDetencion.splice(indice, 1);
+  D.buquesDetencion.forEach((b, i) => { b.numero = i + 1; });
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Inspecciones Técnicas (previstas) ----------
+function uiAgregarInspeccionTecnica() {
+  abrirModalFormulario('Agregar inspección técnica prevista', [
+    { id: 'especialidad', label: 'Especialidad (Casco, Máquinas, Electricidad...)' },
+    { id: 'embarcacion', label: 'Embarcación / Empresa' },
+    { id: 'requerimiento', label: 'Requerimiento' },
+    { id: 'lugar', label: 'Lugar' },
+    { id: 'inspector', label: 'Inspector / MOI' },
+    { id: 'extranjero', label: '¿Es en el extranjero?', tipo: 'select', opciones: [{ valor: 'no', etiqueta: 'No' }, { valor: 'si', etiqueta: 'Sí' }] },
+    { id: 'salidaFechaHora', label: 'Salida — Fecha y hora (si es en el extranjero)' },
+    { id: 'salidaVuelo', label: 'Salida — N.º de vuelo' },
+    { id: 'salidaDestino', label: 'Salida — Destino' },
+    { id: 'regresoFechaHora', label: 'Regreso — Fecha y hora' },
+    { id: 'regresoVuelo', label: 'Regreso — N.º de vuelo' },
+    { id: 'regresoDestino', label: 'Regreso — Destino' }
+  ], {}, (datos) => {
+    const esExtranjero = datos.extranjero === 'si';
+    D.inspeccionesTecnicas.push({
+      especialidad: datos.especialidad, embarcacion: datos.embarcacion, requerimiento: datos.requerimiento,
+      lugar: datos.lugar, inspector: datos.inspector, extranjero: esExtranjero,
+      salida: esExtranjero ? { fechaHora: datos.salidaFechaHora, vuelo: datos.salidaVuelo, destino: datos.salidaDestino } : {},
+      regreso: esExtranjero ? { fechaHora: datos.regresoFechaHora, vuelo: datos.regresoVuelo, destino: datos.regresoDestino } : {}
+    });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarInspeccionTecnica(indice) {
+  if (!confirm('¿Eliminar esta inspección técnica?')) return;
+  D.inspeccionesTecnicas.splice(indice, 1);
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- División Control de Gestión ----------
+function uiAgregarAuditoria() {
+  abrirModalFormulario('Agregar auditoría', [
+    { id: 'tipoAuditoria', label: 'Tipo de auditoría (ej: S.G.S.)' },
+    { id: 'embarcacion', label: 'Embarcación / Empresa' },
+    { id: 'alcance', label: 'Alcance (ej: Renovación)' },
+    { id: 'lugar', label: 'Lugar' },
+    { id: 'auditor', label: 'Auditor' }
+  ], {}, (datos) => {
+    D.divisionControlGestion.push(datos);
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarAuditoria(indice) {
+  if (!confirm('¿Eliminar esta auditoría?')) return;
+  D.divisionControlGestion.splice(indice, 1);
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Licencias ----------
+const MAPA_CATEGORIA_LICENCIA = {
+  anual: 'anuales', medica: 'medicas', tareasAdecuadas: 'tareasAdecuadas',
+  extraordinaria: 'extraordinaria', comisiones: 'comisiones', noComputable: 'noComputables'
+};
+
+function uiAgregarLicencia() {
+  abrirModalFormulario('Agregar licencia', [
+    { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: [
+      { valor: 'anual', etiqueta: 'Licencia Anual' }, { valor: 'medica', etiqueta: 'Licencia Médica' },
+      { valor: 'tareasAdecuadas', etiqueta: 'Tareas Adecuadas' }, { valor: 'extraordinaria', etiqueta: 'Licencia Extraordinaria' },
+      { valor: 'comisiones', etiqueta: 'Comisiones' }, { valor: 'noComputable', etiqueta: 'Licencia No Computable' }
+    ]},
+    { id: 'jerarquia', label: 'Jerarquía' },
+    { id: 'nombre', label: 'Apellido y Nombre' },
+    { id: 'inicia', label: 'Inicia' },
+    { id: 'vence', label: 'Vence' }
+  ], {}, (datos) => {
+    const clave = MAPA_CATEGORIA_LICENCIA[datos.categoria];
+    D.licencias[clave].push({ jerarquia: datos.jerarquia, nombre: datos.nombre, inicia: datos.inicia, vence: datos.vence });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarLicencia(clave, indice) {
+  if (!confirm('¿Eliminar esta licencia?')) return;
+  D.licencias[clave].splice(indice, 1);
   persistirDatosGuardia();
   refrescarPestanaActual();
 }

@@ -19,19 +19,16 @@ function textoInspeccionesGrupo(grupo, etiquetaBandera) {
   deps.forEach(dep => {
     out += `\n${dep}:\n`;
     grupo.porDependencia[dep].forEach(insp => {
-      const tipoTexto = insp.tipo === 'inicial' ? 'Inspección Inicial' :
-        insp.tipo === 'detallada' ? 'Inspección Más Detallada' : 'Inspección de Seguimiento';
-      out += `  • (${tipoTexto}) ${insp.buque.tipo} "${insp.buque.nombre}" (${insp.buque.matricula}) B/${insp.buque.bandera}.`;
-      if (insp.tipo === 'seguimiento' && insp.fechaInspMasDetallada) {
-        out += ` ID previa: ${insp.fechaInspMasDetallada}.`;
-      }
-      out += '\n';
-      if (insp.asunto) out += `    Asunto: ${insp.asunto}\n`;
+      const tipoTexto = insp.tipo === 'inicial' ? 'Inspección Inicial (II)' :
+        insp.tipo === 'detallada' ? 'Inspección Más Detallada (ID)' :
+        `IS de ID Fecha ${insp.fechaInspMasDetallada || '—'}`;
+      out += `  • (${tipoTexto}) ${insp.buque.tipo} "${insp.buque.nombre}" (${insp.buque.matricula}) B/${insp.buque.bandera}.\n`;
+      if (insp.asunto) out += `    Ref. Caso MAS: ${insp.asunto}\n`;
       if (insp.tipo === 'inicial') {
         out += `    Sin registrar deficiencias.\n`;
       }
-      (insp.deficiencias || []).forEach(d => {
-        out += `    - Cód. ${d.codigo}: ${d.descripcion}\n`;
+      (insp.deficiencias || []).forEach(g => {
+        out += `    - ${textoGrupoDeficiencia(g)}\n`;
       });
       if (insp.nota) out += `    Nota: ${insp.nota}\n`;
     });

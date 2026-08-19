@@ -1,16 +1,35 @@
 // ============================================================
 // ESTADÍSTICAS — Novedades DPSN
 // ============================================================
-// Filtros funcionan leyendo el valor actual de los <select> en
-// el momento del cambio (sin guardar estado aparte) y vuelven a
-// pintar solo el contenedor de resultados correspondiente.
+// Primero se elige QUÉ consultar (Extraordinarias / PSC / Casos
+// MAS / Casos SAR); recién ahí aparecen los filtros de esa
+// categoría. Las opciones de los filtros (dependencias, banderas)
+// se arman en el momento a partir de los datos cargados, así que
+// un caso nuevo (ej. de una dependencia RAWS) ya aparece como
+// criterio apenas se carga. El último resultado filtrado se puede
+// exportar a PDF.
 // ============================================================
 
-function htmlResultados(filas, columnas) {
+let ULTIMO_RESULTADO_ESTADISTICA = null; // { titulo, columnas, filas }
+
+function htmlResultados(filas, columnas, tituloExportar) {
+  ULTIMO_RESULTADO_ESTADISTICA = { titulo: tituloExportar, columnas, filas };
   return `
-    <p style="font-size:12.5px; color:var(--gris-700); margin-bottom:8px;"><strong>${filas.length}</strong> resultado(s)</p>
+    <p style="font-size:12.5px; color:var(--gris-700); margin:12px 0 8px;"><strong>${filas.length}</strong> resultado(s)</p>
     ${filas.length ? renderTablaGenerica(columnas, filas) : '<div class="placeholder-panel">Sin resultados para este filtro.</div>'}
+    ${filas.length ? `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="exportarResultadoEstadistica()">Exportar PDF</button>` : ''}
   `;
+}
+
+function exportarResultadoEstadistica() {
+  if (!ULTIMO_RESULTADO_ESTADISTICA || !ULTIMO_RESULTADO_ESTADISTICA.filas.length) return;
+  const { titulo, columnas, filas } = ULTIMO_RESULTADO_ESTADISTICA;
+  generarPDF(
+    `Estadistica ${titulo} ${fechaHoy()}.pdf`,
+    'RESUMEN DE NOVEDADES — ESTADÍSTICA',
+    `${titulo} — ${fechaHoy()}`,
+    [{ titulo, contenido: { tablas: [{ columnas, filas }] } }]
+  );
 }
 
 // ---------- Inspecciones Extraordinarias ----------
@@ -22,13 +41,13 @@ function calcularResultadosExtraordinarias(bandera, codigo) {
   grupos.forEach(([nombreBandera, grupo]) => {
     Object.entries(grupo.porDependencia).forEach(([dep, lista]) => {
       lista.forEach(insp => {
-        const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(d => d.codigo === codigo);
+        const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(g => codigosDeGrupo(g).includes(codigo));
         if (coincideCodigo) {
           filas.push([
             dep, nombreBandera,
             `${insp.buque.tipo} "${insp.buque.nombre}"`,
             insp.tipo === 'inicial' ? 'Inicial' : (insp.tipo === 'detallada' ? 'Más detallada' : 'Seguimiento'),
-            (insp.deficiencias || []).map(d => d.codigo).join(', ') || '—'
+            (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—'
           ]);
         }
       });
@@ -41,8 +60,8 @@ function actualizarEstadExtraordinarias() {
   const bandera = document.getElementById('filtroExtraBandera').value;
   const codigo = document.getElementById('filtroExtraCodigo').value;
   const filas = calcularResultadosExtraordinarias(bandera, codigo);
-  document.getElementById('resultadosExtraordinarias').innerHTML =
-    htmlResultados(filas, ['Dependencia', 'Bandera', 'Buque', 'Tipo', 'Cód. deficiencias']);
+  document.getElementById('resultadosEstadistica').innerHTML =
+    htmlResultados(filas, ['Dependencia', 'Bandera', 'Buque', 'Tipo', 'Cód. deficiencias'], 'Inspecciones Extraordinarias');
 }
 
 // ---------- Estado Rector de Puerto ----------
@@ -57,9 +76,9 @@ function calcularResultadosPSC(bandera, codigo) {
   Object.entries(D.estadoRectorPuerto.porDependencia).forEach(([dep, lista]) => {
     lista.forEach(insp => {
       const coincideBandera = bandera === 'todas' || insp.buque.bandera === bandera;
-      const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(d => d.codigo === codigo);
+      const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(g => codigosDeGrupo(g).includes(codigo));
       if (coincideBandera && coincideCodigo) {
-        filas.push([dep, insp.buque.bandera, `${insp.buque.tipo} "${insp.buque.nombre}"`, (insp.deficiencias || []).map(d => d.codigo).join(', ') || '—']);
+        filas.push([dep, insp.buque.bandera, `${insp.buque.tipo} "${insp.buque.nombre}"`, (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—']);
       }
     });
   });
@@ -70,8 +89,8 @@ function actualizarEstadPSC() {
   const bandera = document.getElementById('filtroPscBandera').value;
   const codigo = document.getElementById('filtroPscCodigo').value;
   const filas = calcularResultadosPSC(bandera, codigo);
-  document.getElementById('resultadosPSC').innerHTML =
-    htmlResultados(filas, ['Dependencia', 'Bandera', 'Buque', 'Cód. deficiencias']);
+  document.getElementById('resultadosEstadistica').innerHTML =
+    htmlResultados(filas, ['Dependencia', 'Bandera', 'Buque', 'Cód. deficiencias'], 'Estado Rector de Puerto');
 }
 
 // ---------- Casos MAS / SAR ----------
@@ -90,41 +109,20 @@ function calcularResultadosCasos(bloque, dependencia, estado) {
 }
 
 function actualizarEstadCasos(tipo) {
-  const dependencia = document.getElementById('filtro' + tipo + 'Dependencia').value;
-  const estado = document.getElementById('filtro' + tipo + 'Estado').value;
-  const bloque = tipo === 'Mas' ? D.casosMAS : D.casosSAR;
+  const dependencia = document.getElementById('filtroCasoDependencia').value;
+  const estado = document.getElementById('filtroCasoEstado').value;
+  const bloque = tipo === 'mas' ? D.casosMAS : D.casosSAR;
   const filas = calcularResultadosCasos(bloque, dependencia, estado);
-  document.getElementById('resultados' + tipo).innerHTML =
-    htmlResultados(filas, ['Dependencia', 'Título', 'Estado']);
+  document.getElementById('resultadosEstadistica').innerHTML =
+    htmlResultados(filas, ['Dependencia', 'Título', 'Estado'], tipo === 'mas' ? 'Casos MAS' : 'Casos SAR');
 }
 
-function filtrosDependenciaEstado(tipo, bloque) {
-  return `
-    <div class="campo" style="margin:0; min-width:160px;">
-      <label>Dependencia</label>
-      <select id="filtro${tipo}Dependencia" onchange="actualizarEstadCasos('${tipo}')">
-        <option value="todas">Todas</option>
-        ${opcionesDependencia(bloque).map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="campo" style="margin:0; min-width:160px;">
-      <label>Estado</label>
-      <select id="filtro${tipo}Estado" onchange="actualizarEstadCasos('${tipo}')">
-        <option value="todos">Todos</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="cerrado">Cerrado</option>
-      </select>
-    </div>
-  `;
-}
-
-// ---------- Panel principal ----------
-function renderEstadisticas() {
-  return `
-    <div class="tarjeta">
-      <h2>Inspecciones Extraordinarias</h2>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
-        <div class="campo" style="margin:0; min-width:160px;">
+// ---------- Selector de categoría (primero elegís qué consultar) ----------
+function filtrosPorCategoria(categoria) {
+  if (categoria === 'extraordinarias') {
+    return `
+      <div class="fila-doble">
+        <div class="campo">
           <label>Bandera</label>
           <select id="filtroExtraBandera" onchange="actualizarEstadExtraordinarias()">
             <option value="todas">Todas</option>
@@ -132,7 +130,7 @@ function renderEstadisticas() {
             <option value="extranjera">Extranjera</option>
           </select>
         </div>
-        <div class="campo" style="margin:0; min-width:260px;">
+        <div class="campo">
           <label>Código de deficiencia</label>
           <select id="filtroExtraCodigo" onchange="actualizarEstadExtraordinarias()">
             <option value="todos">Todos</option>
@@ -140,22 +138,20 @@ function renderEstadisticas() {
           </select>
         </div>
       </div>
-      <div id="resultadosExtraordinarias">
-        ${htmlResultados(calcularResultadosExtraordinarias('todas', 'todos'), ['Dependencia', 'Bandera', 'Buque', 'Tipo', 'Cód. deficiencias'])}
-      </div>
-    </div>
-
-    <div class="tarjeta">
-      <h2>Estado Rector de Puerto</h2>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
-        <div class="campo" style="margin:0; min-width:160px;">
+      <div id="resultadosEstadistica"></div>
+    `;
+  }
+  if (categoria === 'psc') {
+    return `
+      <div class="fila-doble">
+        <div class="campo">
           <label>Bandera</label>
           <select id="filtroPscBandera" onchange="actualizarEstadPSC()">
             <option value="todas">Todas</option>
             ${opcionesBanderaPSC().map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}
           </select>
         </div>
-        <div class="campo" style="margin:0; min-width:260px;">
+        <div class="campo">
           <label>Código de deficiencia</label>
           <select id="filtroPscCodigo" onchange="actualizarEstadPSC()">
             <option value="todos">Todos</option>
@@ -163,29 +159,56 @@ function renderEstadisticas() {
           </select>
         </div>
       </div>
-      <div id="resultadosPSC">
-        ${htmlResultados(calcularResultadosPSC('todas', 'todos'), ['Dependencia', 'Bandera', 'Buque', 'Cód. deficiencias'])}
+      <div id="resultadosEstadistica"></div>
+    `;
+  }
+  // 'mas' o 'sar'
+  const bloque = categoria === 'mas' ? D.casosMAS : D.casosSAR;
+  return `
+    <div class="fila-doble">
+      <div class="campo">
+        <label>Dependencia</label>
+        <select id="filtroCasoDependencia" onchange="actualizarEstadCasos('${categoria}')">
+          <option value="todas">Todas</option>
+          ${opcionesDependencia(bloque).map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="campo">
+        <label>Estado</label>
+        <select id="filtroCasoEstado" onchange="actualizarEstadCasos('${categoria}')">
+          <option value="todos">Todos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="cerrado">Cerrado</option>
+        </select>
       </div>
     </div>
+    <div id="resultadosEstadistica"></div>
+  `;
+}
 
-    <div class="tarjeta">
-      <h2>Casos MAS</h2>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
-        ${filtrosDependenciaEstado('Mas', D.casosMAS)}
-      </div>
-      <div id="resultadosMas">
-        ${htmlResultados(calcularResultadosCasos(D.casosMAS, 'todas', 'todos'), ['Dependencia', 'Título', 'Estado'])}
-      </div>
-    </div>
+function cambiarCategoriaEstadistica() {
+  const categoria = document.getElementById('statCategoria').value;
+  const cont = document.getElementById('statFiltrosContenedor');
+  if (!categoria) { cont.innerHTML = ''; ULTIMO_RESULTADO_ESTADISTICA = null; return; }
+  cont.innerHTML = filtrosPorCategoria(categoria);
+  if (categoria === 'extraordinarias') actualizarEstadExtraordinarias();
+  else if (categoria === 'psc') actualizarEstadPSC();
+  else actualizarEstadCasos(categoria);
+}
 
-    <div class="tarjeta">
-      <h2>Casos SAR</h2>
-      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
-        ${filtrosDependenciaEstado('Sar', D.casosSAR)}
-      </div>
-      <div id="resultadosSar">
-        ${htmlResultados(calcularResultadosCasos(D.casosSAR, 'todas', 'todos'), ['Dependencia', 'Título', 'Estado'])}
-      </div>
+// ---------- Panel principal ----------
+function renderEstadisticas() {
+  return `
+    <div class="campo">
+      <label>¿Qué querés consultar?</label>
+      <select id="statCategoria" onchange="cambiarCategoriaEstadistica()">
+        <option value="">Elegí una opción...</option>
+        <option value="extraordinarias">Inspecciones Extraordinarias</option>
+        <option value="psc">Inspecciones Estado Rector de Puerto</option>
+        <option value="mas">Casos MAS</option>
+        <option value="sar">Casos SAR</option>
+      </select>
     </div>
+    <div id="statFiltrosContenedor"></div>
   `;
 }

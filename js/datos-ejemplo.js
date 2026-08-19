@@ -38,12 +38,9 @@ const DATOS_EJEMPLO = {
             buque: { tipo: "B/A", nombre: "IRIS", matricula: "01644", bandera: "ARGENTINA" },
             asunto: 'CASO MAS PZDE Nº 22/26 — Inconveniente en máquina',
             deficiencias: [
-              { codigo: "10", descripcion: "MMPP (YANMAR 1187) presenta falla en Turbo. Se reemplazó turbo del MMPP." },
-              { codigo: "10", descripcion: "Salvavidas circular en popa sin identificación. Se verificó identificación." },
-              { codigo: "10", descripcion: "Extintor de incendio en Sala de Máquinas descargado. Se reemplazó extintor." },
-              { codigo: "10", descripcion: "Dos chalecos salvavidas sin identificación del buque. Se verificó identificación." }
+              { accion: "recodifico", cantidad: 4, codigoAnterior: "17", codigoNuevo: "10" }
             ],
-            nota: ""
+            nota: "Se reemplazó turbo del MMPP (YANMAR 1187), se verificó identificación de salvavidas y chalecos, y se reemplazó extintor de Sala de Máquinas."
           }
         ]
       }
@@ -62,9 +59,9 @@ const DATOS_EJEMPLO = {
           fechaInspMasDetallada: "05/07/2026",
           buque: { tipo: "B/T", nombre: "AYSEN STAR", matricula: "IMO 9419199", bandera: "LIBERIA" },
           deficiencias: [
-            { codigo: "99", descripcion: "Generador/Motor Auxiliar N.º 1 fuera de servicio por mantenimiento. Dispensa de bandera hasta el 21/08/2026." }
+            { accion: "recodifico", cantidad: 1, codigoAnterior: "99", codigoNuevo: "99" }
           ],
-          nota: "Próx. puerto a confirmar."
+          nota: "Generador/Motor Auxiliar N.º 1 fuera de servicio por mantenimiento. Dispensa de bandera hasta el 21/08/2026. Próx. puerto a confirmar."
         }
       ],
       "SLOR": [
