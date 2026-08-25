@@ -15,12 +15,12 @@
 // ============================================================
 
 const firebaseConfig = {
-  apiKey: "REEMPLAZAR_API_KEY",
-  authDomain: "REEMPLAZAR.firebaseapp.com",
-  projectId: "REEMPLAZAR",
-  storageBucket: "REEMPLAZAR.appspot.com",
-  messagingSenderId: "REEMPLAZAR",
-  appId: "REEMPLAZAR"
+  apiKey: "AIzaSyAsJ6vqzxpi2HCG2cgCm9WpRvKGKw990u0",
+  authDomain: "novedades-dpsn.firebaseapp.com",
+  projectId: "novedades-dpsn",
+  storageBucket: "novedades-dpsn.firebasestorage.app",
+  messagingSenderId: "183094582836",
+  appId: "1:183094582836:web:3bd88dc812fbdbb24af461"
 };
 
 // Inicialización (usa Firebase v9+ compat para simplicidad en GitHub Pages,
