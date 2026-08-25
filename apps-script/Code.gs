@@ -51,13 +51,13 @@ function alEditarHoja(e) {
     sincronizarLicencias();
   }
   // Para el resto de las hojas (EstadoRectorPuerto, CasosSAR, Otros,
-  // AlturaAgua, Dragas, BuquesDetencion, InspeccionesTecnicas,
-  // ControlGestion, Guardia, y cada hoja de Oficinas) se agrega un
-  // "else if" más, siguiendo el mismo patrón que estas dos: leer
-  // filas con encabezados, armar el objeto, y llamar a
-  // escribirEnFirestore() con la ruta correspondiente. La guía
-  // completa con las columnas exactas de cada hoja está en
-  // GUIA_GOOGLE_SHEETS.md.
+  // BuquesDetencion, InspeccionesTecnicas, ControlGestion, Cursos)
+  // se agrega un "else if" más, siguiendo el mismo patrón que estas
+  // tres: leer filas con encabezados, armar el objeto, y llamar a
+  // escribirEnFirestore('parteDiario/<seccion>', { valor: tuObjeto })
+  // — el { valor: ... } es obligatorio: así es como la plataforma
+  // guarda y lee cada sección en Firestore. La guía completa con
+  // las columnas exactas de cada hoja está en GUIA_GOOGLE_SHEETS.md.
 }
 
 /** Patrón "agrupado por dependencia + estado" — sirve de modelo para CasosSAR también. */
@@ -83,7 +83,7 @@ function sincronizarCasosMAS() {
     });
   });
 
-  escribirEnFirestore('parteDiario/casosMAS', { porDependencia });
+  escribirEnFirestore('parteDiario/casosMAS', { valor: { porDependencia } });
 }
 
 /** Patrón "plano con columna de categoría" — sirve de modelo para Dragas, BuquesDetencion, ControlGestion, InspeccionesTecnicas, etc. */
@@ -111,7 +111,7 @@ function sincronizarLicencias() {
     });
   });
 
-  escribirEnFirestore('parteDiario/licencias', licencias);
+  escribirEnFirestore('parteDiario/licencias', { valor: licencias });
 }
 
 /**
@@ -189,7 +189,7 @@ function sincronizarInspeccionesExtraordinarias() {
     });
   });
 
-  escribirEnFirestore('parteDiario/inspeccionesExtraordinarias', porBandera);
+  escribirEnFirestore('parteDiario/inspeccionesExtraordinarias', { valor: porBandera });
 }
 
 /**

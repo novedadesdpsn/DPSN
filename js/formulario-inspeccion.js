@@ -25,13 +25,14 @@ function opcionesCantidadHtml() {
 
 function textoGrupoDeficiencia(g) {
   const cant = g.cantidad || 1;
-  let base;
   if (g.accion === 'recodifico') {
-    base = `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionCodigo(g.codigoAnterior)}) a Cód. ${g.codigoNuevo} (${descripcionCodigo(g.codigoNuevo)})`;
-  } else {
-    base = `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionCodigo(g.codigo)})`;
+    return `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionCodigo(g.codigoAnterior)}) a Cód. ${g.codigoNuevo} (${descripcionCodigo(g.codigoNuevo)})`;
   }
-  return g.descripcionAdicional ? `${base} — ${g.descripcionAdicional}` : base;
+  return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionCodigo(g.codigo)})`;
+}
+
+function lineasDescripcionGrupo(g) {
+  return (g.descripcionAdicional || '').split('\n').map(l => l.trim()).filter(Boolean);
 }
 
 function codigosDeGrupo(g) {
@@ -129,8 +130,8 @@ function abrirFormularioInspeccionEstandar(opciones) {
               <div class="campo" style="margin-bottom:8px;"><label>Código nuevo</label><select id="defCodigoNuevo">${opcionesCodigoHtml()}</select></div>
             </div>
             <div class="campo" style="margin-bottom:8px;">
-              <label>Descripción / aclaración (opcional)</label>
-              <textarea id="defDescripcion" placeholder="Ej: Se reemplazó turbo del MMPP"></textarea>
+              <label>Descripción / aclaración</label>
+              <textarea id="defDescripcion" placeholder="Si hay varias deficiencias de este mismo código, escribí una por línea (Enter). Ej: qué se detectó y cómo se subsanó."></textarea>
             </div>
             <button type="button" class="btn-secundario" id="btnAgregarGrupoDef">+ Agregar deficiencia</button>
           </div>

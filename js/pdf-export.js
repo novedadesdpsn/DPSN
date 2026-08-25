@@ -1,11 +1,11 @@
 // ============================================================
 // EXPORTACIÓN A PDF — Novedades DPSN
 // ============================================================
-// Formato pensado para parecerse al parte oficial: encabezado
-// institucional centrado (sin colores de fondo), referencias en
-// cursiva, dependencias en negrita, ítems con viñeta, y los
-// cuadros numéricos como tablas reales con bordes — igual que en
-// el PDF de referencia.
+// Encabezado institucional centrado, títulos de sección centrados,
+// texto mixto negrita/normal en la misma línea (para diferenciar
+// el título de cada inspección/caso del resto), listas en vez de
+// texto corrido, y tablas con encabezados que ajustan su alto
+// cuando el texto no entra en una sola línea.
 // ============================================================
 
 function fechaHoy() {
@@ -68,11 +68,7 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
 /**
  * Genera el PDF. `secciones` es un array de:
  * { titulo, referencias?, contenido }
- * donde `contenido` puede ser:
- *   - un string (texto corrido, con negrita automática en líneas
- *     tipo "DEPENDENCIA:" y justificado)
- *   - un objeto { texto?, tablas?: [{ titulo?, columnas, filas }] }
- *     para secciones con cuadros numéricos reales.
+ * `contenido.tipo` puede ser: 'lista' | 'inspecciones' | 'casos' | 'tablas' | 'texto'
  */
 function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   const { jsPDF } = window.jspdf;
@@ -122,7 +118,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.setTextColor(20, 20, 20);
-    doc.text(texto.toUpperCase(), margen, y);
+    doc.text(texto.toUpperCase(), anchoPagina / 2, y, { align: 'center' });
     y += 8;
     doc.setDrawColor(150, 150, 150);
     doc.setLineWidth(0.5);
@@ -135,38 +131,57 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(70, 70, 70);
-    const lineas = doc.splitTextToSize(texto, anchoUtil);
-    lineas.forEach(ln => {
-      saltoDePaginaSiHaceFalta(11);
-      doc.text(ln, margen, y);
-      y += 10;
-    });
+    doc.text(texto, anchoPagina / 2, y, { align: 'center', maxWidth: anchoUtil });
+    y += 16;
     doc.setTextColor(20, 20, 20);
+  }
+
+  /**
+   * Escribe un párrafo con tramos de distinto peso (negrita/normal) que
+   * fluyen en la misma línea y se van ajustando con el ancho disponible.
+   * runs: [{ texto, negrita }]. Devuelve el nuevo y.
+   */
+  function escribirParrafoMixto(runs, x, anchoMax, yInicial, tamano) {
+    doc.setFontSize(tamano);
+    const espacio = doc.getStringUnitWidth(' ') * tamano / doc.internal.scaleFactor;
+    const lineas = [[]];
+    let anchoLinea = 0;
+    runs.forEach(run => {
+      doc.setFont('helvetica', run.negrita ? 'bold' : 'normal');
+      String(run.texto).split(/\s+/).filter(Boolean).forEach(palabra => {
+        const anchoPalabra = doc.getStringUnitWidth(palabra) * tamano / doc.internal.scaleFactor;
+        if (anchoLinea + anchoPalabra > anchoMax && anchoLinea > 0) {
+          lineas.push([]);
+          anchoLinea = 0;
+        }
+        lineas[lineas.length - 1].push({ texto: palabra, negrita: run.negrita });
+        anchoLinea += anchoPalabra + espacio;
+      });
+    });
+    let y2 = yInicial;
+    lineas.forEach(linea => {
+      if (y2 + 11 > altoPagina - 46) { doc.addPage(); y2 = margen; }
+      let cx = x;
+      linea.forEach(w => {
+        doc.setFont('helvetica', w.negrita ? 'bold' : 'normal');
+        doc.text(w.texto, cx, y2);
+        cx += doc.getStringUnitWidth(w.texto) * tamano / doc.internal.scaleFactor + espacio;
+      });
+      y2 += tamano * 1.4;
+    });
+    return y2;
+  }
+
+  function listaSimple(items) {
+    doc.setFontSize(9.5);
+    items.forEach(item => {
+      y = escribirParrafoMixto([{ texto: '•', negrita: false }, { texto: item, negrita: false }], margen, anchoUtil - 10, y, 9.5);
+      y += 2;
+    });
     y += 6;
   }
 
-  function parrafo(texto) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    const lineas = doc.splitTextToSize(texto || '(sin contenido)', anchoUtil);
-    lineas.forEach((ln, idx) => {
-      saltoDePaginaSiHaceFalta(13);
-      const esSubtitulo = /^[A-ZÁÉÍÓÚÑ0-9 /.]+:$/.test(ln.trim()) && ln.trim().length < 40;
-      const esUltimaLinea = idx === lineas.length - 1;
-      if (esSubtitulo) {
-        doc.setFont('helvetica', 'bold');
-        doc.text(ln, margen, y);
-        doc.setFont('helvetica', 'normal');
-      } else if (esUltimaLinea) {
-        doc.text(ln, margen, y);
-      } else {
-        doc.text(ln, margen, y, { align: 'justify', maxWidth: anchoUtil });
-      }
-      y += 12.5;
-    });
-  }
-
-  /** Tabla con bordes reales, encabezado en negrita con fondo gris claro. */
+  /** Tabla con bordes reales; el encabezado ajusta su alto si el texto no entra en una línea. */
   function tabla(columnas, filas, tituloTabla) {
     if (tituloTabla) {
       saltoDePaginaSiHaceFalta(14);
@@ -184,54 +199,164 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     }
 
     const anchoCol = anchoUtil / columnas.length;
-    const altoFila = 16;
 
     function dibujarEncabezado() {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.6);
+      const lineasEncabezado = columnas.map(c => doc.splitTextToSize(String(c), anchoCol - 8));
+      const maxLineas = Math.max(1, ...lineasEncabezado.map(l => l.length));
+      const altoEncabezado = maxLineas * 9 + 8;
+
       doc.setFillColor(235, 235, 235);
       doc.setDrawColor(120, 120, 120);
       doc.setLineWidth(0.5);
-      doc.rect(margen, y, anchoUtil, altoFila, 'FD');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.rect(margen, y, anchoUtil, altoEncabezado, 'FD');
       doc.setTextColor(20, 20, 20);
-      columnas.forEach((c, i) => {
-        doc.text(String(c), margen + i * anchoCol + 4, y + 11, { maxWidth: anchoCol - 6 });
-        if (i > 0) doc.line(margen + i * anchoCol, y, margen + i * anchoCol, y + altoFila);
+      lineasEncabezado.forEach((lns, i) => {
+        if (i > 0) doc.line(margen + i * anchoCol, y, margen + i * anchoCol, y + altoEncabezado);
+        lns.forEach((ln, li) => {
+          doc.text(ln, margen + i * anchoCol + 4, y + 10 + li * 9);
+        });
       });
-      doc.rect(margen, y, anchoUtil, altoFila);
-      y += altoFila;
+      doc.rect(margen, y, anchoUtil, altoEncabezado);
+      y += altoEncabezado;
     }
 
-    saltoDePaginaSiHaceFalta(altoFila * 2);
+    saltoDePaginaSiHaceFalta(40);
     dibujarEncabezado();
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
+    doc.setFontSize(7.8);
     filas.forEach(fila => {
-      // Alto de fila dinámico según el texto más largo de la fila
-      const lineasCelda = fila.map((celda, i) => doc.splitTextToSize(String(celda), anchoCol - 6));
+      const lineasCelda = fila.map(celda => doc.splitTextToSize(String(celda), anchoCol - 8));
       const maxLineas = Math.max(1, ...lineasCelda.map(l => l.length));
-      const altoEstaFila = Math.max(altoFila, maxLineas * 9 + 6);
+      const altoEstaFila = maxLineas * 9 + 7;
 
       if (y + altoEstaFila > altoPagina - 46) {
         doc.addPage();
         y = margen;
         dibujarEncabezado();
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
+        doc.setFontSize(7.8);
       }
 
       doc.setDrawColor(190, 190, 190);
       doc.rect(margen, y, anchoUtil, altoEstaFila);
-      lineasCelda.forEach((lineas, i) => {
+      lineasCelda.forEach((lns, i) => {
         if (i > 0) doc.line(margen + i * anchoCol, y, margen + i * anchoCol, y + altoEstaFila);
-        lineas.forEach((ln, li) => {
-          doc.text(ln, margen + i * anchoCol + 4, y + 10 + li * 9, { maxWidth: anchoCol - 6 });
+        lns.forEach((ln, li) => {
+          doc.text(ln, margen + i * anchoCol + 4, y + 10 + li * 9);
         });
       });
       y += altoEstaFila;
     });
     y += 14;
+  }
+
+  function grupoDeficienciaPDF(g, xIndent) {
+    const cant = g.cantidad || 1;
+    const verbo = g.accion === 'recodifico'
+      ? (cant > 1 ? 'Se recodificaron ' : 'Se recodificó ')
+      : (cant > 1 ? 'Se detectaron ' : 'Se detectó ');
+    const contenido = g.accion === 'recodifico'
+      ? `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigoAnterior} (${descripcionCodigo(g.codigoAnterior)}) a Cód. ${g.codigoNuevo} (${descripcionCodigo(g.codigoNuevo)}).`
+      : `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigo} (${descripcionCodigo(g.codigo)}).`;
+
+    y = escribirParrafoMixto([{ texto: verbo, negrita: false }, { texto: contenido, negrita: true }], xIndent, anchoUtil - (xIndent - margen), y, 9);
+
+    const lineasDesc = (g.descripcionAdicional || '').split('\n').map(l => l.trim()).filter(Boolean);
+    if (lineasDesc.length === 1) {
+      y = escribirParrafoMixto([{ texto: lineasDesc[0], negrita: true }], xIndent + 8, anchoUtil - (xIndent - margen) - 8, y, 9);
+    } else if (lineasDesc.length > 1) {
+      lineasDesc.forEach(l => {
+        y = escribirParrafoMixto([{ texto: '- ' + l, negrita: true }], xIndent + 8, anchoUtil - (xIndent - margen) - 8, y, 9);
+      });
+    }
+  }
+
+  function grupoInspeccionesPDF(grupo, familia) {
+    const deps = Object.keys(grupo.porDependencia);
+    if (!deps.length) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text('NIL', margen, y);
+      y += 16;
+      return;
+    }
+    deps.forEach(dep => {
+      saltoDePaginaSiHaceFalta(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text(`${dep}:`, margen, y);
+      y += 13;
+
+      grupo.porDependencia[dep].forEach(insp => {
+        let marca;
+        if (familia === 'psc') {
+          marca = insp.tipo === 'inicial' ? '(IISD)' : insp.tipo === 'detallada' ? '(IICD)' : `(IS de ID Fecha ${insp.fechaInspMasDetallada || '—'})`;
+        } else {
+          marca = insp.tipo === 'inicial' ? '(II)' : insp.tipo === 'detallada' ? '(ID)' : `(IS de ID Fecha ${insp.fechaInspMasDetallada || '—'})`;
+        }
+        const refIdentif = familia === 'psc' ? 'IMO' : 'Mat.';
+        let tituloTexto = `${marca} ${insp.buque.tipo} "${insp.buque.nombre}" (${refIdentif} ${insp.buque.matricula}) B/${insp.buque.bandera}`;
+        if (insp.asunto) tituloTexto += `, referente ${insp.asunto}`;
+        if (familia === 'psc' && insp.nota) tituloTexto += `. Próx. puerto: ${insp.nota}`;
+        tituloTexto += '.';
+
+        y = escribirParrafoMixto([{ texto: tituloTexto, negrita: true }], margen + 8, anchoUtil - 8, y, 9);
+
+        if (insp.tipo === 'inicial') {
+          y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        }
+        (insp.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8));
+
+        if (familia !== 'psc' && insp.nota) {
+          y = escribirParrafoMixto([{ texto: 'Nota: ' + insp.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        }
+        y += 9; // renglón en blanco entre inspecciones
+      });
+      y += 4;
+    });
+  }
+
+  function casosPDF(bloque, esSAR) {
+    const deps = Object.keys(bloque.porDependencia);
+    if (!deps.length) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.text('Sin casos cargados.', margen, y);
+      y += 16;
+      return;
+    }
+    deps.forEach(dep => {
+      saltoDePaginaSiHaceFalta(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text(`${dep}:`, margen, y);
+      y += 13;
+
+      bloque.porDependencia[dep].forEach(c => {
+        const estadoTxt = c.estado === 'pendiente' ? 'PENDIENTE' : 'CERRADO';
+        y = escribirParrafoMixto([{ texto: `${c.titulo} — ${estadoTxt}`, negrita: true }], margen + 8, anchoUtil - 8, y, 9.5);
+
+        if (esSAR) {
+          const runsSar = [
+            { texto: 'N.º de caso:', negrita: true }, { texto: (c.numeroCaso || '—') + '  ', negrita: false },
+            { texto: 'Subcentro (VTS):', negrita: true }, { texto: (c.subcentroVTS || '—') + '  ', negrita: false },
+            { texto: 'Inicio:', negrita: true }, { texto: c.fechaInicio || '—', negrita: false }
+          ];
+          if (c.fechaCierre) { runsSar.push({ texto: '  Cierre:', negrita: true }, { texto: c.fechaCierre, negrita: false }); }
+          y = escribirParrafoMixto(runsSar, margen + 8, anchoUtil - 8, y, 8.5);
+        }
+
+        y = escribirParrafoMixto([{ texto: 'Posición:', negrita: true }, { texto: c.posicion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        y = escribirParrafoMixto([{ texto: 'Novedad:', negrita: true }, { texto: c.novedad || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        y = escribirParrafoMixto([{ texto: 'Características:', negrita: true }, { texto: c.caracteristicas || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        y = escribirParrafoMixto([{ texto: 'Situación:', negrita: true }, { texto: c.situacion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        y += 10;
+      });
+      y += 4;
+    });
   }
 
   encabezadoInstitucional();
@@ -240,17 +365,27 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     tituloSeccion(sec.titulo);
     if (sec.referencias) referenciasSeccion(sec.referencias);
 
-    const contenido = sec.contenido;
-    if (typeof contenido === 'string') {
-      parrafo(contenido);
-    } else if (contenido && typeof contenido === 'object') {
-      if (contenido.texto) parrafo(contenido.texto);
-      if (contenido.tablas) {
-        if (contenido.texto) y += 6;
-        contenido.tablas.forEach(t => tabla(t.columnas, t.filas, t.titulo));
+    const c = sec.contenido;
+    if (typeof c === 'string') {
+      listaSimple(c.split('\n').filter(Boolean));
+    } else if (c && c.tipo === 'lista') {
+      listaSimple(c.items);
+    } else if (c && c.tipo === 'inspecciones') {
+      grupoInspeccionesPDF(c.grupo, c.familia);
+    } else if (c && c.tipo === 'casos') {
+      casosPDF(c.bloque, c.esSAR);
+    } else if (c && c.tipo === 'tablas') {
+      c.tablas.forEach(t => tabla(t.columnas, t.filas, t.titulo));
+      if (c.nota) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(90, 90, 90);
+        doc.text(c.nota, margen, y);
+        doc.setTextColor(20, 20, 20);
+        y += 14;
       }
     }
-    y += 10;
+    y += 12;
   });
 
   const totalPaginas = doc.internal.getNumberOfPages();
@@ -280,7 +415,7 @@ function guardarCopiaEnDrive(doc, nombreArchivo) {
 
   fetch(APPS_SCRIPT_WEBAPP_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita el preflight CORS con Apps Script
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
       archivoBase64: base64,
       nombreArchivo: nombreArchivo,
@@ -301,6 +436,12 @@ function textoPlano(html) {
 }
 
 const REFERENCIAS_TEXTO = 'REFERENCIAS: (II) Inspección Inicial. (ID) Inspección Más Detallada. (IS) Inspección de Seguimiento.';
+const REFERENCIAS_PSC_TEXTO = 'REFERENCIAS: (IISD) Inspección Inicial Sin Deficiencias. (IICD) Inspección Inicial Con Deficiencia. (IS) Inspección de Seguimiento.';
+
+// Orden fijo en el que se arma el PDF, independiente del orden en
+// que se tildaron los checkboxes. "inicio" se maneja aparte: su
+// resumen va primero y su bloque de altura/calados/guardia al final.
+const ORDEN_EXPORTACION = ['insp-extraordinarias', 'insp-psc', 'casos-mas', 'casos-sar', 'otros', 'buques-detencion', 'insp-tecnicas', 'control-gestion', 'licencias', 'cursos'];
 
 // ---------- Exportar desde Guardias (todo el parte diario) ----------
 function abrirModalExportarGuardia() {
@@ -309,12 +450,23 @@ function abrirModalExportarGuardia() {
   const pestanasExportables = PESTANAS.filter(p => p.id !== 'estadisticas' && p.id !== 'asistente');
   const items = pestanasExportables.map(p => ({ id: p.id, label: p.etiqueta }));
   abrirModalExportarGenerico('Exportar Novedades DPSN', items, (seleccionados) => {
-    const secciones = seleccionados.map(id => {
-      const p = pestanasExportables.find(x => x.id === id);
-      const generarContenido = TEXTO_EXPORTACION[id];
-      const referencias = (id === 'insp-extraordinarias' || id === 'insp-psc' || id === 'buques-detencion') ? REFERENCIAS_TEXTO : null;
-      return { titulo: p.etiqueta, referencias, contenido: generarContenido ? generarContenido() : '(sección sin generador de texto)' };
+    let secciones = [];
+
+    if (seleccionados.includes('inicio')) {
+      secciones.push({ titulo: 'Resumen del Parte', contenido: { tipo: 'lista', items: itemsResumenParte() } });
+    }
+
+    ORDEN_EXPORTACION.forEach(id => {
+      if (!seleccionados.includes(id)) return;
+      const generarSecciones = TEXTO_EXPORTACION[id];
+      if (!generarSecciones) return;
+      secciones = secciones.concat(generarSecciones());
     });
+
+    if (seleccionados.includes('inicio')) {
+      secciones.push({ titulo: 'Altura de Agua, Calados de Navegación y Relevo de Guardia', contenido: { tipo: 'lista', items: itemsAlturaCaladosGuardia() } });
+    }
+
     generarPDF(`Novedades DPSN ${fechaHoy()}.pdf`, 'RESUMEN DE NOVEDADES', D.fechaParte, secciones);
   });
 }

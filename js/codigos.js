@@ -22,3 +22,11 @@ function descripcionCodigo(codigo) {
   const c = CODIGOS_MEDIDAS.find(x => x.codigo === codigo);
   return c ? c.descripcion : '';
 }
+
+// Números en letras (femenino, para acompañar "deficiencia(s)"), 1 a 20 —
+// coincide con el desplegable de cantidad del formulario de inspecciones.
+const NUMEROS_EN_LETRAS = ['', 'UNA', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE', 'DIEZ',
+  'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE', 'VEINTE'];
+
+function numeroALetras(n) { return NUMEROS_EN_LETRAS[n] || String(n); }
+function numeroConDigitos(n) { return String(n).padStart(2, '0'); }

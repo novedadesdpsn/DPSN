@@ -189,6 +189,9 @@ const DATOS_EJEMPLO = {
   // y queda guardado en el navegador (localStorage).
   buquesDetencionMapa: [],
 
+  // Cursos del personal (designación, fechas, modalidad)
+  cursos: [],
+
   inspeccionesTecnicas: [
     {
       especialidad: "CASCO",

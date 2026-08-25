@@ -1,37 +1,83 @@
 // ============================================================
 // DATOS DE GUARDIA — carga directa en la plataforma
 // ============================================================
-// Guarda en el navegador (localStorage) lo que se va cargando en
-// Inspecciones Extraordinarias, Estado Rector de Puerto, Casos MAS
-// y Casos SAR, así no se pierde al recargar la página o cerrar el
-// navegador. Es un reemplazo temporal de Firestore: persiste en
-// ESTA computadora/navegador, no se sincroniza todavía entre
-// distintos usuarios — eso llega cuando conectemos Firestore.
+// Cada sección (Inspecciones Extraordinarias, PSC, Casos MAS/SAR,
+// Otros, Buques con Detención, Inspecciones Técnicas, Control de
+// Gestión, Licencias, Cursos) es UN documento en la colección
+// "parteDiario" de Firestore: parteDiario/{seccion} = { valor: ... }
+//
+// Mientras el proyecto de Firebase real no esté conectado (modo
+// demo), se usa localStorage como reemplazo temporal — persiste
+// en esa computadora, pero no se comparte entre usuarios. En
+// cuanto haya un proyecto real, esto mismo pasa a leer/escribir
+// en Firestore y queda compartido en vivo entre todas las
+// computadoras que entren con el link.
 // ============================================================
 
 const CLAVE_DATOS_GUARDIA = 'novedades_dpsn_datos_guardia';
-const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias'];
+const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias', 'cursos'];
+const COLECCION_PARTE_DIARIO = 'parteDiario';
 
 function persistirDatosGuardia() {
+  // Caché local instantáneo, siempre — sirve de resguardo si por
+  // un instante se corta la conexión, y es lo único que se usa en
+  // modo demo.
   const paquete = {};
   SECCIONES_PERSISTIDAS.forEach(clave => { paquete[clave] = DATOS_EJEMPLO[clave]; });
   localStorage.setItem(CLAVE_DATOS_GUARDIA, JSON.stringify(paquete));
+
+  if (DEMO_MODE) return;
+
+  SECCIONES_PERSISTIDAS.forEach(clave => {
+    db.collection(COLECCION_PARTE_DIARIO).doc(clave).set({ valor: DATOS_EJEMPLO[clave] })
+      .catch(err => console.error(`No se pudo guardar "${clave}" en Firestore:`, err));
+  });
 }
 
-function hidratarDatosGuardia() {
-  const raw = localStorage.getItem(CLAVE_DATOS_GUARDIA);
-  if (raw) {
-    try {
-      const guardado = JSON.parse(raw);
-      SECCIONES_PERSISTIDAS.forEach(clave => {
-        if (guardado[clave]) DATOS_EJEMPLO[clave] = guardado[clave];
-      });
-    } catch (e) { console.error('No se pudo leer lo guardado localmente:', e); }
-  } else {
-    persistirDatosGuardia(); // primera vez: el punto de partida son los datos de ejemplo
+/** Primera carga: trae lo que ya haya guardado (Firestore o localStorage según el modo). */
+async function hidratarDatosGuardia() {
+  if (DEMO_MODE) {
+    const raw = localStorage.getItem(CLAVE_DATOS_GUARDIA);
+    if (raw) {
+      try {
+        const guardado = JSON.parse(raw);
+        SECCIONES_PERSISTIDAS.forEach(clave => {
+          if (guardado[clave] !== undefined) DATOS_EJEMPLO[clave] = guardado[clave];
+        });
+      } catch (e) { console.error('No se pudo leer lo guardado localmente:', e); }
+    } else {
+      persistirDatosGuardia();
+    }
+    return;
   }
+
+  await Promise.all(SECCIONES_PERSISTIDAS.map(async (clave) => {
+    try {
+      const doc = await db.collection(COLECCION_PARTE_DIARIO).doc(clave).get();
+      if (doc.exists && doc.data().valor !== undefined) {
+        DATOS_EJEMPLO[clave] = doc.data().valor;
+      } else {
+        // Todavía no existe en Firestore: lo sembramos con el dato de ejemplo actual.
+        await db.collection(COLECCION_PARTE_DIARIO).doc(clave).set({ valor: DATOS_EJEMPLO[clave] });
+      }
+    } catch (err) {
+      console.error(`No se pudo leer "${clave}" desde Firestore:`, err);
+    }
+  }));
+
+  activarEscuchaEnVivo();
 }
-hidratarDatosGuardia();
+
+/** Escucha en vivo: si otro usuario carga algo desde otra computadora, se refleja acá solo. */
+function activarEscuchaEnVivo() {
+  SECCIONES_PERSISTIDAS.forEach(clave => {
+    db.collection(COLECCION_PARTE_DIARIO).doc(clave).onSnapshot(doc => {
+      if (!doc.exists || doc.data().valor === undefined) return;
+      DATOS_EJEMPLO[clave] = doc.data().valor;
+      if (typeof refrescarPestanaActual === 'function') refrescarPestanaActual();
+    }, err => console.error(`Escucha en vivo de "${clave}" interrumpida:`, err));
+  });
+}
 
 // ---------- Modal de formulario genérico ----------
 function cerrarModalFormulario() {
@@ -197,7 +243,6 @@ function camposCaso(esSAR) {
     { id: 'fechaCierre', label: 'Fecha de cierre (si corresponde)' }
   ] : [];
   return [...base, ...sar,
-    { id: 'asunto', label: 'Asunto', tipo: 'textarea' },
     { id: 'posicion', label: 'Posición (lat/lon o referencia)' },
     { id: 'novedad', label: 'Novedad', tipo: 'textarea' },
     { id: 'caracteristicas', label: 'Características', tipo: 'textarea' },
@@ -391,6 +436,34 @@ function uiAgregarLicencia() {
 function eliminarLicencia(clave, indice) {
   if (!confirm('¿Eliminar esta licencia?')) return;
   D.licencias[clave].splice(indice, 1);
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Cursos ----------
+function uiAgregarCurso() {
+  abrirModalFormulario('Agregar nuevo curso', [
+    { id: 'personal', label: 'Personal designado' },
+    { id: 'nombreCurso', label: 'Nombre del curso' },
+    { id: 'descripcion', label: 'Descripción (opcional)', tipo: 'textarea' },
+    { id: 'fechaInicio', label: 'Fecha de inicio' },
+    { id: 'fechaFin', label: 'Fecha de finalización' },
+    { id: 'modalidad', label: 'Modalidad', tipo: 'select', opciones: [{ valor: 'virtual', etiqueta: 'Virtual' }, { valor: 'presencial', etiqueta: 'Presencial' }] },
+    { id: 'lugar', label: 'Lugar de realización (si es presencial)' }
+  ], {}, (datos) => {
+    D.cursos.push({
+      personal: datos.personal, nombreCurso: datos.nombreCurso, descripcion: datos.descripcion,
+      fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin, modalidad: datos.modalidad,
+      lugar: datos.modalidad === 'presencial' ? datos.lugar : ''
+    });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarCurso(indice) {
+  if (!confirm('¿Eliminar este curso?')) return;
+  D.cursos.splice(indice, 1);
   persistirDatosGuardia();
   refrescarPestanaActual();
 }

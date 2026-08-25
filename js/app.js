@@ -11,6 +11,13 @@ function esc(html) {
   return d.innerHTML;
 }
 
+function renderLineasDescripcionHtml(g) {
+  const lineas = lineasDescripcionGrupo(g);
+  if (!lineas.length) return '';
+  if (lineas.length === 1) return ` — ${esc(lineas[0])}`;
+  return `<ul style="margin:4px 0 0 16px; padding:0;">` + lineas.map(l => `<li>${esc(l)}</li>`).join('') + `</ul>`;
+}
+
 function tagTipo(tipo) {
   const nombres = { inicial: 'Inicial', detallada: 'Más detallada', seguimiento: 'Seguimiento' };
   return `<span class="tag ${tipo}">${nombres[tipo] || tipo}</span>`;
@@ -91,6 +98,7 @@ function renderInicio() {
             <div class="stat acc-1"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
             <div class="stat acc-2"><div class="valor">${D.buquesDetencionMapa.length}</div><div class="etiqueta">Buques con detención</div></div>
             <div class="stat acc-3"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
+            <div class="stat acc-4"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Personas en cursos</div></div>
           </div>
         </div>
 
@@ -162,7 +170,7 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
       if (insp.deficiencias && insp.deficiencias.length) {
         html += `<ul style="margin:6px 0 0 18px; padding:0;">`;
         insp.deficiencias.forEach(g => {
-          html += `<li>${esc(textoGrupoDeficiencia(g))}</li>`;
+          html += `<li>${esc(textoGrupoDeficiencia(g))}${renderLineasDescripcionHtml(g)}</li>`;
         });
         html += `</ul>`;
       }
@@ -279,8 +287,7 @@ function renderTarjetaCaso(c, esSAR, dependencia, indice) {
         N.º de caso: ${esc(c.numeroCaso)} · Subcentro (VTS): ${esc(c.subcentroVTS)} ·
         Inicio: ${esc(c.fechaInicio)} ${c.fechaCierre ? '· Cierre: ' + esc(c.fechaCierre) : ''}
       </div>` : ''}
-      <div style="margin-top:8px; font-size:13px;"><strong>Asunto:</strong> ${esc(c.asunto || c.titulo)}</div>
-      <div style="margin-top:4px; font-size:13px;"><strong>Posición:</strong> ${esc(c.posicion)}</div>
+      <div style="margin-top:8px; font-size:13px;"><strong>Posición:</strong> ${esc(c.posicion)}</div>
       <div style="margin-top:4px; font-size:13px; color:var(--rojo);"><strong>Novedad:</strong> ${esc(c.novedad)}</div>
       <div style="margin-top:4px; font-size:13px;"><strong>Características:</strong> ${esc(c.caracteristicas)}</div>
       <div style="margin-top:4px; font-size:13px;"><strong>Situación:</strong> ${esc(c.situacion)}</div>
@@ -395,6 +402,30 @@ function renderDivisionControlGestion() {
   return html;
 }
 
+function renderCursos() {
+  let html = `<div class="tarjeta"><h2>Cursos <span class="contador">${D.cursos.length}</span></h2>`;
+  if (!D.cursos.length) {
+    html += '<div class="placeholder-panel">Todavía no hay cursos cargados.</div>';
+  } else {
+    html += `<table class="tabla-datos"><thead><tr>
+      <th>Personal</th><th>Curso</th><th>Modalidad</th><th>Inicio</th><th>Fin</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+    </tr></thead><tbody>`;
+    D.cursos.forEach((c, idx) => {
+      html += `<tr>
+        <td>${esc(c.personal)}</td>
+        <td>${esc(c.nombreCurso)}${c.descripcion ? `<div style="font-size:11px; color:var(--gris-500);">${esc(c.descripcion)}</div>` : ''}</td>
+        <td>${c.modalidad === 'presencial' ? 'Presencial' + (c.lugar ? ` — ${esc(c.lugar)}` : '') : 'Virtual'}</td>
+        <td>${esc(c.fechaInicio)}</td><td>${esc(c.fechaFin)}</td>
+        ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarCurso(${idx})">✕</button></td>` : ''}
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarCurso()">+ Agregar nuevo curso</button>`;
+  html += `</div>`;
+  return html;
+}
+
 function renderLicencias() {
   const secciones = [
     ['Licencia Anual', D.licencias.anuales, 'anuales'],
@@ -445,10 +476,11 @@ const PESTANAS = [
   { id: 'buques-detencion', grupo: 'Gestión', etiqueta: 'Buques con Detención', render: renderBuquesDetencion },
   { id: 'insp-tecnicas', grupo: 'Gestión', etiqueta: 'Inspecciones Técnicas', render: renderInspeccionesTecnicas },
   { id: 'control-gestion', grupo: 'Gestión', etiqueta: 'Div. Control de Gestión', render: renderDivisionControlGestion },
-  { id: 'licencias', grupo: 'Gestión', etiqueta: 'Licencias', render: renderLicencias }
+  { id: 'licencias', grupo: 'Gestión', etiqueta: 'Licencias', render: renderLicencias },
+  { id: 'cursos', grupo: 'Gestión', etiqueta: 'Cursos', render: renderCursos }
 ];
 
-function iniciarDashboard() {
+async function iniciarDashboard() {
   const usuario = requerirSesion();
   if (!usuario) return;
 
@@ -475,6 +507,9 @@ function iniciarDashboard() {
   nav.querySelectorAll('.tab-link').forEach(btn => {
     btn.addEventListener('click', () => mostrarPestana(btn.dataset.id));
   });
+
+  document.getElementById('contenidoPanel').innerHTML = '<div class="placeholder-panel">Cargando datos…</div>';
+  await hidratarDatosGuardia();
 
   mostrarPestana(PESTANAS[0].id);
   document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);

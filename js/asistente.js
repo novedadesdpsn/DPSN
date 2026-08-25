@@ -47,7 +47,7 @@ function buscarPorBuque(query) {
   todasLasInspeccionesExtraordinarias().forEach(r => { if (normalizarTexto(r.buque.nombre).includes(q)) resultados.push(r); });
   todasLasInspeccionesPSC().forEach(r => { if (normalizarTexto(r.buque.nombre).includes(q)) resultados.push(r); });
   todosLosCasos(D.casosMAS, 'Caso MAS').forEach(r => {
-    if (normalizarTexto(r.titulo).includes(q) || normalizarTexto(r.asunto).includes(q)) resultados.push(r);
+    if (normalizarTexto(r.titulo).includes(q) || normalizarTexto(r.novedad || '').includes(q)) resultados.push(r);
   });
   todosLosCasos(D.casosSAR, 'Caso SAR').forEach(r => {
     if (normalizarTexto(r.nombreBuque || '').includes(q) || normalizarTexto(r.titulo).includes(q)) resultados.push(r);
@@ -74,7 +74,7 @@ function renderResultadoAsistente(r) {
     html += `<div style="margin-top:4px;">${esc(r.buque.tipo || '')} "${esc(r.buque.nombre || '')}" (${esc(r.buque.matricula || '')}) — B/${esc(r.buque.bandera || '')}</div>`;
     html += `<div style="margin-top:2px; color:var(--gris-700);">Tipo de inspección: ${tipoTexto}</div>`;
     if (r.deficiencias && r.deficiencias.length) {
-      html += `<ul style="margin:6px 0 0 18px;">` + r.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g))}</li>`).join('') + `</ul>`;
+      html += `<ul style="margin:6px 0 0 18px;">` + r.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g))}${renderLineasDescripcionHtml(g)}</li>`).join('') + `</ul>`;
     } else {
       html += `<div style="color:var(--verde);">Sin deficiencias registradas</div>`;
     }

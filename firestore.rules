@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfiles de usuario: cualquier persona logueada puede leer su
+    // propio perfil (y el de otros, por simplicidad); la carga y edición
+    // de usuarios se hace a mano desde la consola de Firebase, no desde
+    // la app — por eso "write" queda cerrado acá.
+    match /usuarios/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Datos del parte diario: solo puede escribir quien tenga permiso
+    // de administrador (administradorGlobal, o permisos.guardias =
+    // "admin") según su propio documento en /usuarios. Cualquier
+    // usuario logueado puede leer, aunque sea de solo lectura.
+    match /parteDiario/{seccion} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.administradorGlobal == true ||
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.permisos.guardias == 'admin'
+      );
+    }
+  }
+}
