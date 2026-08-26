@@ -192,6 +192,10 @@ const DATOS_EJEMPLO = {
   // Cursos del personal (designación, fechas, modalidad)
   cursos: [],
 
+  // Oficinas: cada una carga sus propios bloques de texto o tabla,
+  // agrupados por nombre de oficina.
+  oficinas: { porOficina: {} },
+
   inspeccionesTecnicas: [
     {
       especialidad: "CASCO",

@@ -98,7 +98,7 @@ function renderInicio() {
             <div class="stat acc-1"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
             <div class="stat acc-2"><div class="valor">${D.buquesDetencionMapa.length}</div><div class="etiqueta">Buques con detención</div></div>
             <div class="stat acc-3"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
-            <div class="stat acc-4"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Personas en cursos</div></div>
+            <div class="stat acc-4"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Cursos</div></div>
           </div>
         </div>
 
@@ -326,6 +326,37 @@ function renderOtros() {
   return html;
 }
 
+// ---------- Oficinas ----------
+function renderOficinas() {
+  let html = `<div class="tarjeta"><h2>Oficinas</h2>`;
+  const oficinas = Object.keys(D.oficinas.porOficina);
+  if (!oficinas.length) {
+    html += '<div class="placeholder-panel">Todavía no hay información cargada por ninguna oficina.</div>';
+  } else {
+    oficinas.forEach(of => {
+      html += `<details class="dependencia-bloque" open><summary>${esc(of)}</summary>`;
+      D.oficinas.porOficina[of].forEach((b, idx) => {
+        const btnEliminar = !SOLO_LECTURA_ACTUAL ? `<button type="button" class="btn-secundario" style="padding:2px 8px; float:right;" onclick="eliminarOficina('${of}',${idx})">✕</button>` : '';
+        if (b.tipoBloque === 'texto') {
+          html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong><p style="margin:6px 0 0;">${esc(b.contenido)}</p></div>`;
+        } else if (b.tipoBloque === 'tabla') {
+          html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong>${renderTablaGenerica(b.columnas, b.filas)}</div>`;
+        }
+      });
+      html += `</details>`;
+    });
+  }
+  if (!SOLO_LECTURA_ACTUAL) {
+    html += `
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="btn-secundario" type="button" onclick="uiAgregarOficinaTexto()">+ Agregar bloque de texto</button>
+        <button class="btn-secundario" type="button" onclick="uiAgregarOficinaTabla()">+ Agregar bloque de tabla</button>
+      </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 // ---------- Tablas genéricas ----------
 function renderTablaGenerica(columnas, filas) {
   let html = `<table class="tabla-datos"><thead><tr>`;
@@ -473,6 +504,7 @@ const PESTANAS = [
   { id: 'casos-mas', grupo: 'Parte diario', etiqueta: 'Casos MAS', render: renderCasosMAS },
   { id: 'casos-sar', grupo: 'Parte diario', etiqueta: 'Casos SAR', render: renderCasosSAR },
   { id: 'otros', grupo: 'Parte diario', etiqueta: 'Otros', render: renderOtros },
+  { id: 'oficinas', grupo: 'Parte diario', etiqueta: 'Oficinas', render: renderOficinas },
   { id: 'buques-detencion', grupo: 'Gestión', etiqueta: 'Buques con Detención', render: renderBuquesDetencion },
   { id: 'insp-tecnicas', grupo: 'Gestión', etiqueta: 'Inspecciones Técnicas', render: renderInspeccionesTecnicas },
   { id: 'control-gestion', grupo: 'Gestión', etiqueta: 'Div. Control de Gestión', render: renderDivisionControlGestion },
@@ -498,6 +530,9 @@ async function iniciarDashboard() {
   document.body.classList.toggle('modo-lectura', soloLectura);
 
   document.getElementById('btnExportarGlobal').onclick = abrirModalExportarGuardia;
+  if (typeof GUARDADO_EN_DRIVE_ACTIVO !== 'undefined' && GUARDADO_EN_DRIVE_ACTIVO) {
+    document.getElementById('btnPDFsArchivados').classList.remove('oculto');
+  }
 
   // Armar la barra de pestañas superior
   const nav = document.getElementById('tabsNav');

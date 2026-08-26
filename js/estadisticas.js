@@ -1,13 +1,12 @@
 // ============================================================
 // ESTADÍSTICAS — Novedades DPSN
 // ============================================================
-// Primero se elige QUÉ consultar (Extraordinarias / PSC / Casos
-// MAS / Casos SAR); recién ahí aparecen los filtros de esa
-// categoría. Las opciones de los filtros (dependencias, banderas)
-// se arman en el momento a partir de los datos cargados, así que
-// un caso nuevo (ej. de una dependencia RAWS) ya aparece como
-// criterio apenas se carga. El último resultado filtrado se puede
-// exportar a PDF.
+// Primero se elige QUÉ consultar; recién ahí aparecen los filtros
+// de esa categoría. Hay un casillero para incluir también todo el
+// historial archivado (no solo el parte de hoy) — cada resultado
+// muestra de qué fecha es. Las opciones de los filtros se arman en
+// el momento a partir de los datos ya cargados. El resultado se
+// puede exportar a PDF.
 // ============================================================
 
 let ULTIMO_RESULTADO_ESTADISTICA = null; // { titulo, columnas, filas }
@@ -32,36 +31,56 @@ function exportarResultadoEstadistica() {
   );
 }
 
+/** Trae los bundles a recorrer: solo hoy, o hoy + todo el historial archivado. */
+async function bundlesSegunAlcance(incluirHistorial) {
+  if (!incluirHistorial) return [{ datos: D, etiquetaFecha: 'Hoy' }];
+  return obtenerTodosLosBundles();
+}
+
+function checkboxHistorial(onchangeFn) {
+  return `
+    <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--gris-700); margin:2px 0 12px;">
+      <input type="checkbox" id="filtroIncluirHistorial" onchange="${onchangeFn}" style="width:16px; height:16px;">
+      Incluir todo el historial archivado (no solo hoy)
+    </label>
+  `;
+}
+
 // ---------- Inspecciones Extraordinarias ----------
-function calcularResultadosExtraordinarias(bandera, codigo) {
-  const grupos = [];
-  if (bandera === 'todas' || bandera === 'argentina') grupos.push(['Argentina', D.inspeccionesExtraordinarias.argentina]);
-  if (bandera === 'todas' || bandera === 'extranjera') grupos.push(['Extranjera', D.inspeccionesExtraordinarias.extranjera]);
+function calcularResultadosExtraordinarias(bundles, bandera, codigo) {
   const filas = [];
-  grupos.forEach(([nombreBandera, grupo]) => {
-    Object.entries(grupo.porDependencia).forEach(([dep, lista]) => {
-      lista.forEach(insp => {
-        const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(g => codigosDeGrupo(g).includes(codigo));
-        if (coincideCodigo) {
-          filas.push([
-            dep, nombreBandera,
-            `${insp.buque.tipo} "${insp.buque.nombre}"`,
-            insp.tipo === 'inicial' ? 'Inicial' : (insp.tipo === 'detallada' ? 'Más detallada' : 'Seguimiento'),
-            (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—'
-          ]);
-        }
+  bundles.forEach(({ datos, etiquetaFecha }) => {
+    const grupos = [];
+    if (bandera === 'todas' || bandera === 'argentina') grupos.push(['Argentina', datos.inspeccionesExtraordinarias.argentina]);
+    if (bandera === 'todas' || bandera === 'extranjera') grupos.push(['Extranjera', datos.inspeccionesExtraordinarias.extranjera]);
+    grupos.forEach(([nombreBandera, grupo]) => {
+      Object.entries(grupo.porDependencia).forEach(([dep, lista]) => {
+        lista.forEach(insp => {
+          const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(g => codigosDeGrupo(g).includes(codigo));
+          if (coincideCodigo) {
+            filas.push([
+              etiquetaFecha, dep, nombreBandera,
+              `${insp.buque.tipo} "${insp.buque.nombre}"`,
+              insp.tipo === 'inicial' ? 'Inicial' : (insp.tipo === 'detallada' ? 'Más detallada' : 'Seguimiento'),
+              (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—'
+            ]);
+          }
+        });
       });
     });
   });
   return filas;
 }
 
-function actualizarEstadExtraordinarias() {
+async function actualizarEstadExtraordinarias() {
   const bandera = document.getElementById('filtroExtraBandera').value;
   const codigo = document.getElementById('filtroExtraCodigo').value;
-  const filas = calcularResultadosExtraordinarias(bandera, codigo);
+  const incluirHistorial = document.getElementById('filtroIncluirHistorial').checked;
+  document.getElementById('resultadosEstadistica').innerHTML = '<div class="placeholder-panel">Consultando…</div>';
+  const bundles = await bundlesSegunAlcance(incluirHistorial);
+  const filas = calcularResultadosExtraordinarias(bundles, bandera, codigo);
   document.getElementById('resultadosEstadistica').innerHTML =
-    htmlResultados(filas, ['Dependencia', 'Bandera', 'Buque', 'Tipo', 'Cód. deficiencias'], 'Inspecciones Extraordinarias');
+    htmlResultados(filas, ['Fecha', 'Dependencia', 'Bandera', 'Buque', 'Tipo', 'Cód. deficiencias'], 'Inspecciones Extraordinarias');
 }
 
 // ---------- Estado Rector de Puerto ----------
@@ -71,56 +90,67 @@ function opcionesBanderaPSC() {
   return [...set];
 }
 
-function calcularResultadosPSC(bandera, codigo) {
+function calcularResultadosPSC(bundles, bandera, codigo) {
   const filas = [];
-  Object.entries(D.estadoRectorPuerto.porDependencia).forEach(([dep, lista]) => {
-    lista.forEach(insp => {
-      const coincideBandera = bandera === 'todas' || insp.buque.bandera === bandera;
-      const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(g => codigosDeGrupo(g).includes(codigo));
-      if (coincideBandera && coincideCodigo) {
-        filas.push([dep, insp.buque.bandera, `${insp.buque.tipo} "${insp.buque.nombre}"`, (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—']);
-      }
+  bundles.forEach(({ datos, etiquetaFecha }) => {
+    Object.entries(datos.estadoRectorPuerto.porDependencia).forEach(([dep, lista]) => {
+      lista.forEach(insp => {
+        const coincideBandera = bandera === 'todas' || insp.buque.bandera === bandera;
+        const coincideCodigo = codigo === 'todos' || (insp.deficiencias || []).some(g => codigosDeGrupo(g).includes(codigo));
+        if (coincideBandera && coincideCodigo) {
+          filas.push([etiquetaFecha, dep, insp.buque.bandera, `${insp.buque.tipo} "${insp.buque.nombre}"`, (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—']);
+        }
+      });
     });
   });
   return filas;
 }
 
-function actualizarEstadPSC() {
+async function actualizarEstadPSC() {
   const bandera = document.getElementById('filtroPscBandera').value;
   const codigo = document.getElementById('filtroPscCodigo').value;
-  const filas = calcularResultadosPSC(bandera, codigo);
+  const incluirHistorial = document.getElementById('filtroIncluirHistorial').checked;
+  document.getElementById('resultadosEstadistica').innerHTML = '<div class="placeholder-panel">Consultando…</div>';
+  const bundles = await bundlesSegunAlcance(incluirHistorial);
+  const filas = calcularResultadosPSC(bundles, bandera, codigo);
   document.getElementById('resultadosEstadistica').innerHTML =
-    htmlResultados(filas, ['Dependencia', 'Bandera', 'Buque', 'Cód. deficiencias'], 'Estado Rector de Puerto');
+    htmlResultados(filas, ['Fecha', 'Dependencia', 'Bandera', 'Buque', 'Cód. deficiencias'], 'Estado Rector de Puerto');
 }
 
 // ---------- Casos MAS / SAR ----------
 function opcionesDependencia(bloque) { return Object.keys(bloque.porDependencia); }
 
-function calcularResultadosCasos(bloque, dependencia, estado) {
+function calcularResultadosCasos(bundles, tipo, dependencia, estado) {
   const filas = [];
-  Object.entries(bloque.porDependencia).forEach(([dep, lista]) => {
-    if (dependencia !== 'todas' && dep !== dependencia) return;
-    lista.forEach(c => {
-      if (estado !== 'todos' && c.estado !== estado) return;
-      filas.push([dep, c.titulo, c.estado === 'pendiente' ? 'Pendiente' : 'Cerrado']);
+  bundles.forEach(({ datos, etiquetaFecha }) => {
+    const bloque = tipo === 'mas' ? datos.casosMAS : datos.casosSAR;
+    Object.entries(bloque.porDependencia).forEach(([dep, lista]) => {
+      if (dependencia !== 'todas' && dep !== dependencia) return;
+      lista.forEach(c => {
+        if (estado !== 'todos' && c.estado !== estado) return;
+        filas.push([etiquetaFecha, dep, c.titulo, c.estado === 'pendiente' ? 'Pendiente' : 'Cerrado']);
+      });
     });
   });
   return filas;
 }
 
-function actualizarEstadCasos(tipo) {
+async function actualizarEstadCasos(tipo) {
   const dependencia = document.getElementById('filtroCasoDependencia').value;
   const estado = document.getElementById('filtroCasoEstado').value;
-  const bloque = tipo === 'mas' ? D.casosMAS : D.casosSAR;
-  const filas = calcularResultadosCasos(bloque, dependencia, estado);
+  const incluirHistorial = document.getElementById('filtroIncluirHistorial').checked;
+  document.getElementById('resultadosEstadistica').innerHTML = '<div class="placeholder-panel">Consultando…</div>';
+  const bundles = await bundlesSegunAlcance(incluirHistorial);
+  const filas = calcularResultadosCasos(bundles, tipo, dependencia, estado);
   document.getElementById('resultadosEstadistica').innerHTML =
-    htmlResultados(filas, ['Dependencia', 'Título', 'Estado'], tipo === 'mas' ? 'Casos MAS' : 'Casos SAR');
+    htmlResultados(filas, ['Fecha', 'Dependencia', 'Título', 'Estado'], tipo === 'mas' ? 'Casos MAS' : 'Casos SAR');
 }
 
 // ---------- Selector de categoría (primero elegís qué consultar) ----------
 function filtrosPorCategoria(categoria) {
   if (categoria === 'extraordinarias') {
     return `
+      ${checkboxHistorial('actualizarEstadExtraordinarias()')}
       <div class="fila-doble">
         <div class="campo">
           <label>Bandera</label>
@@ -143,6 +173,7 @@ function filtrosPorCategoria(categoria) {
   }
   if (categoria === 'psc') {
     return `
+      ${checkboxHistorial('actualizarEstadPSC()')}
       <div class="fila-doble">
         <div class="campo">
           <label>Bandera</label>
@@ -165,6 +196,7 @@ function filtrosPorCategoria(categoria) {
   // 'mas' o 'sar'
   const bloque = categoria === 'mas' ? D.casosMAS : D.casosSAR;
   return `
+    ${checkboxHistorial(`actualizarEstadCasos('${categoria}')`)}
     <div class="fila-doble">
       <div class="campo">
         <label>Dependencia</label>

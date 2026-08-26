@@ -21,7 +21,7 @@ function itemsResumenParte() {
     `Otras situaciones: ${contarOtros()}`,
     `Buques con detención: ${D.buquesDetencion.length}`,
     `Personas de licencia: ${contarLicenciasTotal()}`,
-    `Personas en cursos: ${D.cursos.length}`
+    `Cursos: ${D.cursos.length}`
   ];
 }
 
@@ -104,6 +104,18 @@ function textoOtros() {
     });
   });
   return [{ titulo: 'Otros', contenido: { tipo: 'lista', items: items.length ? items : ['Sin novedades adicionales.'] } }];
+}
+
+function textoOficinas() {
+  const oficinas = Object.keys(D.oficinas.porOficina);
+  const items = [];
+  oficinas.forEach(of => {
+    D.oficinas.porOficina[of].forEach(b => {
+      if (b.tipoBloque === 'texto') items.push(`${of} — ${b.titulo}: ${b.contenido}`);
+      else items.push(`${of} — ${b.titulo}: (tabla — ver detalle en el sistema)`);
+    });
+  });
+  return [{ titulo: 'Oficinas', contenido: { tipo: 'lista', items: items.length ? items : ['Sin información cargada por oficinas.'] } }];
 }
 
 function textoBuquesDetencion() {
@@ -197,6 +209,7 @@ const TEXTO_EXPORTACION = {
   'casos-mas': textoCasosMAS,
   'casos-sar': textoCasosSAR,
   'otros': textoOtros,
+  'oficinas': textoOficinas,
   'buques-detencion': textoBuquesDetencion,
   'insp-tecnicas': textoInspeccionesTecnicas,
   'control-gestion': textoDivisionControlGestion,

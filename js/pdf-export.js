@@ -429,6 +429,51 @@ function guardarCopiaEnDrive(doc, nombreArchivo) {
     .catch(err => console.error('No se pudo contactar el Apps Script para guardar en Drive:', err));
 }
 
+/** Lista los PDFs guardados en Drive y los muestra en un modal, con link para abrir cada uno. */
+async function abrirModalPDFsArchivados() {
+  cerrarModalExportar();
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modalPDFsArchivados';
+  modal.innerHTML = `
+    <div class="modal-caja">
+      <div class="modal-header">
+        <h3>PDFs archivados en Drive</h3>
+        <button type="button" onclick="document.getElementById('modalPDFsArchivados').remove()">✕</button>
+      </div>
+      <div class="modal-lista" id="listaPDFsArchivados"><div class="placeholder-panel">Consultando Drive…</div></div>
+      <div class="modal-footer">
+        <button class="btn-secundario" type="button" onclick="document.getElementById('modalPDFsArchivados').remove()">Cerrar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  try {
+    const resp = await fetch(`${APPS_SCRIPT_WEBAPP_URL}?carpetaId=${encodeURIComponent(CARPETA_DRIVE_ID)}`);
+    const datos = await resp.json();
+    const cont = document.getElementById('listaPDFsArchivados');
+    if (!cont) return; // el usuario ya cerró el modal
+    if (!datos.ok) {
+      cont.innerHTML = `<div class="placeholder-panel">No se pudo consultar Drive: ${esc(datos.error || '')}</div>`;
+      return;
+    }
+    if (!datos.archivos.length) {
+      cont.innerHTML = '<div class="placeholder-panel">Todavía no hay PDFs archivados en la carpeta.</div>';
+      return;
+    }
+    cont.innerHTML = datos.archivos.map(a => `
+      <a href="${esc(a.url)}" target="_blank" rel="noopener" style="display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--gris-100); font-size:13px; color:var(--azul-medio);">
+        <span>${esc(a.nombre)}</span>
+        <span style="color:var(--gris-500); font-size:11.5px; white-space:nowrap;">${esc(new Date(a.fecha).toLocaleDateString('es-AR'))}</span>
+      </a>
+    `).join('');
+  } catch (err) {
+    const cont = document.getElementById('listaPDFsArchivados');
+    if (cont) cont.innerHTML = '<div class="placeholder-panel">No se pudo conectar con Drive. Revisá la configuración en integraciones-config.js.</div>';
+  }
+}
+
 function textoPlano(html) {
   const d = document.createElement('div');
   d.innerHTML = html || '';
@@ -441,7 +486,7 @@ const REFERENCIAS_PSC_TEXTO = 'REFERENCIAS: (IISD) Inspección Inicial Sin Defic
 // Orden fijo en el que se arma el PDF, independiente del orden en
 // que se tildaron los checkboxes. "inicio" se maneja aparte: su
 // resumen va primero y su bloque de altura/calados/guardia al final.
-const ORDEN_EXPORTACION = ['insp-extraordinarias', 'insp-psc', 'casos-mas', 'casos-sar', 'otros', 'buques-detencion', 'insp-tecnicas', 'control-gestion', 'licencias', 'cursos'];
+const ORDEN_EXPORTACION = ['insp-extraordinarias', 'insp-psc', 'casos-mas', 'casos-sar', 'otros', 'oficinas', 'buques-detencion', 'insp-tecnicas', 'control-gestion', 'licencias', 'cursos'];
 
 // ---------- Exportar desde Guardias (todo el parte diario) ----------
 function abrirModalExportarGuardia() {
@@ -468,5 +513,6 @@ function abrirModalExportarGuardia() {
     }
 
     generarPDF(`Novedades DPSN ${fechaHoy()}.pdf`, 'RESUMEN DE NOVEDADES', D.fechaParte, secciones);
+    archivarParteDelDia();
   });
 }

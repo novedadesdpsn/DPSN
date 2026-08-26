@@ -63,7 +63,12 @@ Mientras el proyecto siga en modo demo, sigue funcionando igual que antes pero g
 
 ## Guardar copia del PDF exportado en Drive
 
-Ver `apps-script/Code.gs` (función `doPost`) y completar `js/integraciones-config.js` con la URL del despliegue y el ID de la carpeta de Drive.
+1. Desplegá `apps-script/Code.gs` como Aplicación web (los pasos están comentados arriba de la función `doPost` en ese mismo archivo).
+2. Completá `js/integraciones-config.js` con la URL del despliegue y el ID de la carpeta de Drive.
+3. Cada exportación de PDF desde Guardias descarga el archivo en la computadora **y** manda una copia a esa carpeta de Drive automáticamente.
+4. Con eso configurado, en el topbar aparece el botón **"PDFs archivados"**: lista todos los PDFs guardados en Drive, con link para abrir cada uno.
+
+**Si ya tenías el Apps Script desplegado de antes**, hace falta volver a implementarlo para que tome la función nueva (`doGet`, la que lista los archivos): en el editor de Apps Script, **Implementar > Administrar implementaciones** → ícono de lápiz sobre la implementación existente → "Versión: Nueva versión" → Implementar. La URL no cambia, así que no hace falta tocar `integraciones-config.js`.
 
 ## Vincular Google Sheets (opcional, alternativa a la carga directa)
 

@@ -1,66 +1,78 @@
 // ============================================================
 // ASISTENTE DE BÚSQUEDA — Novedades DPSN
 // ============================================================
-// Esto es un buscador que cruza lo que ya está cargado en el
-// sistema (Inspecciones Extraordinarias, PSC, Casos MAS y SAR),
-// no una inteligencia artificial conversacional: eso necesitaría
-// un servidor propio con una clave de API, algo que este sitio
-// estático en GitHub Pages no tiene. Lo que sí puede hacer: buscar
-// por nombre de buque (te tira todas las inspecciones que tuvo,
-// con sus deficiencias y fechas) o por fecha.
+// Buscador que cruza el parte en curso Y todo el historial
+// archivado (una foto por cada día que se exportó el PDF) —
+// no es una inteligencia artificial conversacional: eso
+// necesitaría un servidor propio con una clave de API, algo que
+// este sitio estático en GitHub Pages no tiene. Lo que sí hace:
+// buscar por nombre de buque (todas sus inspecciones, con
+// deficiencias y fechas, de hoy y de partes anteriores) o por
+// fecha.
 // ============================================================
 
 function normalizarTexto(s) {
   return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function todasLasInspeccionesExtraordinarias() {
+function todasLasInspeccionesExtraordinarias(datos, etiquetaFecha) {
   const out = [];
   ['argentina', 'extranjera'].forEach(bandera => {
-    const grupo = D.inspeccionesExtraordinarias[bandera];
+    const grupo = datos.inspeccionesExtraordinarias[bandera];
     Object.entries(grupo.porDependencia).forEach(([dep, lista]) => {
-      lista.forEach(insp => out.push({ origen: 'Inspección Extraordinaria', bandera, dependencia: dep, ...insp }));
+      lista.forEach(insp => out.push({ origen: 'Inspección Extraordinaria', bandera, dependencia: dep, fechaParte: etiquetaFecha, ...insp }));
     });
   });
   return out;
 }
 
-function todasLasInspeccionesPSC() {
+function todasLasInspeccionesPSC(datos, etiquetaFecha) {
   const out = [];
-  Object.entries(D.estadoRectorPuerto.porDependencia).forEach(([dep, lista]) => {
-    lista.forEach(insp => out.push({ origen: 'Estado Rector de Puerto', dependencia: dep, ...insp }));
+  Object.entries(datos.estadoRectorPuerto.porDependencia).forEach(([dep, lista]) => {
+    lista.forEach(insp => out.push({ origen: 'Estado Rector de Puerto', dependencia: dep, fechaParte: etiquetaFecha, ...insp }));
   });
   return out;
 }
 
-function todosLosCasos(bloque, origen) {
+function todosLosCasos(bloque, origen, etiquetaFecha) {
   const out = [];
   Object.entries(bloque.porDependencia).forEach(([dep, lista]) => {
-    lista.forEach(c => out.push({ origen, dependencia: dep, ...c }));
+    lista.forEach(c => out.push({ origen, dependencia: dep, fechaParte: etiquetaFecha, ...c }));
   });
   return out;
 }
 
-function buscarPorBuque(query) {
-  const q = normalizarTexto(query);
-  const resultados = [];
-  todasLasInspeccionesExtraordinarias().forEach(r => { if (normalizarTexto(r.buque.nombre).includes(q)) resultados.push(r); });
-  todasLasInspeccionesPSC().forEach(r => { if (normalizarTexto(r.buque.nombre).includes(q)) resultados.push(r); });
-  todosLosCasos(D.casosMAS, 'Caso MAS').forEach(r => {
-    if (normalizarTexto(r.titulo).includes(q) || normalizarTexto(r.novedad || '').includes(q)) resultados.push(r);
-  });
-  todosLosCasos(D.casosSAR, 'Caso SAR').forEach(r => {
-    if (normalizarTexto(r.nombreBuque || '').includes(q) || normalizarTexto(r.titulo).includes(q)) resultados.push(r);
-  });
-  return resultados;
+/** Junta todo lo buscable de un bundle de datos (el actual, o una foto del historial). */
+function todoLoBuscableDe(datos, etiquetaFecha) {
+  return [
+    ...todasLasInspeccionesExtraordinarias(datos, etiquetaFecha),
+    ...todasLasInspeccionesPSC(datos, etiquetaFecha),
+    ...todosLosCasos(datos.casosMAS, 'Caso MAS', etiquetaFecha),
+    ...todosLosCasos(datos.casosSAR, 'Caso SAR', etiquetaFecha)
+  ];
 }
 
-function buscarPorFecha(query) {
+/** Trae [{ datos, etiquetaFecha }] para el parte en curso + cada día archivado. */
+async function obtenerTodosLosBundles() {
+  const bundles = [{ datos: D, etiquetaFecha: 'En curso (hoy)' }];
+  const historial = await obtenerHistorialCompleto();
+  historial.forEach(parte => bundles.push({ datos: parte.datos, etiquetaFecha: parte.fechaVisual || parte.fecha }));
+  return bundles;
+}
+
+function buscarPorBuqueEnBundle(datos, etiquetaFecha, q) {
+  return todoLoBuscableDe(datos, etiquetaFecha).filter(r => {
+    if (r.buque) return normalizarTexto(r.buque.nombre).includes(q);
+    return normalizarTexto(r.titulo).includes(q) || normalizarTexto(r.nombreBuque || '').includes(q) || normalizarTexto(r.novedad || '').includes(q);
+  });
+}
+
+function buscarPorFechaEnBundle(datos, etiquetaFecha, query) {
   const resultados = [];
-  todasLasInspeccionesExtraordinarias().concat(todasLasInspeccionesPSC()).forEach(r => {
+  todasLasInspeccionesExtraordinarias(datos, etiquetaFecha).concat(todasLasInspeccionesPSC(datos, etiquetaFecha)).forEach(r => {
     if (r.fechaInspMasDetallada && r.fechaInspMasDetallada.includes(query)) resultados.push(r);
   });
-  todosLosCasos(D.casosSAR, 'Caso SAR').forEach(r => {
+  todosLosCasos(datos.casosSAR, 'Caso SAR', etiquetaFecha).forEach(r => {
     if ((r.fechaInicio && r.fechaInicio.includes(query)) || (r.fechaCierre && r.fechaCierre.includes(query))) resultados.push(r);
   });
   return resultados;
@@ -68,7 +80,10 @@ function buscarPorFecha(query) {
 
 function renderResultadoAsistente(r) {
   let html = `<div class="item-insp" style="margin-bottom:10px;">
-    <div><span class="tag detallada">${esc(r.origen)}</span> <strong>${esc(r.dependencia)}</strong></div>`;
+    <div style="display:flex; justify-content:space-between; gap:8px;">
+      <div><span class="tag detallada">${esc(r.origen)}</span> <strong>${esc(r.dependencia)}</strong></div>
+      <span style="font-size:10.5px; color:var(--gris-500); white-space:nowrap;">${esc(r.fechaParte || '')}</span>
+    </div>`;
   if (r.buque) {
     const tipoTexto = r.tipo === 'inicial' ? 'Inicial (II)' : (r.tipo === 'detallada' ? 'Más Detallada (ID)' : `IS de ID Fecha ${r.fechaInspMasDetallada || '—'}`);
     html += `<div style="margin-top:4px;">${esc(r.buque.tipo || '')} "${esc(r.buque.nombre || '')}" (${esc(r.buque.matricula || '')}) — B/${esc(r.buque.bandera || '')}</div>`;
@@ -89,16 +104,27 @@ function renderResultadoAsistente(r) {
 
 function renderResultadosAsistente(resultados, query) {
   if (!query) return '<div class="placeholder-panel">Escribí el nombre de un buque o una fecha (dd/mm/aaaa) para buscar.</div>';
-  if (!resultados.length) return `<div class="placeholder-panel">No encontré nada para "${esc(query)}" en los datos cargados.</div>`;
-  return `<p style="font-size:12.5px; color:var(--gris-700); margin-bottom:10px;"><strong>${resultados.length}</strong> resultado(s) encontrados</p>` +
+  if (!resultados.length) return `<div class="placeholder-panel">No encontré nada para "${esc(query)}" — ni en el parte de hoy ni en el historial archivado.</div>`;
+  return `<p style="font-size:12.5px; color:var(--gris-700); margin-bottom:10px;"><strong>${resultados.length}</strong> resultado(s) encontrados (hoy + historial)</p>` +
     resultados.map(renderResultadoAsistente).join('');
 }
 
-function ejecutarBusquedaAsistente() {
+async function ejecutarBusquedaAsistente() {
   const query = document.getElementById('asistenteInput').value.trim();
+  const resultadosEl = document.getElementById('asistenteResultados');
+  if (!query) { resultadosEl.innerHTML = renderResultadosAsistente([], query); return; }
+
+  resultadosEl.innerHTML = '<div class="placeholder-panel">Buscando en el parte de hoy y en el historial…</div>';
   const esFecha = /\d{1,2}\/\d{1,2}(\/\d{2,4})?/.test(query);
-  const resultados = query ? (esFecha ? buscarPorFecha(query) : buscarPorBuque(query)) : [];
-  document.getElementById('asistenteResultados').innerHTML = renderResultadosAsistente(resultados, query);
+  const q = normalizarTexto(query);
+
+  const bundles = await obtenerTodosLosBundles();
+  let resultados = [];
+  bundles.forEach(({ datos, etiquetaFecha }) => {
+    resultados = resultados.concat(esFecha ? buscarPorFechaEnBundle(datos, etiquetaFecha, query) : buscarPorBuqueEnBundle(datos, etiquetaFecha, q));
+  });
+
+  resultadosEl.innerHTML = renderResultadosAsistente(resultados, query);
 }
 
 function renderAsistente() {
@@ -110,7 +136,7 @@ function renderAsistente() {
       <button class="btn-primario" type="button" onclick="ejecutarBusquedaAsistente()">Buscar</button>
     </div>
     <div id="asistenteResultados" style="margin-top:14px;">
-      <div class="placeholder-panel">Escribí el nombre de un buque o una fecha (dd/mm/aaaa) para buscar.</div>
+      <div class="placeholder-panel">Escribí el nombre de un buque o una fecha (dd/mm/aaaa) para buscar — busca en el parte de hoy y en todo el historial archivado.</div>
     </div>
   `;
 }

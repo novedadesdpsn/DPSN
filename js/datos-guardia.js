@@ -15,7 +15,7 @@
 // ============================================================
 
 const CLAVE_DATOS_GUARDIA = 'novedades_dpsn_datos_guardia';
-const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias', 'cursos'];
+const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'oficinas', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias', 'cursos'];
 const COLECCION_PARTE_DIARIO = 'parteDiario';
 
 function persistirDatosGuardia() {
@@ -464,6 +464,44 @@ function uiAgregarCurso() {
 function eliminarCurso(indice) {
   if (!confirm('¿Eliminar este curso?')) return;
   D.cursos.splice(indice, 1);
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Oficinas ----------
+function uiAgregarOficinaTexto() {
+  abrirModalFormulario('Agregar bloque de texto — Oficinas', [
+    { id: 'oficina', label: 'Oficina' },
+    { id: 'titulo', label: 'Título' },
+    { id: 'contenido', label: 'Contenido', tipo: 'textarea' }
+  ], {}, (datos) => {
+    const of = datos.oficina || 'SIN_OFICINA';
+    if (!D.oficinas.porOficina[of]) D.oficinas.porOficina[of] = [];
+    D.oficinas.porOficina[of].push({ tipoBloque: 'texto', titulo: datos.titulo, contenido: datos.contenido });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiAgregarOficinaTabla() {
+  abrirModalFormulario('Agregar tabla — Oficinas', [
+    { id: 'oficina', label: 'Oficina' },
+    { id: 'titulo', label: 'Título' },
+    { id: 'columnas', label: 'Columnas (separadas por coma)', default: 'Concepto, Detalle, Fecha' }
+  ], {}, (datos) => {
+    const of = datos.oficina || 'SIN_OFICINA';
+    const columnas = (datos.columnas || '').split(',').map(c => c.trim()).filter(Boolean);
+    if (!D.oficinas.porOficina[of]) D.oficinas.porOficina[of] = [];
+    D.oficinas.porOficina[of].push({ tipoBloque: 'tabla', titulo: datos.titulo, columnas, filas: [columnas.map(() => '')] });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarOficina(oficina, indice) {
+  if (!confirm('¿Eliminar este bloque?')) return;
+  D.oficinas.porOficina[oficina].splice(indice, 1);
+  if (!D.oficinas.porOficina[oficina].length) delete D.oficinas.porOficina[oficina];
   persistirDatosGuardia();
   refrescarPestanaActual();
 }

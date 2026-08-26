@@ -153,6 +153,33 @@ function doPost(e) {
   }
 }
 
+/**
+ * Lista los PDFs guardados en la carpeta de Drive, para el botón
+ * "PDFs archivados" del dashboard. Se llama con GET:
+ *   {URL_DEL_WEBAPP}?carpetaId={ID_DE_LA_CARPETA}
+ */
+function doGet(e) {
+  try {
+    const carpeta = DriveApp.getFolderById(e.parameter.carpetaId);
+    const archivos = carpeta.getFilesByType(MimeType.PDF);
+    const lista = [];
+    while (archivos.hasNext()) {
+      const f = archivos.next();
+      lista.push({
+        nombre: f.getName(),
+        url: f.getUrl(),
+        fecha: f.getDateCreated().toISOString()
+      });
+    }
+    lista.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, archivos: lista }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 function sincronizarInspeccionesExtraordinarias() {
   const hoja = SpreadsheetApp.getActive().getSheetByName('InspeccionesExtraordinarias');
   const filas = hoja.getDataRange().getValues();
