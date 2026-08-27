@@ -9,9 +9,9 @@
 //    guarden las copias de los partes exportados.
 // ============================================================
 
-const APPS_SCRIPT_WEBAPP_URL = "REEMPLAZAR_URL_WEBAPP_APPS_SCRIPT";
-const CARPETA_DRIVE_ID = "REEMPLAZAR_ID_CARPETA_DRIVE";
+const APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwHDXNIPqC1kGx8vLwJqd2i0fCgbjf0iY_74b3XxOviWNQu_VXdFj6y4oZTgtnIHNmZRQ/exec";
+const CARPETA_DRIVE_ID = "https://drive.google.com/drive/u/2/folders/1GaqmTYmW5R8T5c9prozdVPBY68PoxxlD";
 
 const GUARDADO_EN_DRIVE_ACTIVO =
-  APPS_SCRIPT_WEBAPP_URL !== "REEMPLAZAR_URL_WEBAPP_APPS_SCRIPT" &&
-  CARPETA_DRIVE_ID !== "REEMPLAZAR_ID_CARPETA_DRIVE";
+  APPS_SCRIPT_WEBAPP_URL !== "https://script.google.com/macros/s/AKfycbwHDXNIPqC1kGx8vLwJqd2i0fCgbjf0iY_74b3XxOviWNQu_VXdFj6y4oZTgtnIHNmZRQ/exec" &&
+  CARPETA_DRIVE_ID !== "https://drive.google.com/drive/u/2/folders/1GaqmTYmW5R8T5c9prozdVPBY68PoxxlD";
