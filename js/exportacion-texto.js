@@ -64,8 +64,10 @@ function textoExtraordinarias() {
 
 function textoEstadoRectorPuerto() {
   const rp = D.estadoRectorPuerto.resumen;
+  const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
+  const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + (rp.inspeccionadosDiario || 0);
   const pctDiario = rp.factiblesDiario ? ((rp.inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(2) : '0.00';
-  const pctAnual = rp.factiblesAnual ? ((rp.inspeccionadosAnual / rp.factiblesAnual) * 100).toFixed(2) : '0.00';
+  const pctAnual = factiblesAnual ? ((inspeccionadosAnual / factiblesAnual) * 100).toFixed(2) : '0.00';
   return [
     {
       titulo: 'Inspecciones por Estado Rector del Puerto',
@@ -79,7 +81,7 @@ function textoEstadoRectorPuerto() {
         nota: '(Cálculo automático)',
         tablas: [{
           columnas: ['Buq. Extr. Ingresados', 'Factibles (hoy)', 'Insp. (hoy)', 'Total % (hoy)', 'Factibles (anual)', 'Insp. (anual)', 'Total % (anual)'],
-          filas: [[rp.buquesIngresados, rp.factiblesDiario, rp.inspeccionadosDiario, pctDiario + '%', rp.factiblesAnual, rp.inspeccionadosAnual, pctAnual + '%']]
+          filas: [[rp.buquesIngresados, rp.factiblesDiario, rp.inspeccionadosDiario, pctDiario + '%', factiblesAnual, inspeccionadosAnual, pctAnual + '%']]
         }]
       }
     }

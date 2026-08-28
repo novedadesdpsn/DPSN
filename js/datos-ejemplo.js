@@ -72,7 +72,7 @@ const DATOS_EJEMPLO = {
         }
       ]
     },
-    resumen: { buquesIngresados: 6, factiblesDiario: 3, inspeccionadosDiario: 1, factiblesAnual: 1803, inspeccionadosAnual: 882 }
+    resumen: { buquesIngresados: 6, factiblesDiario: 3, inspeccionadosDiario: 1, factiblesAnualPrevio: 1800, inspeccionadosAnualPrevio: 881 }
   },
 
   casosMAS: {

@@ -15,7 +15,7 @@
 // ============================================================
 
 const CLAVE_DATOS_GUARDIA = 'novedades_dpsn_datos_guardia';
-const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'oficinas', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias', 'cursos'];
+const SECCIONES_PERSISTIDAS = ['inspeccionesExtraordinarias', 'estadoRectorPuerto', 'casosMAS', 'casosSAR', 'buquesDetencionMapa', 'otros', 'oficinas', 'buquesDetencion', 'inspeccionesTecnicas', 'divisionControlGestion', 'licencias', 'cursos', 'guardia'];
 const COLECCION_PARTE_DIARIO = 'parteDiario';
 
 function persistirDatosGuardia() {
@@ -504,4 +504,55 @@ function eliminarOficina(oficina, indice) {
   if (!D.oficinas.porOficina[oficina].length) delete D.oficinas.porOficina[oficina];
   persistirDatosGuardia();
   refrescarPestanaActual();
+}
+
+// ---------- Resumen PSC (editable) ----------
+function uiEditarResumenPSC() {
+  const rp = D.estadoRectorPuerto.resumen;
+  abrirModalFormulario('Editar resumen PSC', [
+    { id: 'buquesIngresados', label: 'Buques extranjeros ingresados (hoy)', default: String(rp.buquesIngresados) },
+    { id: 'factiblesDiario', label: 'Factibles de ser inspeccionados (hoy)', default: String(rp.factiblesDiario) },
+    { id: 'inspeccionadosDiario', label: 'Cantidad de inspeccionados (hoy)', default: String(rp.inspeccionadosDiario) },
+    { id: 'factiblesAnualPrevio', label: 'Acumulado anual de factibles — previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.factiblesAnualPrevio || 0) },
+    { id: 'inspeccionadosAnualPrevio', label: 'Acumulado anual de inspeccionados — previo a hoy (ídem, una sola vez)', default: String(rp.inspeccionadosAnualPrevio || 0) }
+  ], {}, (datos) => {
+    D.estadoRectorPuerto.resumen = {
+      buquesIngresados: parseInt(datos.buquesIngresados, 10) || 0,
+      factiblesDiario: parseInt(datos.factiblesDiario, 10) || 0,
+      inspeccionadosDiario: parseInt(datos.inspeccionadosDiario, 10) || 0,
+      factiblesAnualPrevio: parseInt(datos.factiblesAnualPrevio, 10) || 0,
+      inspeccionadosAnualPrevio: parseInt(datos.inspeccionadosAnualPrevio, 10) || 0
+    };
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+// ---------- Guardia (Saliente / Entrante) ----------
+function uiEditarGuardia() {
+  const s = D.guardia.saliente;
+  const e = D.guardia.entrante;
+  abrirModalFormulario('Editar Guardia', [
+    { id: 'salienteJefe', label: 'Saliente — Jefe de Servicio', default: s[0] ? s[0].nombre : '' },
+    { id: 'salienteOficial', label: 'Saliente — Oficial de Guardia', default: s[1] ? s[1].nombre : '' },
+    { id: 'salienteAyte', label: 'Saliente — Ayte. de Guardia', default: s[2] ? s[2].nombre : '' },
+    { id: 'entranteJefe', label: 'Entrante — Jefe de Servicio', default: e[0] ? e[0].nombre : '' },
+    { id: 'entranteOficial', label: 'Entrante — Oficial de Guardia', default: e[1] ? e[1].nombre : '' },
+    { id: 'entranteAyte', label: 'Entrante — Ayte. de Guardia', default: e[2] ? e[2].nombre : '' }
+  ], {}, (datos) => {
+    D.guardia = {
+      saliente: [
+        { rol: 'Jefe de Servicio', nombre: datos.salienteJefe },
+        { rol: 'Oficial de Guardia', nombre: datos.salienteOficial },
+        { rol: 'Ayte. de Guardia', nombre: datos.salienteAyte }
+      ],
+      entrante: [
+        { rol: 'Jefe de Servicio', nombre: datos.entranteJefe },
+        { rol: 'Oficial de Guardia', nombre: datos.entranteOficial },
+        { rol: 'Ayte. de Guardia', nombre: datos.entranteAyte }
+      ]
+    };
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
 }

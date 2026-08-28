@@ -62,8 +62,16 @@ async function obtenerTodosLosBundles() {
 
 function buscarPorBuqueEnBundle(datos, etiquetaFecha, q) {
   return todoLoBuscableDe(datos, etiquetaFecha).filter(r => {
-    if (r.buque) return normalizarTexto(r.buque.nombre).includes(q);
-    return normalizarTexto(r.titulo).includes(q) || normalizarTexto(r.nombreBuque || '').includes(q) || normalizarTexto(r.novedad || '').includes(q);
+    if (r.buque) {
+      return normalizarTexto(r.buque.nombre).includes(q) ||
+        normalizarTexto(r.buque.matricula).includes(q) ||
+        normalizarTexto(r.buque.bandera).includes(q);
+    }
+    return normalizarTexto(r.titulo).includes(q) ||
+      normalizarTexto(r.nombreBuque || '').includes(q) ||
+      normalizarTexto(r.matricula || '').includes(q) ||
+      normalizarTexto(r.bandera || '').includes(q) ||
+      normalizarTexto(r.novedad || '').includes(q);
   });
 }
 
@@ -102,11 +110,34 @@ function renderResultadoAsistente(r) {
   return html;
 }
 
+let ULTIMO_RESULTADO_ASISTENTE = null; // { query, resultados }
+
 function renderResultadosAsistente(resultados, query) {
-  if (!query) return '<div class="placeholder-panel">Escribí el nombre de un buque o una fecha (dd/mm/aaaa) para buscar.</div>';
+  ULTIMO_RESULTADO_ASISTENTE = { query, resultados };
+  if (!query) return '<div class="placeholder-panel">Escribí el nombre de un buque, matrícula, bandera o una fecha (dd/mm/aaaa) para buscar.</div>';
   if (!resultados.length) return `<div class="placeholder-panel">No encontré nada para "${esc(query)}" — ni en el parte de hoy ni en el historial archivado.</div>`;
   return `<p style="font-size:12.5px; color:var(--gris-700); margin-bottom:10px;"><strong>${resultados.length}</strong> resultado(s) encontrados (hoy + historial)</p>` +
-    resultados.map(renderResultadoAsistente).join('');
+    resultados.map(renderResultadoAsistente).join('') +
+    `<button class="btn-primario" type="button" style="margin-top:10px;" onclick="exportarResultadoAsistente()">Exportar PDF</button>`;
+}
+
+function exportarResultadoAsistente() {
+  if (!ULTIMO_RESULTADO_ASISTENTE || !ULTIMO_RESULTADO_ASISTENTE.resultados.length) return;
+  const { query, resultados } = ULTIMO_RESULTADO_ASISTENTE;
+  const columnas = ['Fecha', 'Origen', 'Dependencia', 'Buque / Título', 'Detalle'];
+  const filas = resultados.map(r => {
+    const buqueTxt = r.buque ? `${r.buque.tipo || ''} "${r.buque.nombre || ''}" (${r.buque.matricula || ''}) B/${r.buque.bandera || ''}` : r.titulo;
+    const detalle = r.buque
+      ? (r.deficiencias && r.deficiencias.length ? r.deficiencias.map(g => textoGrupoDeficiencia(g)).join(' — ') : 'Sin deficiencias')
+      : (r.novedad || '');
+    return [r.fechaParte || '', r.origen || '', r.dependencia || '', buqueTxt, detalle];
+  });
+  generarPDF(
+    `Busqueda ${query} ${fechaHoy()}.pdf`,
+    'RESUMEN DE NOVEDADES — BÚSQUEDA',
+    `Búsqueda: "${query}" — ${fechaHoy()}`,
+    [{ titulo: 'Resultados', contenido: { tipo: 'tablas', tablas: [{ columnas, filas }] } }]
+  );
 }
 
 async function ejecutarBusquedaAsistente() {
@@ -130,13 +161,13 @@ async function ejecutarBusquedaAsistente() {
 function renderAsistente() {
   return `
     <div style="display:flex; gap:10px;">
-      <input type="text" id="asistenteInput" placeholder="Ej: KOETI, o 03/08/2026"
+      <input type="text" id="asistenteInput" placeholder="Ej: KOETI, 03242, ARGENTINA, o 03/08/2026"
         style="flex:1; padding:10px 12px; border:1px solid var(--gris-300); border-radius:var(--radio); font-size:13px;"
         onkeydown="if(event.key==='Enter') ejecutarBusquedaAsistente()">
       <button class="btn-primario" type="button" onclick="ejecutarBusquedaAsistente()">Buscar</button>
     </div>
     <div id="asistenteResultados" style="margin-top:14px;">
-      <div class="placeholder-panel">Escribí el nombre de un buque o una fecha (dd/mm/aaaa) para buscar — busca en el parte de hoy y en todo el historial archivado.</div>
+      <div class="placeholder-panel">Escribí el nombre de un buque, matrícula, bandera o una fecha (dd/mm/aaaa) para buscar — busca en el parte de hoy y en todo el historial archivado.</div>
     </div>
   `;
 }
@@ -163,7 +194,7 @@ function irAModoAsistente(modo) {
   const cuerpo = document.getElementById('asistenteCuerpo');
   if (modo === 'buscar') {
     cuerpo.innerHTML = botonVolverAsistente() +
-      `<p style="font-size:12.5px; color:var(--gris-700); margin-bottom:10px;">Escribí el nombre de un buque o una fecha (dd/mm/aaaa) para buscar.</p>` +
+      `<p style="font-size:12.5px; color:var(--gris-700); margin-bottom:10px;">Escribí el nombre de un buque, matrícula, bandera o una fecha (dd/mm/aaaa) para buscar.</p>` +
       renderAsistente();
   } else {
     cuerpo.innerHTML = botonVolverAsistente() +

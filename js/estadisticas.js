@@ -27,7 +27,7 @@ function exportarResultadoEstadistica() {
     `Estadistica ${titulo} ${fechaHoy()}.pdf`,
     'RESUMEN DE NOVEDADES — ESTADÍSTICA',
     `${titulo} — ${fechaHoy()}`,
-    [{ titulo, contenido: { tablas: [{ columnas, filas }] } }]
+    [{ titulo, contenido: { tipo: 'tablas', tablas: [{ columnas, filas }] } }]
   );
 }
 

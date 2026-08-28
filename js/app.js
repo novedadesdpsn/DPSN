@@ -118,6 +118,7 @@ function renderInicio() {
             ${renderGuardiaLista('Saliente', D.guardia.saliente)}
             ${renderGuardiaLista('Entrante', D.guardia.entrante)}
           </div>
+          ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarGuardia()">Editar</button>` : ''}
         </div>
       </div>
 
@@ -224,8 +225,10 @@ function renderExtraordinarias() {
 
 function renderEstadoRectorPuerto() {
   const rp = D.estadoRectorPuerto.resumen;
+  const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
+  const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + (rp.inspeccionadosDiario || 0);
   const pctDiario = rp.factiblesDiario ? ((rp.inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(2) : '0.00';
-  const pctAnual = rp.factiblesAnual ? ((rp.inspeccionadosAnual / rp.factiblesAnual) * 100).toFixed(2) : '0.00';
+  const pctAnual = factiblesAnual ? ((inspeccionadosAnual / factiblesAnual) * 100).toFixed(2) : '0.00';
   return `
     <div class="tarjeta">
       <h2>Inspecciones por Estado Rector del Puerto</h2>
@@ -239,13 +242,14 @@ function renderEstadoRectorPuerto() {
         <div class="stat"><div class="valor">${rp.factiblesDiario}</div><div class="etiqueta">Factibles (hoy)</div></div>
         <div class="stat"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">Inspeccionados (hoy)</div></div>
         <div class="stat"><div class="valor">${pctDiario}%</div><div class="etiqueta">Total % (hoy)</div></div>
-        <div class="stat"><div class="valor">${rp.factiblesAnual}</div><div class="etiqueta">Factibles (anual)</div></div>
-        <div class="stat"><div class="valor">${rp.inspeccionadosAnual}</div><div class="etiqueta">Inspeccionados (anual)</div></div>
+        <div class="stat"><div class="valor">${factiblesAnual}</div><div class="etiqueta">Factibles (anual)</div></div>
+        <div class="stat"><div class="valor">${inspeccionadosAnual}</div><div class="etiqueta">Inspeccionados (anual)</div></div>
         <div class="stat"><div class="valor">${pctAnual}%</div><div class="etiqueta">Total % (anual)</div></div>
       </div>
       <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
-        % calculado por regla de tres simple entre buques factibles de inspección e inspeccionados.
+        Los totales % se calculan solos por regla de tres simple (inspeccionados sobre factibles). El anual se arma sumando el acumulado previo + lo de hoy — no hace falta tipearlo entero cada vez.
       </p>
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarResumenPSC()">Editar</button>` : ''}
     </div>
   `;
 }
