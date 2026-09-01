@@ -103,16 +103,6 @@ function renderInicio() {
         </div>
 
         <div class="tarjeta">
-          <h2>Altura de Agua y Calados de Navegación</h2>
-          ${renderTablaGenerica(['Punto de control', 'Fecha', 'Altura', 'Escala'],
-            D.alturaAgua.lecturas.map(a => [a.punto, a.fecha, a.altura, a.escala]))}
-          <div style="margin-top:14px;">
-            ${renderTablaGenerica(['Tramo', 'Referencia', 'Calado'],
-              D.alturaAgua.calados.map(c => [c.tramo, c.referencia, c.calado]))}
-          </div>
-        </div>
-
-        <div class="tarjeta">
           <h2>Guardia</h2>
           <div style="display:flex; gap:40px; flex-wrap:wrap;">
             ${renderGuardiaLista('Saliente', D.guardia.saliente)}
@@ -171,7 +161,7 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
       if (insp.deficiencias && insp.deficiencias.length) {
         html += `<ul style="margin:6px 0 0 18px; padding:0;">`;
         insp.deficiencias.forEach(g => {
-          html += `<li>${esc(textoGrupoDeficiencia(g))}${renderLineasDescripcionHtml(g)}</li>`;
+          html += `<li>${esc(textoGrupoDeficiencia(g, esPSC ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS))}${renderLineasDescripcionHtml(g)}</li>`;
         });
         html += `</ul>`;
       }
@@ -285,7 +275,10 @@ function renderTarjetaCaso(c, esSAR, dependencia, indice) {
     <div class="tarjeta" style="margin-bottom:12px; background:var(--gris-100);">
       <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;">
         <strong style="color:var(--azul-marino); font-size:14px;">${esc(c.titulo)}</strong>
-        ${tagEstado(c.estado)}
+        <div style="display:flex; gap:6px;">
+          ${!esSAR && c.requiereInspeccion === 'si' ? '<span class="tag detallada">Requiere Inspección</span>' : ''}
+          ${tagEstado(c.estado)}
+        </div>
       </div>
       ${esSAR ? `<div style="font-size:11.5px; color:var(--gris-500); margin-top:2px;">
         N.º de caso: ${esc(c.numeroCaso)} · Subcentro (VTS): ${esc(c.subcentroVTS)} ·
@@ -332,33 +325,68 @@ function renderOtros() {
 
 // ---------- Oficinas ----------
 function renderOficinas() {
-  let html = `<div class="tarjeta"><h2>Oficinas</h2>`;
-  const oficinas = Object.keys(D.oficinas.porOficina);
-  if (!oficinas.length) {
-    html += '<div class="placeholder-panel">Todavía no hay información cargada por ninguna oficina.</div>';
-  } else {
-    oficinas.forEach(of => {
-      html += `<details class="dependencia-bloque" open><summary>${esc(of)}</summary>`;
-      D.oficinas.porOficina[of].forEach((b, idx) => {
-        const btnEliminar = !SOLO_LECTURA_ACTUAL ? `<button type="button" class="btn-secundario" style="padding:2px 8px; float:right;" onclick="eliminarOficina('${of}',${idx})">✕</button>` : '';
-        if (b.tipoBloque === 'texto') {
-          html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong><p style="margin:6px 0 0;">${esc(b.contenido)}</p></div>`;
-        } else if (b.tipoBloque === 'tabla') {
-          html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong>${renderTablaGenerica(b.columnas, b.filas)}</div>`;
-        }
-      });
-      html += `</details>`;
+  const tablaConFilas = (columnas, camposFila, filas, onEliminar) => {
+    let html = `<table class="tabla-datos"><thead><tr>${columnas.map(c => `<th>${esc(c)}</th>`).join('')}${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+    filas.forEach((fila, idx) => {
+      html += `<tr>${camposFila.map(campo => `<td>${esc(fila[campo] || '')}</td>`).join('')}`;
+      if (!SOLO_LECTURA_ACTUAL) html += `<td><button type="button" class="btn-secundario no-imprimir" style="padding:2px 8px;" onclick="${onEliminar(idx)}">✕</button></td>`;
+      html += `</tr>`;
     });
-  }
-  if (!SOLO_LECTURA_ACTUAL) {
-    html += `
-      <div style="display:flex; gap:10px; margin-top:10px;">
-        <button class="btn-secundario" type="button" onclick="uiAgregarOficinaTexto()">+ Agregar bloque de texto</button>
-        <button class="btn-secundario" type="button" onclick="uiAgregarOficinaTabla()">+ Agregar bloque de tabla</button>
-      </div>`;
-  }
-  html += `</div>`;
-  return html;
+    html += `</tbody></table>`;
+    return html;
+  };
+
+  // Documentación
+  const doc = D.oficinas.documentacion;
+  let bloqueDocumentacion = `
+    <div class="tarjeta" id="bloqueDocumentacion">
+      <h2>Documentación <button class="btn-secundario no-imprimir" type="button" onclick="imprimirBloqueOficina('bloqueDocumentacion')">Imprimir</button></h2>
+
+      <h3 style="font-size:13px; color:var(--azul-marino); margin:14px 0 8px;">Trámites en Análisis — ${esc(fechaHoy())}</h3>
+      ${doc.tramitesAnalisis.length
+        ? tablaConFilas(['N.º', 'Vuelve', 'Ingreso PROGEBU', 'Usuario Sol.', 'Vto. CNSN/Prórroga', 'Trámite', 'Servicio', 'Nombre', 'Especialidades', 'Solicita', 'Observación'],
+            ['numero', 'vuelve', 'ingresoProgebu', 'usuarioSolicitante', 'vtoCnsn', 'tramite', 'servicio', 'nombre', 'especialidades', 'solicita', 'observacion'],
+            doc.tramitesAnalisis, idx => `eliminarFilaDocumentacion('tramitesAnalisis',${idx})`)
+        : '<div class="placeholder-panel">Sin trámites cargados.</div>'}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarTramiteAnalisis()">+ Agregar trámite</button>` : ''}
+
+      <h3 style="font-size:13px; color:var(--azul-marino); margin:20px 0 8px;">Solicitudes Certificados de Arqueo</h3>
+      ${doc.certificadosArqueo.length
+        ? tablaConFilas(['N.º Ingreso', 'Usuario Sol.', 'Servicio', 'Nombre', 'Solicita'],
+            ['numeroIngreso', 'usuarioSolicitante', 'servicio', 'nombre', 'solicita'],
+            doc.certificadosArqueo, idx => `eliminarFilaDocumentacion('certificadosArqueo',${idx})`)
+        : '<div class="placeholder-panel">Sin solicitudes cargadas.</div>'}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarCertificadoArqueo()">+ Agregar solicitud</button>` : ''}
+
+      <h3 style="font-size:13px; color:var(--azul-marino); margin:20px 0 8px;">Girados a TNAV</h3>
+      ${doc.giradosTNAV.length
+        ? tablaConFilas(['N.º', 'Fecha', 'Usuario', 'Servicio', 'Nombre y Matrícula', 'Solicita'],
+            ['numero', 'fecha', 'usuario', 'servicio', 'nombreMatricula', 'solicita'],
+            doc.giradosTNAV, idx => `eliminarFilaDocumentacion('giradosTNAV',${idx})`)
+        : '<div class="placeholder-panel">Sin registros.</div>'}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarGiradoTNAV()">+ Agregar girado</button>` : ''}
+    </div>`;
+
+  const bloqueSimple = (clave, idBloque, titulo) => `
+    <div class="tarjeta" id="${idBloque}">
+      <h2>${esc(titulo)} <button class="btn-secundario no-imprimir" type="button" onclick="imprimirBloqueOficina('${idBloque}')">Imprimir</button></h2>
+      ${D.oficinas[clave].filas.length
+        ? tablaConFilas(['Fecha', 'GDE', 'Expedientes en tramitación'], ['fecha', 'gde', 'expediente'], D.oficinas[clave].filas, idx => `eliminarFilaSimple('${clave}',${idx})`)
+        : '<div class="placeholder-panel">Sin expedientes cargados.</div>'}
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarFilaSimple('${clave}','Agregar expediente — ${esc(titulo)}')">+ Agregar expediente</button>` : ''}
+    </div>`;
+
+  const bloqueSinDefinir = (idBloque, titulo) => `
+    <div class="tarjeta" id="${idBloque}">
+      <h2>${esc(titulo)}</h2>
+      <div class="placeholder-panel">Estructura pendiente de definir — avisen qué necesitan cargar acá y la armamos.</div>
+    </div>`;
+
+  return bloqueDocumentacion +
+    bloqueSimple('controlGestion', 'bloqueControlGestion', 'Control de Gestión') +
+    bloqueSimple('divisionNavegacion', 'bloqueDivisionNavegacion', 'División Navegación') +
+    bloqueSinDefinir('bloqueSinDefinir1', 'Sin Definir') +
+    bloqueSinDefinir('bloqueSinDefinir2', 'Sin Definir');
 }
 
 // ---------- Tablas genéricas ----------

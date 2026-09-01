@@ -189,6 +189,7 @@ function uiAgregarInspeccionPSC() {
     titulo: 'Agregar inspección PSC',
     etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
     incluirCategoria: false,
+    listaCodigos: CODIGOS_MEDIDAS_PSC,
     onGuardar: (datos) => {
       const dep = datos.dependencia;
       if (!D.estadoRectorPuerto.porDependencia[dep]) D.estadoRectorPuerto.porDependencia[dep] = [];
@@ -205,6 +206,7 @@ function uiEditarInspeccionPSC(dependencia, indice) {
     titulo: 'Editar inspección PSC',
     etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
     incluirCategoria: false,
+    listaCodigos: CODIGOS_MEDIDAS_PSC,
     valores: { ...actual, dependencia },
     onGuardar: (datos) => {
       D.estadoRectorPuerto.porDependencia[dependencia].splice(indice, 1);
@@ -242,7 +244,10 @@ function camposCaso(esSAR) {
     { id: 'fechaInicio', label: 'Fecha de inicio' },
     { id: 'fechaCierre', label: 'Fecha de cierre (si corresponde)' }
   ] : [];
-  return [...base, ...sar,
+  const requiereInspeccion = !esSAR ? [
+    { id: 'requiereInspeccion', label: '¿Requiere inspección?', tipo: 'select', opciones: [{ valor: 'no', etiqueta: 'No' }, { valor: 'si', etiqueta: 'Sí' }] }
+  ] : [];
+  return [...base, ...sar, ...requiereInspeccion,
     { id: 'posicion', label: 'Posición (lat/lon o referencia)' },
     { id: 'novedad', label: 'Novedad', tipo: 'textarea' },
     { id: 'caracteristicas', label: 'Características', tipo: 'textarea' },
@@ -468,44 +473,6 @@ function eliminarCurso(indice) {
   refrescarPestanaActual();
 }
 
-// ---------- Oficinas ----------
-function uiAgregarOficinaTexto() {
-  abrirModalFormulario('Agregar bloque de texto — Oficinas', [
-    { id: 'oficina', label: 'Oficina' },
-    { id: 'titulo', label: 'Título' },
-    { id: 'contenido', label: 'Contenido', tipo: 'textarea' }
-  ], {}, (datos) => {
-    const of = datos.oficina || 'SIN_OFICINA';
-    if (!D.oficinas.porOficina[of]) D.oficinas.porOficina[of] = [];
-    D.oficinas.porOficina[of].push({ tipoBloque: 'texto', titulo: datos.titulo, contenido: datos.contenido });
-    persistirDatosGuardia();
-    refrescarPestanaActual();
-  });
-}
-
-function uiAgregarOficinaTabla() {
-  abrirModalFormulario('Agregar tabla — Oficinas', [
-    { id: 'oficina', label: 'Oficina' },
-    { id: 'titulo', label: 'Título' },
-    { id: 'columnas', label: 'Columnas (separadas por coma)', default: 'Concepto, Detalle, Fecha' }
-  ], {}, (datos) => {
-    const of = datos.oficina || 'SIN_OFICINA';
-    const columnas = (datos.columnas || '').split(',').map(c => c.trim()).filter(Boolean);
-    if (!D.oficinas.porOficina[of]) D.oficinas.porOficina[of] = [];
-    D.oficinas.porOficina[of].push({ tipoBloque: 'tabla', titulo: datos.titulo, columnas, filas: [columnas.map(() => '')] });
-    persistirDatosGuardia();
-    refrescarPestanaActual();
-  });
-}
-
-function eliminarOficina(oficina, indice) {
-  if (!confirm('¿Eliminar este bloque?')) return;
-  D.oficinas.porOficina[oficina].splice(indice, 1);
-  if (!D.oficinas.porOficina[oficina].length) delete D.oficinas.porOficina[oficina];
-  persistirDatosGuardia();
-  refrescarPestanaActual();
-}
-
 // ---------- Resumen PSC (editable) ----------
 function uiEditarResumenPSC() {
   const rp = D.estadoRectorPuerto.resumen;
@@ -532,24 +499,22 @@ function uiEditarResumenPSC() {
 function uiEditarGuardia() {
   const s = D.guardia.saliente;
   const e = D.guardia.entrante;
+  const opcionesJefes = NOMINA_JEFES_SERVICIO.map(n => ({ valor: n, etiqueta: n }));
+  const opcionesAyudantes = NOMINA_AYUDANTES_GUARDIA.map(n => ({ valor: n, etiqueta: n }));
   abrirModalFormulario('Editar Guardia', [
-    { id: 'salienteJefe', label: 'Saliente — Jefe de Servicio', default: s[0] ? s[0].nombre : '' },
-    { id: 'salienteOficial', label: 'Saliente — Oficial de Guardia', default: s[1] ? s[1].nombre : '' },
-    { id: 'salienteAyte', label: 'Saliente — Ayte. de Guardia', default: s[2] ? s[2].nombre : '' },
-    { id: 'entranteJefe', label: 'Entrante — Jefe de Servicio', default: e[0] ? e[0].nombre : '' },
-    { id: 'entranteOficial', label: 'Entrante — Oficial de Guardia', default: e[1] ? e[1].nombre : '' },
-    { id: 'entranteAyte', label: 'Entrante — Ayte. de Guardia', default: e[2] ? e[2].nombre : '' }
+    { id: 'salienteJefe', label: 'Saliente — Jefe de Servicio', tipo: 'select', opciones: opcionesJefes, default: s[0] ? s[0].nombre : '' },
+    { id: 'salienteAyte', label: 'Saliente — Ayudante de Guardia', tipo: 'select', opciones: opcionesAyudantes, default: s[1] ? s[1].nombre : '' },
+    { id: 'entranteJefe', label: 'Entrante — Jefe de Servicio', tipo: 'select', opciones: opcionesJefes, default: e[0] ? e[0].nombre : '' },
+    { id: 'entranteAyte', label: 'Entrante — Ayudante de Guardia', tipo: 'select', opciones: opcionesAyudantes, default: e[1] ? e[1].nombre : '' }
   ], {}, (datos) => {
     D.guardia = {
       saliente: [
         { rol: 'Jefe de Servicio', nombre: datos.salienteJefe },
-        { rol: 'Oficial de Guardia', nombre: datos.salienteOficial },
-        { rol: 'Ayte. de Guardia', nombre: datos.salienteAyte }
+        { rol: 'Ayudante de Guardia', nombre: datos.salienteAyte }
       ],
       entrante: [
         { rol: 'Jefe de Servicio', nombre: datos.entranteJefe },
-        { rol: 'Oficial de Guardia', nombre: datos.entranteOficial },
-        { rol: 'Ayte. de Guardia', nombre: datos.entranteAyte }
+        { rol: 'Ayudante de Guardia', nombre: datos.entranteAyte }
       ]
     };
     persistirDatosGuardia();

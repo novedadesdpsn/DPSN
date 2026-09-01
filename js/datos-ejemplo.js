@@ -194,7 +194,13 @@ const DATOS_EJEMPLO = {
 
   // Oficinas: cada una carga sus propios bloques de texto o tabla,
   // agrupados por nombre de oficina.
-  oficinas: { porOficina: {} },
+  oficinas: {
+    documentacion: { tramitesAnalisis: [], certificadosArqueo: [], giradosTNAV: [] },
+    controlGestion: { filas: [] },
+    divisionNavegacion: { filas: [] },
+    sinDefinir1: {},
+    sinDefinir2: {}
+  },
 
   inspeccionesTecnicas: [
     {
@@ -247,13 +253,11 @@ const DATOS_EJEMPLO = {
   guardia: {
     saliente: [
       { rol: "Jefe de Servicio", nombre: "SP ALBINO, Gisela Marina" },
-      { rol: "Oficial de Guardia", nombre: "OP PICCOLI, Leonardo Agustín" },
-      { rol: "Ayte. de Guardia", nombre: "AI GONZALEZ, Elvio" }
+      { rol: "Ayudante de Guardia", nombre: "AI GONZALEZ, Elvio Hernán" }
     ],
     entrante: [
       { rol: "Jefe de Servicio", nombre: "SP BADARACCO, Arturo Federico" },
-      { rol: "Oficial de Guardia", nombre: "OP SCHULZ, Alexis Daniel" },
-      { rol: "Ayte. de Guardia", nombre: "AS SOSA, Javier" }
+      { rol: "Ayudante de Guardia", nombre: "AS SOSA, Javier Albino" }
     ]
   }
 };
