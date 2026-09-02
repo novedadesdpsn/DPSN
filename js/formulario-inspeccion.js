@@ -13,8 +13,8 @@ function cerrarModalInspeccion() {
   if (m) m.remove();
 }
 
-function opcionesCodigoHtml() {
-  return CODIGOS_MEDIDAS.map(c => `<option value="${c.codigo}">${c.codigo} — ${esc(c.descripcion)}</option>`).join('');
+function opcionesCodigoHtml(lista) {
+  return (lista || CODIGOS_MEDIDAS).map(c => `<option value="${c.codigo}">${c.codigo} — ${esc(c.descripcion)}</option>`).join('');
 }
 
 function opcionesCantidadHtml() {
@@ -23,12 +23,12 @@ function opcionesCantidadHtml() {
   return out;
 }
 
-function textoGrupoDeficiencia(g) {
+function textoGrupoDeficiencia(g, lista) {
   const cant = g.cantidad || 1;
   if (g.accion === 'recodifico') {
-    return `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionCodigo(g.codigoAnterior)}) a Cód. ${g.codigoNuevo} (${descripcionCodigo(g.codigoNuevo)})`;
+    return `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)})`;
   }
-  return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionCodigo(g.codigo)})`;
+  return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)})`;
 }
 
 function lineasDescripcionGrupo(g) {
@@ -53,6 +53,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
   cerrarModalInspeccion();
   const v = opciones.valores || {};
   const buque = v.buque || {};
+  const listaCodigos = opciones.listaCodigos || CODIGOS_MEDIDAS;
   let grupos = (v.deficiencias || []).slice();
 
   const categoriasHtml = opciones.incluirCategoria ? `
@@ -123,11 +124,11 @@ function abrirFormularioInspeccionEstandar(opciones) {
             </div>
             <div id="defCodigoUnico" class="campo" style="margin-bottom:8px;">
               <label>Código</label>
-              <select id="defCodigo">${opcionesCodigoHtml()}</select>
+              <select id="defCodigo">${opcionesCodigoHtml(listaCodigos)}</select>
             </div>
             <div id="defCodigoDoble" class="fila-doble oculto">
-              <div class="campo" style="margin-bottom:8px;"><label>Código anterior</label><select id="defCodigoAnterior">${opcionesCodigoHtml()}</select></div>
-              <div class="campo" style="margin-bottom:8px;"><label>Código nuevo</label><select id="defCodigoNuevo">${opcionesCodigoHtml()}</select></div>
+              <div class="campo" style="margin-bottom:8px;"><label>Código anterior</label><select id="defCodigoAnterior">${opcionesCodigoHtml(listaCodigos)}</select></div>
+              <div class="campo" style="margin-bottom:8px;"><label>Código nuevo</label><select id="defCodigoNuevo">${opcionesCodigoHtml(listaCodigos)}</select></div>
             </div>
             <div class="campo" style="margin-bottom:8px;">
               <label>Descripción / aclaración</label>
@@ -140,11 +141,11 @@ function abrirFormularioInspeccionEstandar(opciones) {
         <div class="campo">
           <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;">
             <input type="checkbox" id="insEsCasoMAS" ${v.asunto ? 'checked' : ''} style="width:16px;height:16px;">
-            ¿Corresponde a un Caso MAS?
+            ¿Corresponde a un Caso MAS/SAR?
           </label>
         </div>
         <div class="campo ${v.asunto ? '' : 'oculto'}" id="bloqueAsuntoMAS">
-          <label>Referencia al Caso MAS</label>
+          <label>Referencia al Caso MAS/SAR</label>
           <input type="text" id="insAsunto" value="${esc(v.asunto || '')}" placeholder="Ej: CASO MAS PZDE N.º 22/26 - Inconveniente en máquina">
         </div>
 
@@ -169,7 +170,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
     }
     cont.innerHTML = grupos.map((g, i) => `
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; background:#fff; border:1px solid var(--gris-300); border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
-        <span>${esc(textoGrupoDeficiencia(g))}</span>
+        <span>${esc(textoGrupoDeficiencia(g, listaCodigos))}</span>
         <button type="button" data-idx="${i}" class="btnQuitarGrupo" style="background:none;border:none;color:var(--rojo);font-size:14px; flex-shrink:0;">✕</button>
       </div>
     `).join('');

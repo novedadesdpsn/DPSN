@@ -25,13 +25,11 @@ function itemsResumenParte() {
   ];
 }
 
-function itemsAlturaCaladosGuardia() {
-  const items = [];
-  D.alturaAgua.lecturas.forEach(a => items.push(`Altura de Agua — ${a.punto}: ${a.altura} "${a.escala}" (${a.fecha})`));
-  D.alturaAgua.calados.forEach(c => items.push(`Calado — Para puerto ${c.tramo}: ${c.calado} (${c.referencia})`));
-  items.push(`Guardia Saliente: ${D.guardia.saliente.map(g => `${g.rol}: ${g.nombre}`).join(' · ')}`);
-  items.push(`Guardia Entrante: ${D.guardia.entrante.map(g => `${g.rol}: ${g.nombre}`).join(' · ')}`);
-  return items;
+function itemsGuardia() {
+  return [
+    `Guardia Saliente: ${D.guardia.saliente.map(g => `${g.rol}: ${g.nombre}`).join(' · ')}`,
+    `Guardia Entrante: ${D.guardia.entrante.map(g => `${g.rol}: ${g.nombre}`).join(' · ')}`
+  ];
 }
 
 function textoExtraordinarias() {
@@ -109,15 +107,54 @@ function textoOtros() {
 }
 
 function textoOficinas() {
-  const oficinas = Object.keys(D.oficinas.porOficina);
-  const items = [];
-  oficinas.forEach(of => {
-    D.oficinas.porOficina[of].forEach(b => {
-      if (b.tipoBloque === 'texto') items.push(`${of} — ${b.titulo}: ${b.contenido}`);
-      else items.push(`${of} — ${b.titulo}: (tabla — ver detalle en el sistema)`);
-    });
-  });
-  return [{ titulo: 'Oficinas', contenido: { tipo: 'lista', items: items.length ? items : ['Sin información cargada por oficinas.'] } }];
+  const doc = D.oficinas.documentacion;
+  const secciones = [{
+    titulo: `Documentación — Trámites en Análisis (${fechaHoy()})`,
+    contenido: {
+      tipo: 'tablas',
+      tablas: [{
+        columnas: ['N.º', 'Vuelve', 'Ingreso PROGEBU', 'Usuario Sol.', 'Vto. CNSN/Prórroga', 'Trámite', 'Servicio', 'Nombre', 'Especialidades', 'Solicita', 'Observación'],
+        filas: doc.tramitesAnalisis.map(t => [t.numero, t.vuelve, t.ingresoProgebu, t.usuarioSolicitante, t.vtoCnsn, t.tramite, t.servicio, t.nombre, t.especialidades, t.solicita, t.observacion])
+      }]
+    }
+  }, {
+    titulo: 'Documentación — Solicitudes Certificados de Arqueo',
+    contenido: {
+      tipo: 'tablas',
+      tablas: [{
+        columnas: ['N.º Ingreso', 'Usuario Sol.', 'Servicio', 'Nombre', 'Solicita'],
+        filas: doc.certificadosArqueo.map(c => [c.numeroIngreso, c.usuarioSolicitante, c.servicio, c.nombre, c.solicita])
+      }]
+    }
+  }, {
+    titulo: 'Documentación — Girados a TNAV',
+    contenido: {
+      tipo: 'tablas',
+      tablas: [{
+        columnas: ['N.º', 'Fecha', 'Usuario', 'Servicio', 'Nombre y Matrícula', 'Solicita'],
+        filas: doc.giradosTNAV.map(g => [g.numero, g.fecha, g.usuario, g.servicio, g.nombreMatricula, g.solicita])
+      }]
+    }
+  }, {
+    titulo: 'Control de Gestión',
+    contenido: {
+      tipo: 'tablas',
+      tablas: [{
+        columnas: ['Fecha', 'GDE', 'Expedientes en tramitación'],
+        filas: D.oficinas.controlGestion.filas.map(f => [f.fecha, f.gde, f.expediente])
+      }]
+    }
+  }, {
+    titulo: 'División Navegación',
+    contenido: {
+      tipo: 'tablas',
+      tablas: [{
+        columnas: ['Fecha', 'GDE', 'Expedientes en tramitación'],
+        filas: D.oficinas.divisionNavegacion.filas.map(f => [f.fecha, f.gde, f.expediente])
+      }]
+    }
+  }];
+  return secciones;
 }
 
 function textoBuquesDetencion() {

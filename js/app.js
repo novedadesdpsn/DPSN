@@ -565,6 +565,9 @@ async function iniciarDashboard() {
   if (typeof GUARDADO_EN_DRIVE_ACTIVO !== 'undefined' && GUARDADO_EN_DRIVE_ACTIVO) {
     document.getElementById('btnPDFsArchivados').classList.remove('oculto');
   }
+  if (!DEMO_MODE && usuario.administradorGlobal) {
+    document.getElementById('btnAuditoria').classList.remove('oculto');
+  }
 
   // Armar la barra de pestañas superior
   const nav = document.getElementById('tabsNav');

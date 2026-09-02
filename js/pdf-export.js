@@ -253,14 +253,15 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     y += 14;
   }
 
-  function grupoDeficienciaPDF(g, xIndent) {
+  function grupoDeficienciaPDF(g, xIndent, listaCodigos) {
+    const lista = listaCodigos || CODIGOS_MEDIDAS;
     const cant = g.cantidad || 1;
     const verbo = g.accion === 'recodifico'
       ? (cant > 1 ? 'Se recodificaron ' : 'Se recodificó ')
       : (cant > 1 ? 'Se detectaron ' : 'Se detectó ');
     const contenido = g.accion === 'recodifico'
-      ? `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigoAnterior} (${descripcionCodigo(g.codigoAnterior)}) a Cód. ${g.codigoNuevo} (${descripcionCodigo(g.codigoNuevo)}).`
-      : `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigo} (${descripcionCodigo(g.codigo)}).`;
+      ? `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)}).`
+      : `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)}).`;
 
     y = escribirParrafoMixto([{ texto: verbo, negrita: false }, { texto: contenido, negrita: true }], xIndent, anchoUtil - (xIndent - margen), y, 9);
 
@@ -308,7 +309,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         if (insp.tipo === 'inicial') {
           y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         }
-        (insp.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8));
+        (insp.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8, familia === 'psc' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS));
 
         if (familia !== 'psc' && insp.nota) {
           y = escribirParrafoMixto([{ texto: 'Nota: ' + insp.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
@@ -509,7 +510,7 @@ function abrirModalExportarGuardia() {
     });
 
     if (seleccionados.includes('inicio')) {
-      secciones.push({ titulo: 'Altura de Agua, Calados de Navegación y Relevo de Guardia', contenido: { tipo: 'lista', items: itemsAlturaCaladosGuardia() } });
+      secciones.push({ titulo: 'Relevo de Guardia', contenido: { tipo: 'lista', items: itemsGuardia() } });
     }
 
     generarPDF(`Novedades DPSN ${fechaHoy()}.pdf`, 'RESUMEN DE NOVEDADES', D.fechaParte, secciones);

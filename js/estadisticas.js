@@ -186,7 +186,7 @@ function filtrosPorCategoria(categoria) {
           <label>Código de deficiencia</label>
           <select id="filtroPscCodigo" onchange="actualizarEstadPSC()">
             <option value="todos">Todos</option>
-            ${CODIGOS_MEDIDAS.map(c => `<option value="${c.codigo}">${c.codigo} — ${esc(c.descripcion)}</option>`).join('')}
+            ${CODIGOS_MEDIDAS_PSC.map(c => `<option value="${c.codigo}">${c.codigo} — ${esc(c.descripcion)}</option>`).join('')}
           </select>
         </div>
       </div>

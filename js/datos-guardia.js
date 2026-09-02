@@ -26,6 +26,8 @@ function persistirDatosGuardia() {
   SECCIONES_PERSISTIDAS.forEach(clave => { paquete[clave] = DATOS_EJEMPLO[clave]; });
   localStorage.setItem(CLAVE_DATOS_GUARDIA, JSON.stringify(paquete));
 
+  SECCIONES_PERSISTIDAS.forEach(clave => { registrarAuditoriaSiCambio(clave, DATOS_EJEMPLO[clave]); });
+
   if (DEMO_MODE) return;
 
   SECCIONES_PERSISTIDAS.forEach(clave => {
@@ -48,6 +50,7 @@ async function hidratarDatosGuardia() {
     } else {
       persistirDatosGuardia();
     }
+    inicializarEstadoConocido();
     return;
   }
 
@@ -65,6 +68,7 @@ async function hidratarDatosGuardia() {
     }
   }));
 
+  inicializarEstadoConocido();
   activarEscuchaEnVivo();
 }
 
@@ -74,6 +78,7 @@ function activarEscuchaEnVivo() {
     db.collection(COLECCION_PARTE_DIARIO).doc(clave).onSnapshot(doc => {
       if (!doc.exists || doc.data().valor === undefined) return;
       DATOS_EJEMPLO[clave] = doc.data().valor;
+      sincronizarEstadoConocido(clave, doc.data().valor); // no genera entrada de auditoría: no es un cambio de esta sesión
       if (typeof refrescarPestanaActual === 'function') refrescarPestanaActual();
     }, err => console.error(`Escucha en vivo de "${clave}" interrumpida:`, err));
   });

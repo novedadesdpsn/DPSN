@@ -97,7 +97,8 @@ function renderResultadoAsistente(r) {
     html += `<div style="margin-top:4px;">${esc(r.buque.tipo || '')} "${esc(r.buque.nombre || '')}" (${esc(r.buque.matricula || '')}) — B/${esc(r.buque.bandera || '')}</div>`;
     html += `<div style="margin-top:2px; color:var(--gris-700);">Tipo de inspección: ${tipoTexto}</div>`;
     if (r.deficiencias && r.deficiencias.length) {
-      html += `<ul style="margin:6px 0 0 18px;">` + r.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g))}${renderLineasDescripcionHtml(g)}</li>`).join('') + `</ul>`;
+      const listaCod = r.origen === 'Estado Rector de Puerto' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS;
+      html += `<ul style="margin:6px 0 0 18px;">` + r.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g, listaCod))}${renderLineasDescripcionHtml(g)}</li>`).join('') + `</ul>`;
     } else {
       html += `<div style="color:var(--verde);">Sin deficiencias registradas</div>`;
     }
@@ -127,8 +128,9 @@ function exportarResultadoAsistente() {
   const columnas = ['Fecha', 'Origen', 'Dependencia', 'Buque / Título', 'Detalle'];
   const filas = resultados.map(r => {
     const buqueTxt = r.buque ? `${r.buque.tipo || ''} "${r.buque.nombre || ''}" (${r.buque.matricula || ''}) B/${r.buque.bandera || ''}` : r.titulo;
+    const listaCod = r.origen === 'Estado Rector de Puerto' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS;
     const detalle = r.buque
-      ? (r.deficiencias && r.deficiencias.length ? r.deficiencias.map(g => textoGrupoDeficiencia(g)).join(' — ') : 'Sin deficiencias')
+      ? (r.deficiencias && r.deficiencias.length ? r.deficiencias.map(g => textoGrupoDeficiencia(g, listaCod)).join(' — ') : 'Sin deficiencias')
       : (r.novedad || '');
     return [r.fechaParte || '', r.origen || '', r.dependencia || '', buqueTxt, detalle];
   });
