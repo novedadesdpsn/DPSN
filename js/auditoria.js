@@ -88,6 +88,23 @@ async function obtenerAuditoriaReciente(limite) {
   }
 }
 
+async function obtenerAuditoriaPorFecha(fechaISO) {
+  if (DEMO_MODE) return [];
+  try {
+    const inicio = new Date(fechaISO + 'T00:00:00');
+    const fin = new Date(fechaISO + 'T23:59:59.999');
+    const snap = await db.collection(COLECCION_AUDITORIA)
+      .where('fechaHora', '>=', inicio)
+      .where('fechaHora', '<=', fin)
+      .orderBy('fechaHora', 'desc')
+      .get();
+    return snap.docs.map(d => d.data());
+  } catch (err) {
+    console.error('No se pudo leer la auditoría de esa fecha:', err);
+    return [];
+  }
+}
+
 function formatearFechaHoraAuditoria(ts) {
   if (!ts || !ts.toDate) return '—';
   const d = ts.toDate();
@@ -101,8 +118,16 @@ async function abrirModalAuditoria() {
   modal.innerHTML = `
     <div class="modal-caja ancho">
       <div class="modal-header">
-        <h3>Actividad reciente</h3>
+        <h3>Actividad</h3>
         <button type="button" onclick="document.getElementById('modalAuditoria').remove()">✕</button>
+      </div>
+      <div style="padding:12px 20px; border-bottom:1px solid var(--gris-100); display:flex; gap:10px; align-items:flex-end;">
+        <div class="campo" style="margin:0; flex:1;">
+          <label>Buscar por fecha</label>
+          <input type="date" id="filtroFechaAuditoria">
+        </div>
+        <button class="btn-secundario" type="button" onclick="buscarAuditoriaPorFecha()">Buscar</button>
+        <button class="btn-secundario" type="button" onclick="cargarAuditoriaReciente()">Ver recientes</button>
       </div>
       <div class="modal-lista" id="listaAuditoria"><div class="placeholder-panel">Consultando…</div></div>
       <div class="modal-footer">
@@ -111,12 +136,14 @@ async function abrirModalAuditoria() {
     </div>
   `;
   document.body.appendChild(modal);
+  cargarAuditoriaReciente();
+}
 
-  const registros = await obtenerAuditoriaReciente();
+function renderizarListaAuditoria(registros, mensajeVacio) {
   const cont = document.getElementById('listaAuditoria');
   if (!cont) return;
   if (!registros.length) {
-    cont.innerHTML = '<div class="placeholder-panel">Todavía no hay actividad registrada.</div>';
+    cont.innerHTML = `<div class="placeholder-panel">${esc(mensajeVacio)}</div>`;
     return;
   }
   cont.innerHTML = registros.map(r => `
@@ -128,4 +155,18 @@ async function abrirModalAuditoria() {
       <div>${esc(r.seccionEtiqueta)} — ${esc(r.resumen)}</div>
     </div>
   `).join('');
+}
+
+async function cargarAuditoriaReciente() {
+  document.getElementById('listaAuditoria').innerHTML = '<div class="placeholder-panel">Consultando…</div>';
+  const registros = await obtenerAuditoriaReciente();
+  renderizarListaAuditoria(registros, 'Todavía no hay actividad registrada.');
+}
+
+async function buscarAuditoriaPorFecha() {
+  const fecha = document.getElementById('filtroFechaAuditoria').value;
+  if (!fecha) return;
+  document.getElementById('listaAuditoria').innerHTML = '<div class="placeholder-panel">Consultando…</div>';
+  const registros = await obtenerAuditoriaPorFecha(fecha);
+  renderizarListaAuditoria(registros, 'No hay actividad registrada para esa fecha.');
 }
