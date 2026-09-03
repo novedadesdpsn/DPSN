@@ -37,6 +37,36 @@ function persistirDatosGuardia() {
 }
 
 /** Primera carga: trae lo que ya haya guardado (Firestore o localStorage según el modo). */
+/**
+ * Corrige la estructura de Oficinas si quedó guardada con la forma
+ * vieja (bloques libres por oficina, de antes del rediseño) o le
+ * faltan subsecciones. Devuelve true si tuvo que arreglar algo,
+ * para que quien la llame vuelva a guardar el dato ya corregido.
+ */
+function normalizarOficinas() {
+  const vacia = () => ({
+    documentacion: { tramitesAnalisis: [], certificadosArqueo: [], giradosTNAV: [] },
+    controlGestion: { filas: [] },
+    divisionNavegacion: { filas: [] },
+    sinDefinir1: {},
+    sinDefinir2: {}
+  });
+
+  const o = DATOS_EJEMPLO.oficinas;
+  if (!o || !o.documentacion || !Array.isArray(o.documentacion.tramitesAnalisis)) {
+    DATOS_EJEMPLO.oficinas = vacia();
+    return true;
+  }
+  let corregido = false;
+  if (!Array.isArray(o.documentacion.certificadosArqueo)) { o.documentacion.certificadosArqueo = []; corregido = true; }
+  if (!Array.isArray(o.documentacion.giradosTNAV)) { o.documentacion.giradosTNAV = []; corregido = true; }
+  if (!o.controlGestion || !Array.isArray(o.controlGestion.filas)) { o.controlGestion = { filas: [] }; corregido = true; }
+  if (!o.divisionNavegacion || !Array.isArray(o.divisionNavegacion.filas)) { o.divisionNavegacion = { filas: [] }; corregido = true; }
+  if (!o.sinDefinir1) { o.sinDefinir1 = {}; corregido = true; }
+  if (!o.sinDefinir2) { o.sinDefinir2 = {}; corregido = true; }
+  return corregido;
+}
+
 async function hidratarDatosGuardia() {
   if (DEMO_MODE) {
     const raw = localStorage.getItem(CLAVE_DATOS_GUARDIA);
@@ -50,6 +80,7 @@ async function hidratarDatosGuardia() {
     } else {
       persistirDatosGuardia();
     }
+    if (normalizarOficinas()) persistirDatosGuardia();
     inicializarEstadoConocido();
     return;
   }
@@ -68,6 +99,7 @@ async function hidratarDatosGuardia() {
     }
   }));
 
+  if (normalizarOficinas()) persistirDatosGuardia();
   inicializarEstadoConocido();
   activarEscuchaEnVivo();
 }
