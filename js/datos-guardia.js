@@ -43,6 +43,16 @@ function persistirDatosGuardia() {
  * faltan subsecciones. Devuelve true si tuvo que arreglar algo,
  * para que quien la llame vuelva a guardar el dato ya corregido.
  */
+/** Asegura que exista la categoría "personales" aunque lo guardado sea de antes de agregarla. */
+function normalizarLicencias() {
+  if (!D.licencias) return false;
+  if (!Array.isArray(D.licencias.personales)) {
+    D.licencias.personales = [];
+    return true;
+  }
+  return false;
+}
+
 function normalizarOficinas() {
   const vacia = () => ({
     documentacion: { tramitesAnalisis: [], certificadosArqueo: [], giradosTNAV: [] },
@@ -80,7 +90,7 @@ async function hidratarDatosGuardia() {
     } else {
       persistirDatosGuardia();
     }
-    if (normalizarOficinas()) persistirDatosGuardia();
+    if (normalizarOficinas() || normalizarLicencias()) persistirDatosGuardia();
     inicializarEstadoConocido();
     return;
   }
@@ -99,7 +109,7 @@ async function hidratarDatosGuardia() {
     }
   }));
 
-  if (normalizarOficinas()) persistirDatosGuardia();
+  if (normalizarOficinas() || normalizarLicencias()) persistirDatosGuardia();
   inicializarEstadoConocido();
   activarEscuchaEnVivo();
 }
@@ -366,20 +376,59 @@ function eliminarOtro(dependencia, indice) {
   refrescarPestanaActual();
 }
 
+function uiEditarOtro(dependencia, indice) {
+  const actual = D.otros.porDependencia[dependencia][indice];
+  const campos = actual.tipoBloque === 'texto'
+    ? [
+        { id: 'dependencia', label: 'Dependencia (sigla)' },
+        { id: 'titulo', label: 'Título' },
+        { id: 'contenido', label: 'Contenido', tipo: 'textarea' }
+      ]
+    : [
+        { id: 'dependencia', label: 'Dependencia (sigla)' },
+        { id: 'titulo', label: 'Título' }
+      ];
+  const valoresIniciales = { dependencia, titulo: actual.titulo, contenido: actual.contenido };
+  abrirModalFormulario('Editar bloque — Otros', campos, valoresIniciales, (datos) => {
+    D.otros.porDependencia[dependencia].splice(indice, 1);
+    if (!D.otros.porDependencia[dependencia].length) delete D.otros.porDependencia[dependencia];
+    const nuevaDep = datos.dependencia || 'SIN_DEP';
+    if (!D.otros.porDependencia[nuevaDep]) D.otros.porDependencia[nuevaDep] = [];
+    D.otros.porDependencia[nuevaDep].push(actual.tipoBloque === 'texto'
+      ? { tipoBloque: 'texto', titulo: datos.titulo, contenido: datos.contenido }
+      : { ...actual, titulo: datos.titulo });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
 // ---------- Buques con Detención (tabla del parte) ----------
-function uiAgregarBuqueDetencionTabla() {
-  abrirModalFormulario('Agregar buque con detención', [
+function camposBuqueDetencionTabla() {
+  return [
     { id: 'dependencia', label: 'Dependencia' },
     { id: 'buque', label: 'Buque (nombre y matrícula)' },
     { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
     { id: 'tipoInsp', label: 'Tipo de inspección (ej: ID)' },
     { id: 'deficiencias', label: 'Deficiencias (ej: Cód. 30 (02) / Cód. 17 (02))' }
-  ], {}, (datos) => {
+  ];
+}
+
+function uiAgregarBuqueDetencionTabla() {
+  abrirModalFormulario('Agregar buque con detención', camposBuqueDetencionTabla(), {}, (datos) => {
     D.buquesDetencion.push({
       numero: D.buquesDetencion.length + 1,
       dependencia: datos.dependencia, buque: datos.buque, fecha: datos.fecha,
       tipoInsp: datos.tipoInsp, deficiencias: datos.deficiencias
     });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarBuqueDetencionTabla(indice) {
+  const actual = D.buquesDetencion[indice];
+  abrirModalFormulario('Editar buque con detención', camposBuqueDetencionTabla(), actual, (datos) => {
+    D.buquesDetencion[indice] = { ...actual, ...datos };
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -394,8 +443,8 @@ function eliminarBuqueDetencionTabla(indice) {
 }
 
 // ---------- Inspecciones Técnicas (previstas) ----------
-function uiAgregarInspeccionTecnica() {
-  abrirModalFormulario('Agregar inspección técnica prevista', [
+function camposInspeccionTecnica() {
+  return [
     { id: 'especialidad', label: 'Especialidad (Casco, Máquinas, Electricidad...)' },
     { id: 'embarcacion', label: 'Embarcación / Empresa' },
     { id: 'requerimiento', label: 'Requerimiento' },
@@ -408,14 +457,37 @@ function uiAgregarInspeccionTecnica() {
     { id: 'regresoFechaHora', label: 'Regreso — Fecha y hora' },
     { id: 'regresoVuelo', label: 'Regreso — N.º de vuelo' },
     { id: 'regresoDestino', label: 'Regreso — Destino' }
-  ], {}, (datos) => {
-    const esExtranjero = datos.extranjero === 'si';
-    D.inspeccionesTecnicas.push({
-      especialidad: datos.especialidad, embarcacion: datos.embarcacion, requerimiento: datos.requerimiento,
-      lugar: datos.lugar, inspector: datos.inspector, extranjero: esExtranjero,
-      salida: esExtranjero ? { fechaHora: datos.salidaFechaHora, vuelo: datos.salidaVuelo, destino: datos.salidaDestino } : {},
-      regreso: esExtranjero ? { fechaHora: datos.regresoFechaHora, vuelo: datos.regresoVuelo, destino: datos.regresoDestino } : {}
-    });
+  ];
+}
+
+function construirInspeccionTecnica(datos) {
+  const esExtranjero = datos.extranjero === 'si';
+  return {
+    especialidad: datos.especialidad, embarcacion: datos.embarcacion, requerimiento: datos.requerimiento,
+    lugar: datos.lugar, inspector: datos.inspector, extranjero: esExtranjero,
+    salida: esExtranjero ? { fechaHora: datos.salidaFechaHora, vuelo: datos.salidaVuelo, destino: datos.salidaDestino } : {},
+    regreso: esExtranjero ? { fechaHora: datos.regresoFechaHora, vuelo: datos.regresoVuelo, destino: datos.regresoDestino } : {}
+  };
+}
+
+function uiAgregarInspeccionTecnica() {
+  abrirModalFormulario('Agregar inspección técnica prevista', camposInspeccionTecnica(), {}, (datos) => {
+    D.inspeccionesTecnicas.push(construirInspeccionTecnica(datos));
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarInspeccionTecnica(indice) {
+  const actual = D.inspeccionesTecnicas[indice];
+  const valoresIniciales = {
+    especialidad: actual.especialidad, embarcacion: actual.embarcacion, requerimiento: actual.requerimiento,
+    lugar: actual.lugar, inspector: actual.inspector, extranjero: actual.extranjero ? 'si' : 'no',
+    salidaFechaHora: actual.salida ? actual.salida.fechaHora : '', salidaVuelo: actual.salida ? actual.salida.vuelo : '', salidaDestino: actual.salida ? actual.salida.destino : '',
+    regresoFechaHora: actual.regreso ? actual.regreso.fechaHora : '', regresoVuelo: actual.regreso ? actual.regreso.vuelo : '', regresoDestino: actual.regreso ? actual.regreso.destino : ''
+  };
+  abrirModalFormulario('Editar inspección técnica', camposInspeccionTecnica(), valoresIniciales, (datos) => {
+    D.inspeccionesTecnicas[indice] = construirInspeccionTecnica(datos);
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -429,15 +501,28 @@ function eliminarInspeccionTecnica(indice) {
 }
 
 // ---------- División Control de Gestión ----------
-function uiAgregarAuditoria() {
-  abrirModalFormulario('Agregar auditoría', [
+function camposAuditoria() {
+  return [
     { id: 'tipoAuditoria', label: 'Tipo de auditoría (ej: S.G.S.)' },
     { id: 'embarcacion', label: 'Embarcación / Empresa' },
     { id: 'alcance', label: 'Alcance (ej: Renovación)' },
     { id: 'lugar', label: 'Lugar' },
     { id: 'auditor', label: 'Auditor' }
-  ], {}, (datos) => {
+  ];
+}
+
+function uiAgregarAuditoria() {
+  abrirModalFormulario('Agregar auditoría', camposAuditoria(), {}, (datos) => {
     D.divisionControlGestion.push(datos);
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarAuditoria(indice) {
+  const actual = D.divisionControlGestion[indice];
+  abrirModalFormulario('Editar auditoría', camposAuditoria(), actual, (datos) => {
+    D.divisionControlGestion[indice] = datos;
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -453,23 +538,49 @@ function eliminarAuditoria(indice) {
 // ---------- Licencias ----------
 const MAPA_CATEGORIA_LICENCIA = {
   anual: 'anuales', medica: 'medicas', tareasAdecuadas: 'tareasAdecuadas',
-  extraordinaria: 'extraordinaria', comisiones: 'comisiones', noComputable: 'noComputables'
+  extraordinaria: 'extraordinaria', comisiones: 'comisiones', noComputable: 'noComputables', personales: 'personales'
 };
 
-function uiAgregarLicencia() {
-  abrirModalFormulario('Agregar licencia', [
-    { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: [
-      { valor: 'anual', etiqueta: 'Licencia Anual' }, { valor: 'medica', etiqueta: 'Licencia Médica' },
-      { valor: 'tareasAdecuadas', etiqueta: 'Tareas Adecuadas' }, { valor: 'extraordinaria', etiqueta: 'Licencia Extraordinaria' },
-      { valor: 'comisiones', etiqueta: 'Comisiones' }, { valor: 'noComputable', etiqueta: 'Licencia No Computable' }
-    ]},
+const OPCIONES_CATEGORIA_LICENCIA = [
+  { valor: 'anual', etiqueta: 'Licencia Anual' }, { valor: 'medica', etiqueta: 'Licencia Médica' },
+  { valor: 'tareasAdecuadas', etiqueta: 'Tareas Adecuadas' }, { valor: 'extraordinaria', etiqueta: 'Licencia Extraordinaria' },
+  { valor: 'comisiones', etiqueta: 'Comisiones' }, { valor: 'noComputable', etiqueta: 'Licencia No Computable' },
+  { valor: 'personales', etiqueta: 'Asuntos Personales' }
+];
+
+function camposLicencia() {
+  return [
+    { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: OPCIONES_CATEGORIA_LICENCIA },
     { id: 'jerarquia', label: 'Jerarquía' },
     { id: 'nombre', label: 'Apellido y Nombre' },
+    { id: 'diagnostico', label: 'Diagnóstico (solo si es Licencia Médica)', tipo: 'textarea' },
     { id: 'inicia', label: 'Inicia' },
     { id: 'vence', label: 'Vence' }
-  ], {}, (datos) => {
+  ];
+}
+
+function uiAgregarLicencia() {
+  abrirModalFormulario('Agregar licencia', camposLicencia(), {}, (datos) => {
     const clave = MAPA_CATEGORIA_LICENCIA[datos.categoria];
-    D.licencias[clave].push({ jerarquia: datos.jerarquia, nombre: datos.nombre, inicia: datos.inicia, vence: datos.vence });
+    D.licencias[clave].push({
+      jerarquia: datos.jerarquia, nombre: datos.nombre, inicia: datos.inicia, vence: datos.vence,
+      diagnostico: datos.categoria === 'medica' ? datos.diagnostico : ''
+    });
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarLicencia(claveActual, indice) {
+  const actual = D.licencias[claveActual][indice];
+  const categoriaActual = Object.keys(MAPA_CATEGORIA_LICENCIA).find(k => MAPA_CATEGORIA_LICENCIA[k] === claveActual);
+  abrirModalFormulario('Editar licencia', camposLicencia(), { ...actual, categoria: categoriaActual }, (datos) => {
+    D.licencias[claveActual].splice(indice, 1);
+    const claveNueva = MAPA_CATEGORIA_LICENCIA[datos.categoria];
+    D.licencias[claveNueva].push({
+      jerarquia: datos.jerarquia, nombre: datos.nombre, inicia: datos.inicia, vence: datos.vence,
+      diagnostico: datos.categoria === 'medica' ? datos.diagnostico : ''
+    });
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -483,8 +594,8 @@ function eliminarLicencia(clave, indice) {
 }
 
 // ---------- Cursos ----------
-function uiAgregarCurso() {
-  abrirModalFormulario('Agregar nuevo curso', [
+function camposCurso() {
+  return [
     { id: 'personal', label: 'Personal designado' },
     { id: 'nombreCurso', label: 'Nombre del curso' },
     { id: 'descripcion', label: 'Descripción (opcional)', tipo: 'textarea' },
@@ -492,12 +603,30 @@ function uiAgregarCurso() {
     { id: 'fechaFin', label: 'Fecha de finalización' },
     { id: 'modalidad', label: 'Modalidad', tipo: 'select', opciones: [{ valor: 'virtual', etiqueta: 'Virtual' }, { valor: 'presencial', etiqueta: 'Presencial' }] },
     { id: 'lugar', label: 'Lugar de realización (si es presencial)' }
-  ], {}, (datos) => {
-    D.cursos.push({
-      personal: datos.personal, nombreCurso: datos.nombreCurso, descripcion: datos.descripcion,
-      fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin, modalidad: datos.modalidad,
-      lugar: datos.modalidad === 'presencial' ? datos.lugar : ''
-    });
+  ];
+}
+
+function construirCurso(datos) {
+  return {
+    personal: datos.personal, nombreCurso: datos.nombreCurso, descripcion: datos.descripcion,
+    fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin, modalidad: datos.modalidad,
+    lugar: datos.modalidad === 'presencial' ? datos.lugar : ''
+  };
+}
+
+function uiAgregarCurso() {
+  abrirModalFormulario('Agregar nuevo curso', camposCurso(), {}, (datos) => {
+    D.cursos.push(construirCurso(datos));
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarCurso(indice) {
+  const actual = D.cursos[indice];
+  const valoresIniciales = { ...actual, modalidad: actual.modalidad || 'virtual' };
+  abrirModalFormulario('Editar curso', camposCurso(), valoresIniciales, (datos) => {
+    D.cursos[indice] = construirCurso(datos);
     persistirDatosGuardia();
     refrescarPestanaActual();
   });

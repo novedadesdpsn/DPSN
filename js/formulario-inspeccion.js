@@ -28,6 +28,9 @@ function textoGrupoDeficiencia(g, lista) {
   if (g.accion === 'recodifico') {
     return `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)})`;
   }
+  if (g.codigo2) {
+    return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo}/${g.codigo2} (${descripcionEnLista(g.codigo, lista)} - ${descripcionEnLista(g.codigo2, lista)})`;
+  }
   return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)})`;
 }
 
@@ -36,7 +39,8 @@ function lineasDescripcionGrupo(g) {
 }
 
 function codigosDeGrupo(g) {
-  return g.accion === 'recodifico' ? [g.codigoAnterior, g.codigoNuevo] : [g.codigo];
+  if (g.accion === 'recodifico') return [g.codigoAnterior, g.codigoNuevo];
+  return g.codigo2 ? [g.codigo, g.codigo2] : [g.codigo];
 }
 
 /**
@@ -126,6 +130,13 @@ function abrirFormularioInspeccionEstandar(opciones) {
               <label>Código</label>
               <select id="defCodigo">${opcionesCodigoHtml(listaCodigos)}</select>
             </div>
+            <div id="defCodigoUnico2" class="campo" style="margin-bottom:8px;">
+              <label>Código adicional (opcional — para combinaciones tipo 17/99)</label>
+              <select id="defCodigo2">
+                <option value="">— Ninguno —</option>
+                ${opcionesCodigoHtml(listaCodigos)}
+              </select>
+            </div>
             <div id="defCodigoDoble" class="fila-doble oculto">
               <div class="campo" style="margin-bottom:8px;"><label>Código anterior</label><select id="defCodigoAnterior">${opcionesCodigoHtml(listaCodigos)}</select></div>
               <div class="campo" style="margin-bottom:8px;"><label>Código nuevo</label><select id="defCodigoNuevo">${opcionesCodigoHtml(listaCodigos)}</select></div>
@@ -193,6 +204,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
   document.getElementById('defAccion').addEventListener('change', (e) => {
     const esRecodifico = e.target.value === 'recodifico';
     document.getElementById('defCodigoUnico').classList.toggle('oculto', esRecodifico);
+    document.getElementById('defCodigoUnico2').classList.toggle('oculto', esRecodifico);
     document.getElementById('defCodigoDoble').classList.toggle('oculto', !esRecodifico);
   });
 
@@ -211,7 +223,8 @@ function abrirFormularioInspeccionEstandar(opciones) {
         codigoNuevo: document.getElementById('defCodigoNuevo').value
       });
     } else {
-      grupos.push({ accion, cantidad, descripcionAdicional, codigo: document.getElementById('defCodigo').value });
+      const codigo2 = document.getElementById('defCodigo2').value;
+      grupos.push({ accion, cantidad, descripcionAdicional, codigo: document.getElementById('defCodigo').value, codigo2: codigo2 || null });
     }
     document.getElementById('defDescripcion').value = '';
     renderizarChipsDeficiencias();

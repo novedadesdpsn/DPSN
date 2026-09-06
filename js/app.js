@@ -284,10 +284,10 @@ function renderTarjetaCaso(c, esSAR, dependencia, indice) {
         N.º de caso: ${esc(c.numeroCaso)} · Subcentro (VTS): ${esc(c.subcentroVTS)} ·
         Inicio: ${esc(c.fechaInicio)} ${c.fechaCierre ? '· Cierre: ' + esc(c.fechaCierre) : ''}
       </div>` : ''}
-      <div style="margin-top:8px; font-size:13px;"><strong>Posición:</strong> ${esc(c.posicion)}</div>
-      <div style="margin-top:4px; font-size:13px; color:var(--rojo);"><strong>Novedad:</strong> ${esc(c.novedad)}</div>
-      <div style="margin-top:4px; font-size:13px;"><strong>Características:</strong> ${esc(c.caracteristicas)}</div>
-      <div style="margin-top:4px; font-size:13px;"><strong>Situación:</strong> ${esc(c.situacion)}</div>
+      <div class="texto-justificado" style="margin-top:8px; font-size:13px;"><strong>Posición:</strong> ${esc(c.posicion)}</div>
+      <div class="texto-justificado" style="margin-top:4px; font-size:13px; color:var(--rojo);"><strong>Novedad:</strong> ${esc(c.novedad)}</div>
+      <div class="texto-justificado" style="margin-top:4px; font-size:13px;"><strong>Características:</strong> ${esc(c.caracteristicas)}</div>
+      <div class="texto-justificado" style="margin-top:4px; font-size:13px;"><strong>Situación:</strong> ${esc(c.situacion)}</div>
       ${!SOLO_LECTURA_ACTUAL ? `
       <div style="margin-top:8px; display:flex; gap:8px;">
         <button class="btn-secundario" type="button" onclick="uiEditarCaso('${tipo}','${dependencia}',${indice})">Editar</button>
@@ -303,11 +303,15 @@ function renderOtros() {
   Object.entries(D.otros.porDependencia).forEach(([dep, bloques]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
     bloques.forEach((b, idx) => {
-      const btnEliminar = !SOLO_LECTURA_ACTUAL ? `<button type="button" class="btn-secundario" style="padding:2px 8px; float:right;" onclick="eliminarOtro('${dep}',${idx})">✕</button>` : '';
+      const btnAcciones = !SOLO_LECTURA_ACTUAL ? `
+        <span style="float:right; display:flex; gap:4px;">
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarOtro('${dep}',${idx})">Editar</button>
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarOtro('${dep}',${idx})">✕</button>
+        </span>` : '';
       if (b.tipoBloque === 'texto') {
-        html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong><p style="margin:6px 0 0;">${esc(b.contenido)}</p></div>`;
+        html += `<div class="item-insp">${btnAcciones}<strong>${esc(b.titulo)}</strong><p style="margin:6px 0 0;" class="texto-justificado">${esc(b.contenido)}</p></div>`;
       } else if (b.tipoBloque === 'tabla') {
-        html += `<div class="item-insp">${btnEliminar}<strong>${esc(b.titulo)}</strong>${renderTablaGenerica(b.columnas, b.filas)}</div>`;
+        html += `<div class="item-insp">${btnAcciones}<strong>${esc(b.titulo)}</strong>${renderTablaGenerica(b.columnas, b.filas)}</div>`;
       }
     });
     html += `</details>`;
@@ -412,7 +416,10 @@ function renderBuquesDetencion() {
     html += `<tr>
       <td>${esc(b.numero)}</td><td>${esc(b.dependencia)}</td><td>${esc(b.buque)}</td>
       <td>${esc(b.fecha)}</td><td>${esc(b.tipoInsp)}</td><td>${esc(b.deficiencias)}</td>
-      ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarBuqueDetencionTabla(${idx})">✕</button></td>` : ''}
+      ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarBuqueDetencionTabla(${idx})">Editar</button>
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarBuqueDetencionTabla(${idx})">✕</button>
+      </td>` : ''}
     </tr>`;
   });
   html += `</tbody></table>`;
@@ -439,7 +446,10 @@ function renderInspeccionesTecnicas() {
           Regreso: ${esc(i.regreso.fechaHora)} · Vuelo ${esc(i.regreso.vuelo)} · ${esc(i.regreso.destino)}
         </div>` : ''}
       </td>
-      ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarInspeccionTecnica(${idx})">✕</button></td>` : ''}
+      ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarInspeccionTecnica(${idx})">Editar</button>
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarInspeccionTecnica(${idx})">✕</button>
+      </td>` : ''}
     </tr>`;
   });
   html += `</tbody></table>`;
@@ -456,7 +466,10 @@ function renderDivisionControlGestion() {
   D.divisionControlGestion.forEach((a, idx) => {
     html += `<tr>
       <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}</td>
-      ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarAuditoria(${idx})">✕</button></td>` : ''}
+      ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarAuditoria(${idx})">Editar</button>
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarAuditoria(${idx})">✕</button>
+      </td>` : ''}
     </tr>`;
   });
   html += `</tbody></table>`;
@@ -476,10 +489,13 @@ function renderCursos() {
     D.cursos.forEach((c, idx) => {
       html += `<tr>
         <td>${esc(c.personal)}</td>
-        <td>${esc(c.nombreCurso)}${c.descripcion ? `<div style="font-size:11px; color:var(--gris-500);">${esc(c.descripcion)}</div>` : ''}</td>
+        <td>${esc(c.nombreCurso)}${c.descripcion ? `<div class="texto-justificado" style="font-size:11px; color:var(--gris-500);">${esc(c.descripcion)}</div>` : ''}</td>
         <td>${c.modalidad === 'presencial' ? 'Presencial' + (c.lugar ? ` — ${esc(c.lugar)}` : '') : 'Virtual'}</td>
         <td>${esc(c.fechaInicio)}</td><td>${esc(c.fechaFin)}</td>
-        ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarCurso(${idx})">✕</button></td>` : ''}
+        ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarCurso(${idx})">Editar</button>
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarCurso(${idx})">✕</button>
+        </td>` : ''}
       </tr>`;
     });
     html += `</tbody></table>`;
@@ -496,17 +512,22 @@ function renderLicencias() {
     ['Tareas Adecuadas', D.licencias.tareasAdecuadas, 'tareasAdecuadas'],
     ['Licencia Extraordinaria', D.licencias.extraordinaria, 'extraordinaria'],
     ['Comisiones', D.licencias.comisiones, 'comisiones'],
-    ['Licencias No Computables', D.licencias.noComputables, 'noComputables']
+    ['Licencias No Computables', D.licencias.noComputables, 'noComputables'],
+    ['Asuntos Personales', D.licencias.personales, 'personales']
   ];
   let html = '';
   secciones.forEach(([titulo, lista, clave]) => {
+    const esMedica = clave === 'medicas';
     html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>`;
     if (lista.length) {
-      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th><th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
       lista.forEach((l, idx) => {
         html += `<tr>
-          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}</td><td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
-          ${!SOLO_LECTURA_ACTUAL ? `<td><button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button></td>` : ''}
+          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
+          ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+            <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${clave}',${idx})">Editar</button>
+            <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button>
+          </td>` : ''}
         </tr>`;
       });
       html += `</tbody></table>`;

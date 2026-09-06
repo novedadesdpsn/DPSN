@@ -234,7 +234,7 @@ const DATOS_EJEMPLO = {
       { jerarquia: "PPCGESMA", nombre: "SOSA, MARIO ALEJANDRO (PRAC)", inicia: "27/07/2026", vence: "05/08/2026" }
     ],
     medicas: [
-      { jerarquia: "CICGOF", nombre: "HERMOSILLA, FÁTIMA MARÍA (RNBU) — Traumatismo tobillo derecho", inicia: "02/07/2026", vence: "Turno médico 05/08/2026" }
+      { jerarquia: "CICGOF", nombre: "HERMOSILLA, FÁTIMA MARÍA (RNBU)", diagnostico: "Traumatismo tobillo derecho", inicia: "02/07/2026", vence: "Turno médico 05/08/2026" }
     ],
     tareasAdecuadas: [
       { jerarquia: "PRCPIN", nombre: "ETCHEVERRY, ALFREDO (TNAV) — Diag. IAM c/colocación de stent", inicia: "20/07/2026", vence: "Turno médico 07/08/2026" }
@@ -247,7 +247,8 @@ const DATOS_EJEMPLO = {
     ],
     noComputables: [
       { jerarquia: "ATCGOF", nombre: "ROBLEDO, DARIO MAXIMILIANO (TNAV)", inicia: "03/08/2026", vence: "07/08/2026" }
-    ]
+    ],
+    personales: []
   },
 
   guardia: {

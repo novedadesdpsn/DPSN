@@ -205,21 +205,22 @@ function textoDivisionControlGestion() {
 
 function textoLicencias() {
   const grupos = [
-    ['Licencia Anual', D.licencias.anuales],
-    ['Licencia Médica', D.licencias.medicas],
-    ['Tareas Adecuadas', D.licencias.tareasAdecuadas],
-    ['Licencia Extraordinaria', D.licencias.extraordinaria],
-    ['Comisiones', D.licencias.comisiones],
-    ['Licencias No Computables', D.licencias.noComputables]
+    ['Licencia Anual', D.licencias.anuales, false],
+    ['Licencia Médica', D.licencias.medicas, true],
+    ['Tareas Adecuadas', D.licencias.tareasAdecuadas, false],
+    ['Licencia Extraordinaria', D.licencias.extraordinaria, false],
+    ['Comisiones', D.licencias.comisiones, false],
+    ['Licencias No Computables', D.licencias.noComputables, false],
+    ['Asuntos Personales', D.licencias.personales, false]
   ];
   return [{
     titulo: 'Licencias',
     contenido: {
       tipo: 'tablas',
-      tablas: grupos.map(([titulo, lista]) => ({
+      tablas: grupos.map(([titulo, lista, esMedica]) => ({
         titulo,
-        columnas: ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
-        filas: lista.map(l => [l.jerarquia, l.nombre, l.inicia, l.vence])
+        columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
+        filas: lista.map(l => esMedica ? [l.jerarquia, l.nombre, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, l.nombre, l.inicia, l.vence])
       }))
     }
   }];

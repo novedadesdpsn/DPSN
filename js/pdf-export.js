@@ -159,13 +159,26 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       });
     });
     let y2 = yInicial;
-    lineas.forEach(linea => {
+    lineas.forEach((linea, idxLinea) => {
       if (y2 + 11 > altoPagina - 46) { doc.addPage(); y2 = margen; }
-      let cx = x;
+      const esUltimaLinea = idxLinea === lineas.length - 1;
+
+      // Ancho real de las palabras (sin espacios), para calcular cuánto hay que estirar.
+      let anchoPalabrasSolas = 0;
       linea.forEach(w => {
         doc.setFont('helvetica', w.negrita ? 'bold' : 'normal');
+        anchoPalabrasSolas += doc.getStringUnitWidth(w.texto) * tamano / doc.internal.scaleFactor;
+      });
+      const huecos = linea.length - 1;
+      const espacioJustificado = (!esUltimaLinea && huecos > 0)
+        ? (anchoMax - anchoPalabrasSolas) / huecos
+        : espacio;
+
+      let cx = x;
+      linea.forEach((w, i) => {
+        doc.setFont('helvetica', w.negrita ? 'bold' : 'normal');
         doc.text(w.texto, cx, y2);
-        cx += doc.getStringUnitWidth(w.texto) * tamano / doc.internal.scaleFactor + espacio;
+        cx += doc.getStringUnitWidth(w.texto) * tamano / doc.internal.scaleFactor + (i < linea.length - 1 ? espacioJustificado : 0);
       });
       y2 += tamano * 1.4;
     });
@@ -261,7 +274,9 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       : (cant > 1 ? 'Se detectaron ' : 'Se detectó ');
     const contenido = g.accion === 'recodifico'
       ? `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)}).`
-      : `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)}).`;
+      : g.codigo2
+        ? `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigo}/${g.codigo2} (${descripcionEnLista(g.codigo, lista)} - ${descripcionEnLista(g.codigo2, lista)}).`
+        : `${numeroALetras(cant)} (${numeroConDigitos(cant)}) Def. Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)}).`;
 
     y = escribirParrafoMixto([{ texto: verbo, negrita: false }, { texto: contenido, negrita: true }], xIndent, anchoUtil - (xIndent - margen), y, 9);
 
