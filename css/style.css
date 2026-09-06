@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
 :root{
   /* Paleta institucional reinterpretada: navy profundo como base,
      con una familia de acentos (teal, coral, violeta, ámbar) para
@@ -27,8 +29,6 @@
   --fuente-cuerpo: 'Plus Jakarta Sans', 'Segoe UI', Roboto, Arial, sans-serif;
   --fuente-mono: 'Consolas', 'Courier New', monospace;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -237,7 +237,11 @@ button{font-family:inherit; cursor:pointer;}
 .dependencia-bloque .item-insp{
   border-left:3px solid var(--gris-300); padding:8px 12px; margin:6px 0 6px 10px;
   background: var(--gris-100); border-radius: 0 var(--radio) var(--radio) 0; font-size:13px;
+  text-align: justify;
 }
+.dependencia-bloque .item-insp > div:first-child,
+.dependencia-bloque .item-insp .tag{ text-align:left; }
+.texto-justificado{ text-align: justify; }
 .item-insp .tag{
   display:inline-block; font-size:10px; font-weight:700;
   padding:1px 7px; border-radius:8px; text-transform:uppercase; margin-right:6px;
