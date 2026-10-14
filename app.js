@@ -386,6 +386,83 @@ function renderOficinas() {
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarFilaSimple('${clave}','Agregar expediente — ${esc(titulo)}')">+ Agregar expediente</button>` : ''}
     </div>`;
 
+  // Registro Nacional de Buques — tabla editable + referencias + gráfico de sectores
+  const rnbu = D.oficinas.registroNacionalBuques.filas;
+  const filasRNBU = [
+    ['buscarBuque', 'Buscar Buque'],
+    ['ingresarGde', 'Ingresar GDE/CUDAP'],
+    ['verificar', 'Verificar Datos / Normalizar'],
+    ['aprobarFolio', 'Aprobar Folio'],
+    ['darSalida', 'Dar Salida']
+  ];
+  const columnasRNBU = [['matr', 'MATR'], ['tran', 'TRAN'], ['vent', 'VENT'], ['medJud', 'MED. JUD.'], ['cbioMotor', 'CBIO MOTOR'], ['otros', 'OTROS']];
+  const sumaFila = (f) => columnasRNBU.reduce((a, [k]) => a + (f[k] || 0), 0);
+  const totalesColumna = {};
+  columnasRNBU.forEach(([k]) => { totalesColumna[k] = filasRNBU.reduce((a, [fk]) => a + (rnbu[fk][k] || 0), 0); });
+  const totalGeneral = columnasRNBU.reduce((a, [k]) => a + totalesColumna[k], 0);
+
+  const coloresRNBU = { tran: '#1e2a78', otros: '#d03a35', cbioMotor: '#6b8be0', matr: '#1f5f6e', medJud: '#e8a23a', vent: '#8a3fa0' };
+  const referencias = [['tran', 'TRAN'], ['otros', 'OTROS'], ['cbioMotor', 'CBIO MOTOR'], ['matr', 'MATR'], ['medJud', 'MED. JUD.'], ['vent', 'VENT']]
+    .sort((a, b) => totalesColumna[b[0]] - totalesColumna[a[0]]);
+
+  // Gráfico de sectores con conic-gradient (se arma solo con los totales)
+  let acumulado = 0;
+  const tramos = referencias.map(([k]) => {
+    const pct = totalGeneral ? (totalesColumna[k] / totalGeneral) * 100 : 0;
+    const desde = acumulado;
+    acumulado += pct;
+    return `${coloresRNBU[k]} ${desde}% ${acumulado}%`;
+  });
+  const fondoTorta = totalGeneral ? `conic-gradient(${tramos.join(', ')})` : 'var(--gris-300)';
+
+  const celdaInput = (filaClave, col) => SOLO_LECTURA_ACTUAL
+    ? `<td style="text-align:center;">${rnbu[filaClave][col]}</td>`
+    : `<td style="text-align:center;"><input type="number" min="0" value="${rnbu[filaClave][col]}" style="width:64px; text-align:center; padding:4px; border:1px solid var(--gris-300); border-radius:4px;" onchange="actualizarCeldaRNBU('${filaClave}','${col}',this.value)"></td>`;
+
+  const bloqueRNBU = `
+    <div class="tarjeta" id="bloqueRNBU">
+      <h2>Registro Nacional de Buques <button class="btn-secundario no-imprimir" type="button" onclick="imprimirBloqueOficina('bloqueRNBU')">Imprimir</button></h2>
+      <table class="tabla-datos">
+        <thead>
+          <tr><th>Nro. Orden</th><th>Pantalla Actual</th>${columnasRNBU.map(([, et]) => `<th style="text-align:center;">${et}</th>`).join('')}<th style="text-align:center;">Trámites Vigentes</th></tr>
+        </thead>
+        <tbody>
+          ${filasRNBU.map(([fk, etiqueta]) => `
+            <tr>
+              <td style="text-align:center;">${rnbu[fk].nroOrden}</td>
+              <td><strong>${esc(etiqueta.toUpperCase())}</strong></td>
+              ${columnasRNBU.map(([col]) => celdaInput(fk, col)).join('')}
+              <td style="text-align:center; font-weight:700;">${sumaFila(rnbu[fk])}</td>
+            </tr>`).join('')}
+          <tr style="background:var(--gris-100); font-weight:700;">
+            <td></td><td style="text-align:right;">Suma Total</td>
+            ${columnasRNBU.map(([k]) => `<td style="text-align:center;">${totalesColumna[k]}</td>`).join('')}
+            <td style="text-align:center;">${totalGeneral}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="display:flex; gap:30px; flex-wrap:wrap; align-items:center; margin-top:20px;">
+        <table class="tabla-datos" style="width:auto; min-width:200px;">
+          <thead><tr><th>Tipo Trámite</th><th style="text-align:center;">Trámites Vigentes</th></tr></thead>
+          <tbody>
+            ${referencias.map(([k, et]) => `<tr><td><span style="display:inline-block; width:10px; height:10px; background:${coloresRNBU[k]}; border-radius:2px; margin-right:6px;"></span><strong>${et}</strong></td><td style="text-align:center;">${totalesColumna[k]}</td></tr>`).join('')}
+            <tr style="background:var(--gris-100); font-weight:700;"><td>Suma Total</td><td style="text-align:center;">${totalGeneral}</td></tr>
+          </tbody>
+        </table>
+
+        <div style="display:flex; align-items:center; gap:20px;">
+          <div style="width:200px; height:200px; border-radius:50%; background:${fondoTorta}; border:1px solid var(--gris-300);" title="Trámites vigentes por tipo"></div>
+          <div style="font-size:12px;">
+            ${referencias.map(([k, et]) => {
+              const pct = totalGeneral ? Math.round((totalesColumna[k] / totalGeneral) * 100) : 0;
+              return `<div style="margin-bottom:4px;"><span style="display:inline-block; width:10px; height:10px; background:${coloresRNBU[k]}; border-radius:2px; margin-right:6px;"></span>${et}, ${pct}%</div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
   const bloqueSinDefinir = (idBloque, titulo) => `
     <div class="tarjeta" id="${idBloque}">
       <h2>${esc(titulo)}</h2>
@@ -395,8 +472,8 @@ function renderOficinas() {
   return bloqueDocumentacion +
     bloqueSimple('controlGestion', 'bloqueControlGestion', 'Control de Gestión') +
     bloqueSimple('divisionNavegacion', 'bloqueDivisionNavegacion', 'División Navegación') +
-    bloqueSinDefinir('bloqueSinDefinir1', 'Sin Definir') +
-    bloqueSinDefinir('bloqueSinDefinir2', 'Sin Definir');
+    bloqueRNBU +
+    bloqueSinDefinir('bloqueSinDefinir1', 'Sin Definir');
 }
 
 // ---------- Tablas genéricas ----------

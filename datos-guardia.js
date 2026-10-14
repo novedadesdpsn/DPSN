@@ -53,13 +53,18 @@ function normalizarLicencias() {
   return false;
 }
 
+function filasRNBUVacias() {
+  const f = (nroOrden) => ({ nroOrden, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 });
+  return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), aprobarFolio: f(8), darSalida: f(11) };
+}
+
 function normalizarOficinas() {
   const vacia = () => ({
     documentacion: { tramitesAnalisis: [], certificadosArqueo: [], giradosTNAV: [] },
     controlGestion: { filas: [] },
     divisionNavegacion: { filas: [] },
     sinDefinir1: {},
-    sinDefinir2: {}
+    registroNacionalBuques: { filas: filasRNBUVacias() }
   });
 
   const o = DATOS_EJEMPLO.oficinas;
@@ -73,7 +78,11 @@ function normalizarOficinas() {
   if (!o.controlGestion || !Array.isArray(o.controlGestion.filas)) { o.controlGestion = { filas: [] }; corregido = true; }
   if (!o.divisionNavegacion || !Array.isArray(o.divisionNavegacion.filas)) { o.divisionNavegacion = { filas: [] }; corregido = true; }
   if (!o.sinDefinir1) { o.sinDefinir1 = {}; corregido = true; }
-  if (!o.sinDefinir2) { o.sinDefinir2 = {}; corregido = true; }
+  if (!o.registroNacionalBuques || !o.registroNacionalBuques.filas || !o.registroNacionalBuques.filas.buscarBuque) {
+    o.registroNacionalBuques = { filas: filasRNBUVacias() };
+    corregido = true;
+  }
+  if (o.sinDefinir2) { delete o.sinDefinir2; corregido = true; }
   return corregido;
 }
 

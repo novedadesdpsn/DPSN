@@ -142,7 +142,28 @@ function textoOficinas() {
         filas: D.oficinas.divisionNavegacion.filas.map(f => [f.fecha, f.gde, f.expediente])
       }]
     }
-  }];
+  }, (() => {
+    const r = D.oficinas.registroNacionalBuques.filas;
+    const defs = [['buscarBuque', 'Buscar Buque'], ['ingresarGde', 'Ingresar GDE/CUDAP'], ['verificar', 'Verificar Datos / Normalizar'], ['aprobarFolio', 'Aprobar Folio'], ['darSalida', 'Dar Salida']];
+    const cols = ['matr', 'tran', 'vent', 'medJud', 'cbioMotor', 'otros'];
+    const sumaFila = f => cols.reduce((a, k) => a + (f[k] || 0), 0);
+    const totales = cols.map(k => defs.reduce((a, [fk]) => a + (r[fk][k] || 0), 0));
+    const totalGral = totales.reduce((a, b) => a + b, 0);
+    return {
+      titulo: 'Registro Nacional de Buques',
+      contenido: {
+        tipo: 'tablas',
+        tablas: [{
+          columnas: ['Nro.', 'Pantalla Actual', 'MATR', 'TRAN', 'VENT', 'MED. JUD.', 'CBIO MOTOR', 'OTROS', 'Trám. Vigentes'],
+          anchos: [0.07, 0.27, 0.09, 0.09, 0.09, 0.09, 0.1, 0.09, 0.11],
+          filas: [
+            ...defs.map(([fk, et]) => [r[fk].nroOrden, et, ...cols.map(k => r[fk][k]), sumaFila(r[fk])]),
+            ['', 'Suma Total', ...totales, totalGral]
+          ]
+        }]
+      }
+    };
+  })()];
   return secciones;
 }
 
