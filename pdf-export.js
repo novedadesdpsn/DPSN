@@ -16,6 +16,19 @@ function fechaHoy() {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+const MESES_ES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+/** Fecha del parte con la fecha actual: "14 0700 a 15 0700 de OCTUBRE de 2026" (0700 del día anterior a 0700 de hoy). */
+function fechaParteActual() {
+  const hoy = new Date();
+  const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+  const dd = (d) => String(d.getDate()).padStart(2, '0');
+  if (ayer.getMonth() === hoy.getMonth()) {
+    return `${dd(ayer)}0700 a ${dd(hoy)}0700 de ${MESES_ES[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+  }
+  return `${dd(ayer)}0700 de ${MESES_ES[ayer.getMonth()]} a ${dd(hoy)}0700 de ${MESES_ES[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+}
+
 function cerrarModalExportar() {
   const m = document.getElementById('modalExportar');
   if (m) m.remove();
@@ -86,16 +99,6 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   function encabezadoInstitucional() {
     doc.setTextColor(20, 20, 20);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('RESUMEN DE NOVEDADES', anchoPagina / 2, y, { align: 'center' });
-    y += 15;
-    if (subtitulo) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.text(subtitulo, anchoPagina / 2, y, { align: 'center' });
-      y += 14;
-    }
-    doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.text('PREFECTURA NAVAL ARGENTINA', anchoPagina / 2, y, { align: 'center' });
     y += 13;
@@ -106,7 +109,17 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.text('DIRECCIÓN DE POLICÍA DE SEGURIDAD DE LA NAVEGACIÓN', anchoPagina / 2, y, { align: 'center' });
-    y += 12;
+    y += 16;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text(tituloVisible || 'RESUMEN DE NOVEDADES', anchoPagina / 2, y, { align: 'center' });
+    y += 15;
+    if (subtitulo) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text(subtitulo, anchoPagina / 2, y, { align: 'center' });
+      y += 12;
+    }
     doc.setDrawColor(60, 60, 60);
     doc.setLineWidth(0.8);
     doc.line(margen, y, anchoPagina - margen, y);
@@ -193,7 +206,8 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   }
 
   /** Tabla con bordes reales; anchos por columna opcionales (proporciones que suman 1). */
-  function tabla(columnas, filas, tituloTabla, anchos) {
+  function tabla(columnas, filas, tituloTabla, anchos, extras) {
+    extras = extras || {};
     if (tituloTabla) {
       saltoDePaginaSiHaceFalta(14);
       doc.setFont('helvetica', 'bold');
@@ -231,7 +245,18 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       y += alto;
     }
 
-    saltoDePaginaSiHaceFalta(40);
+    saltoDePaginaSiHaceFalta(extras.banda ? 58 : 40);
+    if (extras.banda) {
+      doc.setFillColor(215, 215, 215);
+      doc.setDrawColor(120, 120, 120);
+      doc.setLineWidth(0.5);
+      doc.rect(margen, y, anchoUtil, 18, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(20, 20, 20);
+      doc.text(extras.banda, anchoPagina / 2, y + 12, { align: 'center' });
+      y += 18;
+    }
     dibujarEncabezado();
 
     doc.setFont('helvetica', 'normal');
@@ -254,6 +279,14 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       });
       y += alto;
     });
+    if (extras.pie && extras.pie.length) {
+      y += 8;
+      doc.setTextColor(20, 20, 20);
+      extras.pie.forEach(linea => {
+        y = escribirParrafoMixto([{ texto: linea, negrita: false }], margen, anchoUtil, y, 8.5);
+        y += 2;
+      });
+    }
     y += 14;
   }
 
@@ -274,11 +307,11 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         { texto: codigoNuevoTexto, negrita: true }
       ], xIndent, anchoDisp, y, 9);
     } else {
-      const verbo = cant > 1 ? 'se detectaron ' : 'se detectó ';
+      const verbo = cant > 1 ? 'Se detectaron ' : 'Se detectó ';
       const cantidadTexto = `${numeroALetras(cant)} (${numeroConDigitos(cant)}) `;
       const codigoTexto = g.codigo2
-        ? `Def. Cód. ${g.codigo}/${g.codigo2} (${descripcionEnLista(g.codigo, lista)} - ${descripcionEnLista(g.codigo2, lista)}).`
-        : `Def. Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)}).`;
+        ? `def. Cód. ${g.codigo}-${g.codigo2} (${descripcionEnLista(g.codigo, lista)}-${descripcionEnLista(g.codigo2, lista)}).`
+        : `def. Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)}).`;
       y = escribirParrafoMixto([
         { texto: verbo, negrita: false },
         { texto: cantidadTexto, negrita: true },
@@ -295,7 +328,11 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     // Cómo se subsanó — en negrita, aparte.
     const subsano = textoComoSeSubsano(g);
     if (subsano) {
-      y = escribirParrafoMixto([{ texto: subsano, negrita: true }], xIndent + 10, anchoDisp - 10, y, 9);
+      const m = subsano.match(/^(C[óo]d\.?\s*[\d\/-]+\s*:)\s*([\s\S]*)$/i);
+      const runsSub = m
+        ? [{ texto: m[1], negrita: true }, { texto: m[2], negrita: false }]
+        : [{ texto: subsano, negrita: true }];
+      y = escribirParrafoMixto(runsSub, xIndent + 10, anchoDisp - 10, y, 9);
     }
   }
 
@@ -316,27 +353,58 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       y += 13;
 
       grupo.porDependencia[dep].forEach(insp => {
-        let marca;
-        if (familia === 'psc') {
-          marca = insp.tipo === 'inicial' ? '(IISD)' : insp.tipo === 'detallada' ? '(IICD)' : `(IS de ID Fecha ${insp.fechaInspMasDetallada || '—'})`;
+        const listaCod = familia === 'psc' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS;
+        const marcaDe = (x) => {
+          if (familia === 'psc') return x.tipo === 'inicial' ? '(IISD)' : x.tipo === 'detallada' ? '(IICD)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
+          return x.tipo === 'inicial' ? '(II)' : x.tipo === 'detallada' ? '(ID)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
+        };
+        const esConvoy = insp.categoria === 'convoyesExtr' || insp.categoria === 'convoyArgentino';
+        let tituloTexto;
+        if (esConvoy) {
+          tituloTexto = `${marcaDe(insp)} al ${insp.buque.tipo} "${insp.buque.nombre}" (${insp.buque.matricula}) B/${insp.buque.bandera}.`;
+          if (insp.asunto) tituloTexto += ` Motivo ${insp.asunto}.`;
         } else {
-          marca = insp.tipo === 'inicial' ? '(II)' : insp.tipo === 'detallada' ? '(ID)' : `(IS de ID Fecha ${insp.fechaInspMasDetallada || '—'})`;
+          const refIdentif = familia === 'psc' ? 'IMO' : 'Mat.';
+          tituloTexto = `${marcaDe(insp)} ${insp.buque.tipo} "${insp.buque.nombre}" (${refIdentif} ${insp.buque.matricula}) B/${insp.buque.bandera}`;
+          if (insp.asunto) tituloTexto += `, referente ${insp.asunto}`;
+          tituloTexto += '.';
         }
-        const refIdentif = familia === 'psc' ? 'IMO' : 'Mat.';
-        let tituloTexto = `${marca} ${insp.buque.tipo} "${insp.buque.nombre}" (${refIdentif} ${insp.buque.matricula}) B/${insp.buque.bandera}`;
-        if (insp.asunto) tituloTexto += `, referente ${insp.asunto}`;
-        if (familia === 'psc' && insp.nota) tituloTexto += `. Próx. puerto: ${insp.nota}`;
-        tituloTexto += '.';
 
         y = escribirParrafoMixto([{ texto: tituloTexto, negrita: true }], margen + 8, anchoUtil - 8, y, 9);
+
+        if (esConvoy && insp.caracteristicasConvoy) {
+          insp.caracteristicasConvoy.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+            y = escribirParrafoMixto([{ texto: l, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+          });
+        }
 
         if (insp.tipo === 'inicial') {
           y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         }
-        (insp.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8, familia === 'psc' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS));
+        (insp.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8, listaCod));
 
-        if (familia !== 'psc' && insp.nota) {
+        // La nota va debajo de la deficiencia; solo la palabra "Nota:" en negrita.
+        if (insp.nota) {
           y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: insp.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        }
+
+        if (esConvoy && insp.barcazas && insp.barcazas.length) {
+          y += 4;
+          saltoDePaginaSiHaceFalta(24);
+          y = escribirParrafoMixto([{ texto: 'BARCAZAS:', negrita: true }], margen + 8, anchoUtil - 8, y, 9);
+          insp.barcazas.forEach(b => {
+            let t = `"${b.buque.nombre}" (${b.buque.matricula}) B/${b.buque.bandera}.`;
+            if (b.tipo === 'seguimiento') t = `${marcaDe(b)} ${t}`;
+            y = escribirParrafoMixto([{ texto: t, negrita: true }], margen + 8, anchoUtil - 8, y, 9);
+            if (b.tipo === 'inicial') {
+              y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+            }
+            (b.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8, listaCod));
+            if (b.nota) {
+              y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: b.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+            }
+            y += 4;
+          });
         }
         y += 9; // renglón en blanco entre inspecciones
       });
@@ -380,7 +448,8 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       doc.text(titulo, margen, y);
       y += 13;
       personas.forEach(p => {
-        y = escribirParrafoMixto([{ texto: `${p.rol}:`, negrita: true }, { texto: p.nombre, negrita: false }], margen, anchoUtil, y, 9.5);
+        y = escribirParrafoMixto([{ texto: '•', negrita: false }, { texto: `${p.rol}:`, negrita: true }, { texto: p.nombre, negrita: false }], margen + 8, anchoUtil - 8, y, 9.5);
+        y += 2;
       });
       y += 8;
     });
@@ -446,7 +515,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     } else if (c && c.tipo === 'guardia') {
       guardiaPDF(c.saliente, c.entrante);
     } else if (c && c.tipo === 'tablas') {
-      c.tablas.forEach(t => tabla(t.columnas, t.filas, t.titulo, t.anchos));
+      c.tablas.forEach(t => tabla(t.columnas, t.filas, t.titulo, t.anchos, { banda: t.banda, pie: t.pie }));
       if (c.nota) {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
@@ -600,7 +669,7 @@ function abrirModalExportarGuardia() {
       secciones.push({ titulo: 'Relevo de Guardia', contenido: contenidoGuardia() });
     }
 
-    generarPDF(`Novedades DPSN ${fechaHoy()}.pdf`, 'RESUMEN DE NOVEDADES', D.fechaParte, secciones);
+    generarPDF(`Novedades DPSN ${fechaHoy()}.pdf`, 'RESUMEN DE NOVEDADES', fechaParteActual(), secciones);
     archivarParteDelDia();
   });
 }

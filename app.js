@@ -161,6 +161,9 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
           </div>` : ''}
         </div>`;
       if (insp.asunto) html += `<div style="margin-top:4px;">Ref. Caso MAS: ${esc(insp.asunto)}</div>`;
+      if (insp.caracteristicasConvoy) {
+        html += `<div style="margin-top:4px; font-size:12px; color:var(--gris-700);">${insp.caracteristicasConvoy.split('\n').filter(l => l.trim()).map(l => esc(l.trim())).join('<br>')}</div>`;
+      }
       if (insp.tipo === 'inicial') {
         html += `<div style="margin-top:4px; color:var(--acento); font-weight:600;">Sin registrar deficiencias</div>`;
       }
@@ -172,6 +175,19 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
         html += `</ul>`;
       }
       if (insp.nota) html += `<div style="margin-top:4px; font-style:italic; color:var(--gris-700);">Nota: ${esc(insp.nota)}</div>`;
+      if (insp.barcazas && insp.barcazas.length) {
+        html += `<div style="margin-top:8px;"><strong>Barcazas</strong></div>`;
+        insp.barcazas.forEach(b => {
+          html += `<div style="margin:4px 0 0 12px; padding-left:8px; border-left:2px solid var(--gris-300);">
+            ${b.tipo === 'seguimiento' ? `<span class="tag seguimiento">IS de ID Fecha ${esc(b.fechaInspMasDetallada || '—')}</span>` : tagTipo(b.tipo)}
+            <strong>"${esc(b.buque.nombre)}"</strong> (${esc(b.buque.matricula)}) — B/${esc(b.buque.bandera)}`;
+          if (b.deficiencias && b.deficiencias.length) {
+            html += `<ul style="margin:4px 0 0 18px; padding:0;">${b.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g, CODIGOS_MEDIDAS))}${renderLineasDescripcionHtml(g)}</li>`).join('')}</ul>`;
+          }
+          if (b.nota) html += `<div style="font-style:italic; color:var(--gris-700);">Nota: ${esc(b.nota)}</div>`;
+          html += `</div>`;
+        });
+      }
       html += `</div>`;
     });
     html += `</details>`;

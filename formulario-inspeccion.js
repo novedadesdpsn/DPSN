@@ -8,8 +8,8 @@
 // descripción oficial de cada código tomada de codigos.js.
 // ============================================================
 
-function cerrarModalInspeccion() {
-  const m = document.getElementById('modalInspeccion');
+function cerrarModalInspeccion(id) {
+  const m = document.getElementById(id || 'modalInspeccion');
   if (m) m.remove();
 }
 
@@ -61,13 +61,17 @@ function codigosDeGrupo(g) {
  * }
  */
 function abrirFormularioInspeccionEstandar(opciones) {
-  cerrarModalInspeccion();
+  const idModal = opciones.idModal || 'modalInspeccion';
+  const esBarcaza = !!opciones.esBarcaza;
+  cerrarModalInspeccion(idModal);
   const v = opciones.valores || {};
+  let barcazas = (v.barcazas || []).slice();
+  const $ = (id) => modal.querySelector('#' + id);
   const buque = v.buque || {};
   const listaCodigos = opciones.listaCodigos || CODIGOS_MEDIDAS;
   let grupos = (v.deficiencias || []).slice();
 
-  const categoriasHtml = opciones.incluirCategoria ? `
+  const categoriasHtml = (opciones.incluirCategoria && !esBarcaza) ? `
     <div class="campo">
       <label>Categoría (para el resumen)</label>
       <select id="insCategoria">
@@ -81,15 +85,15 @@ function abrirFormularioInspeccionEstandar(opciones) {
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
-  modal.id = 'modalInspeccion';
+  modal.id = idModal;
   modal.innerHTML = `
     <div class="modal-caja ancho">
       <div class="modal-header">
         <h3>${esc(opciones.titulo)}</h3>
-        <button type="button" onclick="cerrarModalInspeccion()">✕</button>
+        <button type="button" onclick="cerrarModalInspeccion('${idModal}')">✕</button>
       </div>
       <div class="modal-campos">
-        <div class="campo">
+        <div class="campo ${esBarcaza ? 'oculto' : ''}">
           <label>Dependencia (sigla)</label>
           <input type="text" id="insDependencia" value="${esc(v.dependencia || '')}">
         </div>
@@ -109,6 +113,11 @@ function abrirFormularioInspeccionEstandar(opciones) {
         <div class="fila-doble">
           <div class="campo"><label>N.º IMO / Matrícula</label><input type="text" id="insMatricula" value="${esc(buque.matricula || '')}"></div>
           <div class="campo"><label>Bandera</label><input type="text" id="insBandera" value="${esc(buque.bandera || '')}"></div>
+        </div>
+
+        <div class="campo oculto" id="bloqueConvoy">
+          <label>Características del remolcador / convoy (una por línea)</label>
+          <textarea id="insConvoy" rows="6" placeholder="Convoy: Veinte (20) Bzas. con 26.205 tn harina de soja.&#10;Eslora total del convoy: 285,6 m. (remolcador y barcazas)&#10;Manga del convoy: 53,4 m.&#10;Potencia del Remolcador: 4.600 HP.&#10;Compañía: ...&#10;Procedente: ...&#10;Destino: ...">${esc(v.caracteristicasConvoy || '')}</textarea>
         </div>
 
         <div class="campo oculto" id="bloqueFechaID">
@@ -160,7 +169,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
           </div>
         </div>
 
-        <div class="campo">
+        <div class="campo ${esBarcaza ? 'oculto' : ''}">
           <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;">
             <input type="checkbox" id="insEsCasoMAS" ${v.asunto ? 'checked' : ''} style="width:16px;height:16px;">
             ¿Corresponde a un Caso MAS/SAR?
@@ -175,9 +184,15 @@ function abrirFormularioInspeccionEstandar(opciones) {
           <label>Nota</label>
           <textarea id="insNota">${esc(v.nota || '')}</textarea>
         </div>
+
+        <div class="campo oculto" id="bloqueBarcazas">
+          <label>Barcazas</label>
+          <div id="listaBarcazas" style="margin-bottom:8px;"></div>
+          <button type="button" class="btn-secundario" id="btnAgregarBarcaza">+ Agregar barcaza</button>
+        </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-secundario" type="button" onclick="cerrarModalInspeccion()">Cancelar</button>
+        <button class="btn-secundario" type="button" onclick="cerrarModalInspeccion('${idModal}')">Cancelar</button>
         <button class="btn-primario" type="button" id="btnGuardarInspeccion">Guardar</button>
       </div>
     </div>
@@ -185,7 +200,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
   document.body.appendChild(modal);
 
   function renderizarChipsDeficiencias() {
-    const cont = document.getElementById('listaGruposDeficiencia');
+    const cont = $('listaGruposDeficiencia');
     if (!grupos.length) {
       cont.innerHTML = '<div style="font-size:12px; color:var(--gris-500);">Todavía no agregaste ninguna.</div>';
       return;
@@ -213,64 +228,108 @@ function abrirFormularioInspeccionEstandar(opciones) {
   }
 
   function actualizarVisibilidadPorTipo() {
-    const tipo = document.getElementById('insTipo').value;
-    document.getElementById('bloqueDeficiencias').classList.toggle('oculto', tipo === 'inicial');
-    document.getElementById('bloqueFechaID').classList.toggle('oculto', tipo !== 'seguimiento');
+    const tipo = $('insTipo').value;
+    $('bloqueDeficiencias').classList.toggle('oculto', tipo === 'inicial');
+    $('bloqueFechaID').classList.toggle('oculto', tipo !== 'seguimiento');
   }
-  document.getElementById('insTipo').addEventListener('change', actualizarVisibilidadPorTipo);
+  $('insTipo').addEventListener('change', actualizarVisibilidadPorTipo);
   actualizarVisibilidadPorTipo();
 
-  document.getElementById('defAccion').addEventListener('change', (e) => {
+  $('defAccion').addEventListener('change', (e) => {
     const esRecodifico = e.target.value === 'recodifico';
-    document.getElementById('defCodigoUnico').classList.toggle('oculto', esRecodifico);
-    document.getElementById('defCodigoUnico2').classList.toggle('oculto', esRecodifico);
-    document.getElementById('defCodigoDoble').classList.toggle('oculto', !esRecodifico);
+    $('defCodigoUnico').classList.toggle('oculto', esRecodifico);
+    $('defCodigoUnico2').classList.toggle('oculto', esRecodifico);
+    $('defCodigoDoble').classList.toggle('oculto', !esRecodifico);
   });
 
-  document.getElementById('insEsCasoMAS').addEventListener('change', (e) => {
-    document.getElementById('bloqueAsuntoMAS').classList.toggle('oculto', !e.target.checked);
+  $('insEsCasoMAS').addEventListener('change', (e) => {
+    $('bloqueAsuntoMAS').classList.toggle('oculto', !e.target.checked);
   });
 
-  document.getElementById('btnAgregarGrupoDef').addEventListener('click', () => {
-    const accion = document.getElementById('defAccion').value;
-    const cantidad = parseInt(document.getElementById('defCantidad').value, 10);
-    const descripcionDeficiencia = document.getElementById('defDescripcion').value.trim();
-    const comoSeSubsano = document.getElementById('defComoSubsano').value.trim();
+  $('btnAgregarGrupoDef').addEventListener('click', () => {
+    const accion = $('defAccion').value;
+    const cantidad = parseInt($('defCantidad').value, 10);
+    const descripcionDeficiencia = $('defDescripcion').value.trim();
+    const comoSeSubsano = $('defComoSubsano').value.trim();
     if (accion === 'recodifico') {
       grupos.push({
         accion, cantidad, descripcionDeficiencia, comoSeSubsano,
-        codigoAnterior: document.getElementById('defCodigoAnterior').value,
-        codigoNuevo: document.getElementById('defCodigoNuevo').value
+        codigoAnterior: $('defCodigoAnterior').value,
+        codigoNuevo: $('defCodigoNuevo').value
       });
     } else {
-      const codigo2 = document.getElementById('defCodigo2').value;
-      grupos.push({ accion, cantidad, descripcionDeficiencia, comoSeSubsano, codigo: document.getElementById('defCodigo').value, codigo2: codigo2 || null });
+      const codigo2 = $('defCodigo2').value;
+      grupos.push({ accion, cantidad, descripcionDeficiencia, comoSeSubsano, codigo: $('defCodigo').value, codigo2: codigo2 || null });
     }
-    document.getElementById('defDescripcion').value = '';
-    document.getElementById('defComoSubsano').value = '';
+    $('defDescripcion').value = '';
+    $('defComoSubsano').value = '';
     renderizarChipsDeficiencias();
   });
 
   renderizarChipsDeficiencias();
 
-  document.getElementById('btnGuardarInspeccion').addEventListener('click', () => {
-    const tipo = document.getElementById('insTipo').value;
+  // ---- Convoy y barcazas (solo Convoyes/Buques Extr. y Convoy B/ARG) ----
+  const esCategoriaConvoy = () => !esBarcaza && opciones.incluirCategoria && ['convoyesExtr', 'convoyArgentino'].includes($('insCategoria').value);
+  function actualizarBloquesConvoy() {
+    const ver = esCategoriaConvoy();
+    $('bloqueConvoy').classList.toggle('oculto', !ver);
+    $('bloqueBarcazas').classList.toggle('oculto', !ver);
+  }
+  function renderizarBarcazas() {
+    const cont = $('listaBarcazas');
+    if (!barcazas.length) { cont.innerHTML = '<div style="font-size:12px; color:var(--gris-500);">Todavía no agregaste barcazas.</div>'; return; }
+    cont.innerHTML = barcazas.map((b, i) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; background:#fff; border:1px solid var(--gris-300); border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
+        <span>"${esc(b.buque.nombre)}" (${esc(b.buque.matricula)}) B/${esc(b.buque.bandera)} — ${(b.deficiencias || []).length} def.</span>
+        <span style="flex-shrink:0;">
+          <button type="button" data-idx="${i}" class="btnEditBarcaza btn-secundario" style="padding:2px 8px;">Editar</button>
+          <button type="button" data-idx="${i}" class="btnQuitarBarcaza" style="background:none;border:none;color:var(--rojo);font-size:14px;">✕</button>
+        </span>
+      </div>`).join('');
+    cont.querySelectorAll('.btnQuitarBarcaza').forEach(btn => btn.addEventListener('click', () => { barcazas.splice(parseInt(btn.dataset.idx, 10), 1); renderizarBarcazas(); }));
+    cont.querySelectorAll('.btnEditBarcaza').forEach(btn => btn.addEventListener('click', () => abrirBarcaza(parseInt(btn.dataset.idx, 10))));
+  }
+  function abrirBarcaza(idx) {
+    abrirFormularioInspeccionEstandar({
+      idModal: 'modalBarcaza',
+      esBarcaza: true,
+      titulo: idx === undefined ? 'Agregar barcaza' : 'Editar barcaza',
+      etiquetasTipo: opciones.etiquetasTipo,
+      listaCodigos,
+      valores: idx === undefined ? {} : barcazas[idx],
+      onGuardar: (datos) => {
+        if (idx === undefined) barcazas.push(datos); else barcazas[idx] = datos;
+        renderizarBarcazas();
+      }
+    });
+  }
+  if (opciones.incluirCategoria && !esBarcaza) $('insCategoria').addEventListener('change', actualizarBloquesConvoy);
+  $('btnAgregarBarcaza').addEventListener('click', () => abrirBarcaza());
+  actualizarBloquesConvoy();
+  renderizarBarcazas();
+
+  $('btnGuardarInspeccion').addEventListener('click', () => {
+    const tipo = $('insTipo').value;
     const datos = {
-      dependencia: document.getElementById('insDependencia').value.trim() || 'SIN_DEP',
+      dependencia: esBarcaza ? '' : ($('insDependencia').value.trim() || 'SIN_DEP'),
       tipo,
       buque: {
-        tipo: document.getElementById('insBuqueTipo').value.trim(),
-        nombre: document.getElementById('insBuqueNombre').value.trim(),
-        matricula: document.getElementById('insMatricula').value.trim(),
-        bandera: document.getElementById('insBandera').value.trim()
+        tipo: $('insBuqueTipo').value.trim(),
+        nombre: $('insBuqueNombre').value.trim(),
+        matricula: $('insMatricula').value.trim(),
+        bandera: $('insBandera').value.trim()
       },
       deficiencias: tipo === 'inicial' ? [] : grupos,
-      fechaInspMasDetallada: tipo === 'seguimiento' ? document.getElementById('insFechaID').value.trim() : '',
-      asunto: document.getElementById('insEsCasoMAS').checked ? document.getElementById('insAsunto').value.trim() : '',
-      nota: document.getElementById('insNota').value.trim()
+      fechaInspMasDetallada: tipo === 'seguimiento' ? $('insFechaID').value.trim() : '',
+      asunto: $('insEsCasoMAS').checked ? $('insAsunto').value.trim() : '',
+      nota: $('insNota').value.trim()
     };
-    if (opciones.incluirCategoria) datos.categoria = document.getElementById('insCategoria').value;
-    cerrarModalInspeccion();
+    if (opciones.incluirCategoria && !esBarcaza) datos.categoria = $('insCategoria').value;
+    if (esCategoriaConvoy()) {
+      datos.caracteristicasConvoy = $('insConvoy').value.trim();
+      datos.barcazas = barcazas;
+    }
+    cerrarModalInspeccion(idModal);
     opciones.onGuardar(datos);
   });
 }

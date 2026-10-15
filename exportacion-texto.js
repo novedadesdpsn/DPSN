@@ -180,24 +180,59 @@ function textoBuquesDetencion() {
   }];
 }
 
+const MESES_BANDA = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function diaMesDeTexto(t) {
+  const m = String(t || '').match(/(\d{1,2})[\/-](\d{1,2})/);
+  return m ? { dia: parseInt(m[1], 10), mes: parseInt(m[2], 10) } : null;
+}
+
 function textoInspeccionesTecnicas() {
-  return [{
-    titulo: 'Inspecciones Técnicas',
-    contenido: {
-      tipo: 'tablas',
-      tablas: [{
-        columnas: ['Especialidad', 'Embarcación/Empresa', 'Requerimiento', 'Lugar', 'Inspector/MOI'],
-        filas: D.inspeccionesTecnicas.map(i => {
-          let inspector = i.inspector + (i.extranjero ? ' (EXTRANJERO)' : '');
-          if (i.salida && i.salida.fechaHora) {
-            inspector += ` | Salida: ${i.salida.fechaHora} Vuelo ${i.salida.vuelo} ${i.salida.destino}`;
-            inspector += ` | Regreso: ${i.regreso.fechaHora} Vuelo ${i.regreso.vuelo} ${i.regreso.destino}`;
-          }
-          return [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, inspector];
-        })
-      }]
+  const columnas = ['ESP', 'EMBARCACION', 'REQUERIMIENTO', 'LUGAR', 'INSPECTOR/MOI'];
+  const locales = D.inspeccionesTecnicas.filter(i => !(i.salida && (i.salida.fechaHora || i.salida.vuelo)));
+  const exterior = D.inspeccionesTecnicas.filter(i => i.salida && (i.salida.fechaHora || i.salida.vuelo));
+  const secciones = [];
+
+  if (locales.length || !exterior.length) {
+    secciones.push({
+      titulo: 'Inspecciones Técnicas',
+      contenido: {
+        tipo: 'tablas',
+        tablas: [{
+          columnas,
+          filas: locales.map(i => [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, i.inspector + (i.extranjero ? ' (EXTRANJERO)' : '')])
+        }]
+      }
+    });
+  }
+
+  if (exterior.length) {
+    const pie = [];
+    const fechas = [];
+    const filas = exterior.map((i, idx) => {
+      const marca = '(' + '*'.repeat(idx + 1) + ')';
+      const s = i.salida || {}, r = i.regreso || {};
+      pie.push(`${marca} Salida: Vuelo ${s.vuelo || '—'} FH ${s.fechaHora || '—'} ${s.destino || ''}`.trim() + (/[.]$/.test(s.destino || '') ? '' : '.'));
+      if (r.fechaHora || r.vuelo) pie.push(`Regreso: Vuelo ${r.vuelo || '—'} FH ${r.fechaHora || '—'} ${r.destino || ''}`.trim() + (/[.]$/.test(r.destino || '') ? '' : '.'));
+      const fs = diaMesDeTexto(s.fechaHora), fr = diaMesDeTexto(r.fechaHora);
+      if (fs) fechas.push({ ...fs, orden: 'ini' });
+      if (fr) fechas.push({ ...fr, orden: 'fin' });
+      return [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, `${i.inspector}${i.extranjero ? ' (EXTRANJERO)' : ''} ${marca}`];
+    });
+    let banda = '';
+    if (fechas.length) {
+      const clave = f => f.mes * 100 + f.dia;
+      const ord = fechas.slice().sort((a, b) => clave(a) - clave(b));
+      const a = ord[0], b = ord[ord.length - 1];
+      const f2 = n => String(n).padStart(2, '0');
+      banda = `DEL ${f2(a.dia)} DE ${MESES_BANDA[a.mes - 1] || ''} AL ${f2(b.dia)} DE ${MESES_BANDA[b.mes - 1] || ''}`;
     }
-  }];
+    secciones.push({
+      titulo: 'Inspecciones al Exterior',
+      contenido: { tipo: 'tablas', tablas: [{ columnas, filas, banda, pie }] }
+    });
+  }
+  return secciones;
 }
 
 function textoDivisionControlGestion() {
