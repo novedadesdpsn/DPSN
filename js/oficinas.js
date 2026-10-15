@@ -92,3 +92,13 @@ function imprimirBloqueOficina(idBloque) {
   window.print();
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimiendo'));
+
+// ---------- Registro Nacional de Buques ----------
+const COLUMNAS_RNBU = ['matr', 'tran', 'vent', 'medJud', 'cbioMotor', 'otros'];
+
+function actualizarCeldaRNBU(filaClave, columna, valor) {
+  const n = Math.max(0, parseInt(valor, 10) || 0);
+  D.oficinas.registroNacionalBuques.filas[filaClave][columna] = n;
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}

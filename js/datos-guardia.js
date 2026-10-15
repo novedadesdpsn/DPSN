@@ -53,13 +53,18 @@ function normalizarLicencias() {
   return false;
 }
 
+function filasRNBUVacias() {
+  const f = (nroOrden) => ({ nroOrden, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 });
+  return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), aprobarFolio: f(8), darSalida: f(11) };
+}
+
 function normalizarOficinas() {
   const vacia = () => ({
     documentacion: { tramitesAnalisis: [], certificadosArqueo: [], giradosTNAV: [] },
     controlGestion: { filas: [] },
     divisionNavegacion: { filas: [] },
     sinDefinir1: {},
-    sinDefinir2: {}
+    registroNacionalBuques: { filas: filasRNBUVacias() }
   });
 
   const o = DATOS_EJEMPLO.oficinas;
@@ -73,7 +78,11 @@ function normalizarOficinas() {
   if (!o.controlGestion || !Array.isArray(o.controlGestion.filas)) { o.controlGestion = { filas: [] }; corregido = true; }
   if (!o.divisionNavegacion || !Array.isArray(o.divisionNavegacion.filas)) { o.divisionNavegacion = { filas: [] }; corregido = true; }
   if (!o.sinDefinir1) { o.sinDefinir1 = {}; corregido = true; }
-  if (!o.sinDefinir2) { o.sinDefinir2 = {}; corregido = true; }
+  if (!o.registroNacionalBuques || !o.registroNacionalBuques.filas || !o.registroNacionalBuques.filas.buscarBuque) {
+    o.registroNacionalBuques = { filas: filasRNBUVacias() };
+    corregido = true;
+  }
+  if (o.sinDefinir2) { delete o.sinDefinir2; corregido = true; }
   return corregido;
 }
 
@@ -403,23 +412,85 @@ function uiEditarOtro(dependencia, indice) {
 }
 
 // ---------- Buques con Detención (tabla del parte) ----------
-function camposBuqueDetencionTabla() {
-  return [
-    { id: 'dependencia', label: 'Dependencia' },
-    { id: 'buque', label: 'Buque (nombre y matrícula)' },
-    { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
-    { id: 'tipoInsp', label: 'Tipo de inspección (ej: ID)' },
-    { id: 'deficiencias', label: 'Deficiencias (ej: Cód. 30 (02) / Cód. 17 (02))' }
-  ];
+const CODIGOS_DETENCION = ['17', '30', '99'];
+
+function textoDeficienciasDetencion(lista) {
+  return (lista || []).map(d => `Cód. ${d.codigo} (${String(d.cantidad).padStart(2, '0')})`).join(' / ');
+}
+
+function abrirFormularioBuqueDetencion(titulo, valores, onGuardar) {
+  cerrarModalInspeccion();
+  let lista = (valores.deficienciasLista || []).slice();
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modalInspeccion';
+  modal.innerHTML = `
+    <div class="modal-caja ancho">
+      <div class="modal-header"><h3>${esc(titulo)}</h3><button type="button" onclick="cerrarModalInspeccion()">✕</button></div>
+      <div class="modal-campos">
+        <div class="campo"><label>Dependencia</label><input type="text" id="bdDependencia" value="${esc(valores.dependencia || '')}"></div>
+        <div class="campo"><label>Buque (nombre y matrícula)</label><input type="text" id="bdBuque" value="${esc(valores.buque || '')}"></div>
+        <div class="fila-doble">
+          <div class="campo"><label>Fecha</label><input type="text" id="bdFecha" value="${esc(valores.fecha || fechaHoy().replace(/-/g, '/'))}"></div>
+          <div class="campo"><label>Tipo de inspección (ej: ID)</label><input type="text" id="bdTipoInsp" value="${esc(valores.tipoInsp || '')}"></div>
+        </div>
+        <div class="campo">
+          <label>Deficiencias cargadas</label>
+          <div id="bdListaDeficiencias" style="margin-bottom:10px;"></div>
+          <div style="background:var(--gris-100); border-radius:var(--radio); padding:12px;">
+            <div class="fila-doble">
+              <div class="campo" style="margin-bottom:8px;"><label>Cantidad</label><select id="bdCantidad">${opcionesCantidadHtml()}</select></div>
+              <div class="campo" style="margin-bottom:8px;"><label>Código</label>
+                <select id="bdCodigo">${CODIGOS_DETENCION.map(cod => `<option value="${cod}">Cód. ${cod} — ${esc(descripcionCodigo(cod))}</option>`).join('')}</select>
+              </div>
+            </div>
+            <button type="button" class="btn-secundario" id="bdBtnAgregar">+ Agregar deficiencia</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" type="button" onclick="cerrarModalInspeccion()">Cancelar</button>
+        <button class="btn-primario" type="button" id="bdBtnGuardar">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  function renderizarLista() {
+    const cont = document.getElementById('bdListaDeficiencias');
+    if (!lista.length) { cont.innerHTML = '<div style="font-size:12px; color:var(--gris-500);">Todavía no agregaste ninguna.</div>'; return; }
+    cont.innerHTML = lista.map((d, i) => `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px solid var(--gris-300); border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
+        <span>Cód. ${esc(d.codigo)} (${String(d.cantidad).padStart(2, '0')})</span>
+        <button type="button" data-idx="${i}" class="bdQuitar" style="background:none;border:none;color:var(--rojo);font-size:14px;">✕</button>
+      </div>`).join('');
+    cont.querySelectorAll('.bdQuitar').forEach(btn => {
+      btn.addEventListener('click', () => { lista.splice(parseInt(btn.dataset.idx, 10), 1); renderizarLista(); });
+    });
+  }
+  renderizarLista();
+
+  document.getElementById('bdBtnAgregar').addEventListener('click', () => {
+    lista.push({ cantidad: parseInt(document.getElementById('bdCantidad').value, 10), codigo: document.getElementById('bdCodigo').value });
+    renderizarLista();
+  });
+
+  document.getElementById('bdBtnGuardar').addEventListener('click', () => {
+    const datos = {
+      dependencia: document.getElementById('bdDependencia').value.trim(),
+      buque: document.getElementById('bdBuque').value.trim(),
+      fecha: document.getElementById('bdFecha').value.trim(),
+      tipoInsp: document.getElementById('bdTipoInsp').value.trim(),
+      deficienciasLista: lista
+    };
+    cerrarModalInspeccion();
+    onGuardar(datos);
+  });
 }
 
 function uiAgregarBuqueDetencionTabla() {
-  abrirModalFormulario('Agregar buque con detención', camposBuqueDetencionTabla(), {}, (datos) => {
-    D.buquesDetencion.push({
-      numero: D.buquesDetencion.length + 1,
-      dependencia: datos.dependencia, buque: datos.buque, fecha: datos.fecha,
-      tipoInsp: datos.tipoInsp, deficiencias: datos.deficiencias
-    });
+  abrirFormularioBuqueDetencion('Agregar buque con detención', {}, (datos) => {
+    D.buquesDetencion.push({ numero: D.buquesDetencion.length + 1, ...datos });
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -427,7 +498,7 @@ function uiAgregarBuqueDetencionTabla() {
 
 function uiEditarBuqueDetencionTabla(indice) {
   const actual = D.buquesDetencion[indice];
-  abrirModalFormulario('Editar buque con detención', camposBuqueDetencionTabla(), actual, (datos) => {
+  abrirFormularioBuqueDetencion('Editar buque con detención', actual, (datos) => {
     D.buquesDetencion[indice] = { ...actual, ...datos };
     persistirDatosGuardia();
     refrescarPestanaActual();
@@ -461,12 +532,14 @@ function camposInspeccionTecnica() {
 }
 
 function construirInspeccionTecnica(datos) {
-  const esExtranjero = datos.extranjero === 'si';
+  const salida = { fechaHora: datos.salidaFechaHora || '', vuelo: datos.salidaVuelo || '', destino: datos.salidaDestino || '' };
+  const regreso = { fechaHora: datos.regresoFechaHora || '', vuelo: datos.regresoVuelo || '', destino: datos.regresoDestino || '' };
+  const hayDatosDeVuelo = !!(salida.fechaHora || salida.vuelo || salida.destino || regreso.fechaHora || regreso.vuelo || regreso.destino);
   return {
     especialidad: datos.especialidad, embarcacion: datos.embarcacion, requerimiento: datos.requerimiento,
-    lugar: datos.lugar, inspector: datos.inspector, extranjero: esExtranjero,
-    salida: esExtranjero ? { fechaHora: datos.salidaFechaHora, vuelo: datos.salidaVuelo, destino: datos.salidaDestino } : {},
-    regreso: esExtranjero ? { fechaHora: datos.regresoFechaHora, vuelo: datos.regresoVuelo, destino: datos.regresoDestino } : {}
+    lugar: datos.lugar, inspector: datos.inspector,
+    extranjero: datos.extranjero === 'si' || hayDatosDeVuelo,
+    salida, regreso
   };
 }
 

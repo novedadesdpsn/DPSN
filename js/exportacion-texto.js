@@ -25,11 +25,8 @@ function itemsResumenParte() {
   ];
 }
 
-function itemsGuardia() {
-  return [
-    `Guardia Saliente: ${D.guardia.saliente.map(g => `${g.rol}: ${g.nombre}`).join(' · ')}`,
-    `Guardia Entrante: ${D.guardia.entrante.map(g => `${g.rol}: ${g.nombre}`).join(' · ')}`
-  ];
+function contenidoGuardia() {
+  return { tipo: 'guardia', saliente: D.guardia.saliente, entrante: D.guardia.entrante };
 }
 
 function textoExtraordinarias() {
@@ -95,15 +92,7 @@ function textoCasosSAR() {
 }
 
 function textoOtros() {
-  const deps = Object.keys(D.otros.porDependencia);
-  const items = [];
-  deps.forEach(dep => {
-    D.otros.porDependencia[dep].forEach(b => {
-      if (b.tipoBloque === 'texto') items.push(`${dep} — ${b.titulo}: ${b.contenido}`);
-      else items.push(`${dep} — ${b.titulo}: (tabla — ver detalle en el sistema)`);
-    });
-  });
-  return [{ titulo: 'Otros', contenido: { tipo: 'lista', items: items.length ? items : ['Sin novedades adicionales.'] } }];
+  return [{ titulo: 'Otros', contenido: { tipo: 'otros', porDependencia: D.otros.porDependencia } }];
 }
 
 function textoOficinas() {
@@ -153,7 +142,28 @@ function textoOficinas() {
         filas: D.oficinas.divisionNavegacion.filas.map(f => [f.fecha, f.gde, f.expediente])
       }]
     }
-  }];
+  }, (() => {
+    const r = D.oficinas.registroNacionalBuques.filas;
+    const defs = [['buscarBuque', 'Buscar Buque'], ['ingresarGde', 'Ingresar GDE/CUDAP'], ['verificar', 'Verificar Datos / Normalizar'], ['aprobarFolio', 'Aprobar Folio'], ['darSalida', 'Dar Salida']];
+    const cols = ['matr', 'tran', 'vent', 'medJud', 'cbioMotor', 'otros'];
+    const sumaFila = f => cols.reduce((a, k) => a + (f[k] || 0), 0);
+    const totales = cols.map(k => defs.reduce((a, [fk]) => a + (r[fk][k] || 0), 0));
+    const totalGral = totales.reduce((a, b) => a + b, 0);
+    return {
+      titulo: 'Registro Nacional de Buques',
+      contenido: {
+        tipo: 'tablas',
+        tablas: [{
+          columnas: ['Nro.', 'Pantalla Actual', 'MATR', 'TRAN', 'VENT', 'MED. JUD.', 'CBIO MOTOR', 'OTROS', 'Trám. Vigentes'],
+          anchos: [0.07, 0.27, 0.09, 0.09, 0.09, 0.09, 0.1, 0.09, 0.11],
+          filas: [
+            ...defs.map(([fk, et]) => [r[fk].nroOrden, et, ...cols.map(k => r[fk][k]), sumaFila(r[fk])]),
+            ['', 'Suma Total', ...totales, totalGral]
+          ]
+        }]
+      }
+    };
+  })()];
   return secciones;
 }
 
@@ -164,30 +174,65 @@ function textoBuquesDetencion() {
       tipo: 'tablas',
       tablas: [{
         columnas: ['N.º', 'Dependencia', 'Buque', 'Fecha', 'Tipo Insp.', 'Deficiencias'],
-        filas: D.buquesDetencion.map(b => [b.numero, b.dependencia, b.buque, b.fecha, b.tipoInsp, b.deficiencias])
+        filas: D.buquesDetencion.map(b => [b.numero, b.dependencia, b.buque, b.fecha, b.tipoInsp, b.deficienciasLista ? textoDeficienciasDetencion(b.deficienciasLista) : (b.deficiencias || '')])
       }]
     }
   }];
 }
 
+const MESES_BANDA = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function diaMesDeTexto(t) {
+  const m = String(t || '').match(/(\d{1,2})[\/-](\d{1,2})/);
+  return m ? { dia: parseInt(m[1], 10), mes: parseInt(m[2], 10) } : null;
+}
+
 function textoInspeccionesTecnicas() {
-  return [{
-    titulo: 'Inspecciones Técnicas',
-    contenido: {
-      tipo: 'tablas',
-      tablas: [{
-        columnas: ['Especialidad', 'Embarcación/Empresa', 'Requerimiento', 'Lugar', 'Inspector/MOI'],
-        filas: D.inspeccionesTecnicas.map(i => {
-          let inspector = i.inspector + (i.extranjero ? ' (EXTRANJERO)' : '');
-          if (i.salida && i.salida.fechaHora) {
-            inspector += ` | Salida: ${i.salida.fechaHora} Vuelo ${i.salida.vuelo} ${i.salida.destino}`;
-            inspector += ` | Regreso: ${i.regreso.fechaHora} Vuelo ${i.regreso.vuelo} ${i.regreso.destino}`;
-          }
-          return [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, inspector];
-        })
-      }]
+  const columnas = ['ESP', 'EMBARCACION', 'REQUERIMIENTO', 'LUGAR', 'INSPECTOR/MOI'];
+  const locales = D.inspeccionesTecnicas.filter(i => !(i.salida && (i.salida.fechaHora || i.salida.vuelo)));
+  const exterior = D.inspeccionesTecnicas.filter(i => i.salida && (i.salida.fechaHora || i.salida.vuelo));
+  const secciones = [];
+
+  if (locales.length || !exterior.length) {
+    secciones.push({
+      titulo: 'Inspecciones Técnicas',
+      contenido: {
+        tipo: 'tablas',
+        tablas: [{
+          columnas,
+          filas: locales.map(i => [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, i.inspector + (i.extranjero ? ' (EXTRANJERO)' : '')])
+        }]
+      }
+    });
+  }
+
+  if (exterior.length) {
+    const pie = [];
+    const fechas = [];
+    const filas = exterior.map((i, idx) => {
+      const marca = '(' + '*'.repeat(idx + 1) + ')';
+      const s = i.salida || {}, r = i.regreso || {};
+      pie.push(`${marca} Salida: Vuelo ${s.vuelo || '—'} FH ${s.fechaHora || '—'} ${s.destino || ''}`.trim() + (/[.]$/.test(s.destino || '') ? '' : '.'));
+      if (r.fechaHora || r.vuelo) pie.push(`Regreso: Vuelo ${r.vuelo || '—'} FH ${r.fechaHora || '—'} ${r.destino || ''}`.trim() + (/[.]$/.test(r.destino || '') ? '' : '.'));
+      const fs = diaMesDeTexto(s.fechaHora), fr = diaMesDeTexto(r.fechaHora);
+      if (fs) fechas.push({ ...fs, orden: 'ini' });
+      if (fr) fechas.push({ ...fr, orden: 'fin' });
+      return [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, `${i.inspector}${i.extranjero ? ' (EXTRANJERO)' : ''} ${marca}`];
+    });
+    let banda = '';
+    if (fechas.length) {
+      const clave = f => f.mes * 100 + f.dia;
+      const ord = fechas.slice().sort((a, b) => clave(a) - clave(b));
+      const a = ord[0], b = ord[ord.length - 1];
+      const f2 = n => String(n).padStart(2, '0');
+      banda = `DEL ${f2(a.dia)} DE ${MESES_BANDA[a.mes - 1] || ''} AL ${f2(b.dia)} DE ${MESES_BANDA[b.mes - 1] || ''}`;
     }
-  }];
+    secciones.push({
+      titulo: 'Inspecciones al Exterior',
+      contenido: { tipo: 'tablas', tablas: [{ columnas, filas, banda, pie }] }
+    });
+  }
+  return secciones;
 }
 
 function textoDivisionControlGestion() {
@@ -219,6 +264,7 @@ function textoLicencias() {
       tipo: 'tablas',
       tablas: grupos.map(([titulo, lista, esMedica]) => ({
         titulo,
+        anchos: esMedica ? [0.11, 0.30, 0.34, 0.125, 0.125] : [0.12, 0.60, 0.14, 0.14],
         columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
         filas: lista.map(l => esMedica ? [l.jerarquia, l.nombre, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, l.nombre, l.inicia, l.vence])
       }))

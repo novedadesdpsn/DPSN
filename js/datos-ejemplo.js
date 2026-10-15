@@ -199,7 +199,15 @@ const DATOS_EJEMPLO = {
     controlGestion: { filas: [] },
     divisionNavegacion: { filas: [] },
     sinDefinir1: {},
-    sinDefinir2: {}
+    registroNacionalBuques: {
+      filas: {
+        buscarBuque:  { nroOrden: 1,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
+        ingresarGde:  { nroOrden: 2,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
+        verificar:    { nroOrden: 3,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
+        aprobarFolio: { nroOrden: 8,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
+        darSalida:    { nroOrden: 11, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 }
+      }
+    }
   },
 
   inspeccionesTecnicas: [
