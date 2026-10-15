@@ -28,20 +28,12 @@ function inicializarMapaBuquesDetencion() {
   }
 
   mapaBuquesDetencionInstancia = L.map(contenedor, { scrollWheelZoom: false }).setView([-38.5, -63.5], 4);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap',
+  // Mapa base oficial del Instituto Geográfico Nacional (IGN Argentina):
+  // muestra "Islas Malvinas" y los límites según la cartografía argentina.
+  L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+    attribution: 'Mapa base &copy; <a href="https://www.ign.gob.ar" target="_blank">Instituto Geográfico Nacional</a> + OpenStreetMap',
+    minZoom: 3,
     maxZoom: 18
-  }).addTo(mapaBuquesDetencionInstancia);
-
-  // Etiqueta propia y fija — "Islas Malvinas", sin depender de cómo
-  // las nombre el servidor de tiles.
-  L.marker([-51.7, -59.5], {
-    icon: L.divIcon({
-      className: 'etiqueta-malvinas',
-      html: '<div style="background:rgba(11,22,38,0.85); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:3px; white-space:nowrap;">Islas Malvinas (Arg.)</div>',
-      iconSize: [0, 0]
-    }),
-    interactive: false
   }).addTo(mapaBuquesDetencionInstancia);
 
   capaMarcadoresBuques = L.layerGroup().addTo(mapaBuquesDetencionInstancia);
