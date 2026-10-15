@@ -626,6 +626,7 @@ function camposLicencia() {
     { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: OPCIONES_CATEGORIA_LICENCIA },
     { id: 'jerarquia', label: 'Jerarquía' },
     { id: 'nombre', label: 'Apellido y Nombre' },
+    { id: 'oficina', label: 'Oficina (opcional)' },
     { id: 'diagnostico', label: 'Diagnóstico (solo si es Licencia Médica)', tipo: 'textarea' },
     { id: 'inicia', label: 'Inicia' },
     { id: 'vence', label: 'Vence' }
@@ -636,7 +637,7 @@ function uiAgregarLicencia() {
   abrirModalFormulario('Agregar licencia', camposLicencia(), {}, (datos) => {
     const clave = MAPA_CATEGORIA_LICENCIA[datos.categoria];
     D.licencias[clave].push({
-      jerarquia: datos.jerarquia, nombre: datos.nombre, inicia: datos.inicia, vence: datos.vence,
+      jerarquia: datos.jerarquia, nombre: datos.nombre, oficina: datos.oficina, inicia: datos.inicia, vence: datos.vence,
       diagnostico: datos.categoria === 'medica' ? datos.diagnostico : ''
     });
     persistirDatosGuardia();
@@ -651,7 +652,7 @@ function uiEditarLicencia(claveActual, indice) {
     D.licencias[claveActual].splice(indice, 1);
     const claveNueva = MAPA_CATEGORIA_LICENCIA[datos.categoria];
     D.licencias[claveNueva].push({
-      jerarquia: datos.jerarquia, nombre: datos.nombre, inicia: datos.inicia, vence: datos.vence,
+      jerarquia: datos.jerarquia, nombre: datos.nombre, oficina: datos.oficina, inicia: datos.inicia, vence: datos.vence,
       diagnostico: datos.categoria === 'medica' ? datos.diagnostico : ''
     });
     persistirDatosGuardia();
@@ -713,6 +714,32 @@ function eliminarCurso(indice) {
 }
 
 // ---------- Resumen PSC (editable) ----------
+function uiEditarResumenExtraordinarias() {
+  const ie = D.inspeccionesExtraordinarias;
+  const man = ie.resumenManual || {};
+  const auto = calcularResumenCategorias();
+  const campoCat = (id, label) => ({ id, label: `${label} (hoy) — vacío = automático (hoy da ${auto[id]})`, default: man[id] === undefined || man[id] === null ? '' : String(man[id]) });
+  abrirModalFormulario('Editar resumen de inspecciones', [
+    campoCat('pesquerosOtros', 'Pesqueros/Otros'),
+    campoCat('porAveria', 'Por avería'),
+    campoCat('cargaPasaje', 'Carga/Pasaje'),
+    campoCat('convoyesExtr', 'Convoyes/Buques Extr.'),
+    campoCat('convoyArgentino', 'Convoy B/ARG'),
+    { id: 'anualArg', label: 'Acumulado anual bandera argentina — previo a hoy', default: String(ie.argentina.acumuladoAnualPrevio || 0) },
+    { id: 'anualExt', label: 'Acumulado anual bandera extranjera — previo a hoy', default: String(ie.extranjera.acumuladoAnualPrevio || 0) }
+  ], {}, (datos) => {
+    const nuevo = {};
+    ['pesquerosOtros', 'porAveria', 'cargaPasaje', 'convoyesExtr', 'convoyArgentino'].forEach(k => {
+      if (String(datos[k]).trim() !== '') nuevo[k] = parseInt(datos[k], 10) || 0;
+    });
+    ie.resumenManual = nuevo;
+    ie.argentina.acumuladoAnualPrevio = parseInt(datos.anualArg, 10) || 0;
+    ie.extranjera.acumuladoAnualPrevio = parseInt(datos.anualExt, 10) || 0;
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
 function uiEditarResumenPSC() {
   const rp = D.estadoRectorPuerto.resumen;
   abrirModalFormulario('Editar resumen PSC', [

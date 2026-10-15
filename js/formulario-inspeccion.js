@@ -180,11 +180,22 @@ function abrirFormularioInspeccionEstandar(opciones) {
           <input type="text" id="insAsunto" value="${esc(v.asunto || '')}" placeholder="Ej: CASO MAS PZDE N.º 22/26 - Inconveniente en máquina">
         </div>
 
+        <div class="campo ${esBarcaza ? 'oculto' : ''}">
+          <label>Próximo puerto (opcional)</label>
+          <input type="text" id="insProximoPuerto" value="${esc(v.proximoPuerto || '')}" placeholder="Ej: Rosario">
+        </div>
+
         <div class="campo">
           <label>Nota</label>
           <textarea id="insNota">${esc(v.nota || '')}</textarea>
         </div>
 
+        <div class="campo oculto" id="bloqueTieneBarcazas">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;">
+            <input type="checkbox" id="insTieneBarcazas" ${barcazas.length ? 'checked' : ''} style="width:16px;height:16px;">
+            ¿El convoy tiene barcazas para cargar?
+          </label>
+        </div>
         <div class="campo oculto" id="bloqueBarcazas">
           <label>Barcazas</label>
           <div id="listaBarcazas" style="margin-bottom:8px;"></div>
@@ -212,7 +223,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; background:#fff; border:1px solid var(--gris-300); border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
         <div>
           <div>${esc(textoGrupoDeficiencia(g, listaCodigos))}</div>
-          ${lineas.length ? `<ul style="margin:3px 0 0 16px; padding:0;">${lineas.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+          ${lineas.length ? `<ol style="margin:3px 0 0 20px; padding:0; list-style:decimal;">${lineas.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` : ''}
           ${subsano ? `<div style="margin-top:3px; font-weight:600;">${esc(subsano)}</div>` : ''}
         </div>
         <button type="button" data-idx="${i}" class="btnQuitarGrupo" style="background:none;border:none;color:var(--rojo);font-size:14px; flex-shrink:0;">✕</button>
@@ -273,8 +284,10 @@ function abrirFormularioInspeccionEstandar(opciones) {
   function actualizarBloquesConvoy() {
     const ver = esCategoriaConvoy();
     $('bloqueConvoy').classList.toggle('oculto', !ver);
-    $('bloqueBarcazas').classList.toggle('oculto', !ver);
+    $('bloqueTieneBarcazas').classList.toggle('oculto', !ver);
+    $('bloqueBarcazas').classList.toggle('oculto', !(ver && $('insTieneBarcazas').checked));
   }
+  $('insTieneBarcazas').addEventListener('change', actualizarBloquesConvoy);
   function renderizarBarcazas() {
     const cont = $('listaBarcazas');
     if (!barcazas.length) { cont.innerHTML = '<div style="font-size:12px; color:var(--gris-500);">Todavía no agregaste barcazas.</div>'; return; }
@@ -321,13 +334,14 @@ function abrirFormularioInspeccionEstandar(opciones) {
       },
       deficiencias: tipo === 'inicial' ? [] : grupos,
       fechaInspMasDetallada: tipo === 'seguimiento' ? $('insFechaID').value.trim() : '',
+      proximoPuerto: esBarcaza ? '' : $('insProximoPuerto').value.trim(),
       asunto: $('insEsCasoMAS').checked ? $('insAsunto').value.trim() : '',
       nota: $('insNota').value.trim()
     };
     if (opciones.incluirCategoria && !esBarcaza) datos.categoria = $('insCategoria').value;
     if (esCategoriaConvoy()) {
       datos.caracteristicasConvoy = $('insConvoy').value.trim();
-      datos.barcazas = barcazas;
+      datos.barcazas = $('insTieneBarcazas').checked ? barcazas : [];
     }
     cerrarModalInspeccion(idModal);
     opciones.onGuardar(datos);

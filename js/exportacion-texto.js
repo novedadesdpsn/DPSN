@@ -21,7 +21,7 @@ function itemsResumenParte() {
     `Otras situaciones: ${contarOtros()}`,
     `Buques con detención: ${D.buquesDetencion.length}`,
     `Personas de licencia: ${contarLicenciasTotal()}`,
-    `Cursos: ${D.cursos.length}`
+    `Cursos / Comisiones: ${D.cursos.length}`
   ];
 }
 
@@ -258,23 +258,26 @@ function textoLicencias() {
     ['Licencias No Computables', D.licencias.noComputables, false],
     ['Asuntos Personales', D.licencias.personales, false]
   ];
+  const conDatos = grupos.filter(([, lista]) => lista.length);
+  if (!conDatos.length) return [];
   return [{
     titulo: 'Licencias',
     contenido: {
       tipo: 'tablas',
-      tablas: grupos.map(([titulo, lista, esMedica]) => ({
+      tablas: conDatos.map(([titulo, lista, esMedica]) => ({
         titulo,
-        anchos: esMedica ? [0.11, 0.30, 0.34, 0.125, 0.125] : [0.12, 0.60, 0.14, 0.14],
-        columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
-        filas: lista.map(l => esMedica ? [l.jerarquia, l.nombre, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, l.nombre, l.inicia, l.vence])
+        anchos: esMedica ? [0.09, 0.26, 0.17, 0.26, 0.11, 0.11] : [0.10, 0.40, 0.24, 0.13, 0.13],
+        columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Oficina', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Oficina', 'Inicia', 'Vence'],
+        filas: lista.map(l => esMedica ? [l.jerarquia, l.nombre, l.oficina || '', l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, l.nombre, l.oficina || '', l.inicia, l.vence])
       }))
     }
   }];
 }
 
 function textoCursos() {
+  if (!D.cursos.length) return [];
   return [{
-    titulo: 'Cursos',
+    titulo: 'Cursos / Comisiones',
     contenido: {
       tipo: 'tablas',
       tablas: [{

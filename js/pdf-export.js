@@ -99,19 +99,19 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   function encabezadoInstitucional() {
     doc.setTextColor(20, 20, 20);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.text('PREFECTURA NAVAL ARGENTINA', anchoPagina / 2, y, { align: 'center' });
-    y += 13;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.text('Autoridad Marítima', anchoPagina / 2, y, { align: 'center' });
-    y += 13;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text('DIRECCIÓN DE POLICÍA DE SEGURIDAD DE LA NAVEGACIÓN', anchoPagina / 2, y, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text('PREFECTURA NAVAL ARGENTINA', margen, y);
     y += 16;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.text('Autoridad Marítima', margen, y);
+    y += 20;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(14);
+    doc.text('DIRECCIÓN DE POLICÍA DE SEGURIDAD DE LA NAVEGACIÓN', anchoPagina / 2, y, { align: 'center' });
+    y += 18;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
     doc.text(tituloVisible || 'RESUMEN DE NOVEDADES', anchoPagina / 2, y, { align: 'center' });
     y += 15;
     if (subtitulo) {
@@ -142,7 +142,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   function referenciasSeccion(runs) {
     saltoDePaginaSiHaceFalta(14);
     doc.setTextColor(70, 70, 70);
-    y = escribirParrafoMixto(runs, margen, anchoUtil, y, 8);
+    y = escribirParrafoMixto(runs, margen, anchoUtil, y, 8, true);
     y += 6;
     doc.setTextColor(20, 20, 20);
   }
@@ -152,7 +152,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
    * fluyen en la misma línea y se van ajustando con el ancho disponible.
    * runs: [{ texto, negrita }]. Devuelve el nuevo y.
    */
-  function escribirParrafoMixto(runs, x, anchoMax, yInicial, tamano) {
+  function escribirParrafoMixto(runs, x, anchoMax, yInicial, tamano, centrado) {
     doc.setFontSize(tamano);
     const espacio = doc.getStringUnitWidth(' ') * tamano / doc.internal.scaleFactor;
     const lineas = [[]];
@@ -181,11 +181,12 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         anchoPalabrasSolas += doc.getStringUnitWidth(w.texto) * tamano / doc.internal.scaleFactor;
       });
       const huecos = linea.length - 1;
-      const espacioJustificado = (!esUltimaLinea && huecos > 0)
+      const espacioJustificado = centrado ? espacio : ((!esUltimaLinea && huecos > 0)
         ? (anchoMax - anchoPalabrasSolas) / huecos
-        : espacio;
+        : espacio);
 
       let cx = x;
+      if (centrado) cx = x + (anchoMax - (anchoPalabrasSolas + espacio * huecos)) / 2;
       linea.forEach((w, i) => {
         doc.setFont('helvetica', w.negrita ? 'bold' : 'normal');
         doc.text(w.texto, cx, y2);
@@ -363,11 +364,13 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         if (esConvoy) {
           tituloTexto = `${marcaDe(insp)} al ${insp.buque.tipo} "${insp.buque.nombre}" (${insp.buque.matricula}) B/${insp.buque.bandera}.`;
           if (insp.asunto) tituloTexto += ` Motivo ${insp.asunto}.`;
+          if (insp.proximoPuerto) tituloTexto += ` Próx. puerto: ${insp.proximoPuerto}.`;
         } else {
           const refIdentif = familia === 'psc' ? 'IMO' : 'Mat.';
           tituloTexto = `${marcaDe(insp)} ${insp.buque.tipo} "${insp.buque.nombre}" (${refIdentif} ${insp.buque.matricula}) B/${insp.buque.bandera}`;
           if (insp.asunto) tituloTexto += `, referente ${insp.asunto}`;
           tituloTexto += '.';
+          if (insp.proximoPuerto) tituloTexto += ` Próx. puerto: ${insp.proximoPuerto}.`;
         }
 
         y = escribirParrafoMixto([{ texto: tituloTexto, negrita: true }], margen + 8, anchoUtil - 8, y, 9);
@@ -376,12 +379,13 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
           insp.caracteristicasConvoy.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
             y = escribirParrafoMixto([{ texto: l, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
           });
+          y += 9;
         }
 
         if (insp.tipo === 'inicial') {
           y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         }
-        (insp.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8, listaCod));
+        (insp.deficiencias || []).forEach((g, gi) => { if (gi > 0) y += 9; grupoDeficienciaPDF(g, margen + 8, listaCod); });
 
         // La nota va debajo de la deficiencia; solo la palabra "Nota:" en negrita.
         if (insp.nota) {
@@ -399,7 +403,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
             if (b.tipo === 'inicial') {
               y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
             }
-            (b.deficiencias || []).forEach(g => grupoDeficienciaPDF(g, margen + 8, listaCod));
+            (b.deficiencias || []).forEach((g, gi) => { if (gi > 0) y += 9; grupoDeficienciaPDF(g, margen + 8, listaCod); });
             if (b.nota) {
               y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: b.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 9);
             }
@@ -486,9 +490,9 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         }
 
         y = escribirParrafoMixto([{ texto: 'Posición:', negrita: true }, { texto: c.posicion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
-        y = escribirParrafoMixto([{ texto: 'Novedad:', negrita: true }, { texto: c.novedad || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         y = escribirParrafoMixto([{ texto: 'Características:', negrita: true }, { texto: c.caracteristicas || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         y = escribirParrafoMixto([{ texto: 'Situación:', negrita: true }, { texto: c.situacion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        y = escribirParrafoMixto([{ texto: 'Novedad:', negrita: true }, { texto: c.novedad || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         y += 10;
       });
       y += 4;

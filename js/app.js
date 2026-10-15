@@ -16,7 +16,7 @@ function renderLineasDescripcionHtml(g) {
   const subsano = textoComoSeSubsano(g);
   let html = '';
   if (lineas.length) {
-    html += `<ul style="margin:4px 0 0 16px; padding:0;">` + lineas.map(l => `<li>${esc(l)}</li>`).join('') + `</ul>`;
+    html += `<ol style="margin:4px 0 0 20px; padding:0; list-style:decimal;">` + lineas.map(l => `<li>${esc(l)}</li>`).join('') + `</ol>`;
   }
   if (subsano) {
     html += `<div style="margin-top:3px; font-weight:700;">${esc(subsano)}</div>`;
@@ -35,9 +35,10 @@ function tagEstado(estado) {
 }
 
 // ---------- Inicio / resumen del día ----------
+// Las inspecciones de seguimiento (IS) no computan: se realizan, pero no son una inspección nueva.
 function contarInspeccionesGrupo(grupo) {
   let n = 0;
-  Object.values(grupo.porDependencia).forEach(lista => { n += lista.length; });
+  Object.values(grupo.porDependencia).forEach(lista => { n += lista.filter(i => i.tipo !== 'seguimiento').length; });
   return n;
 }
 
@@ -48,8 +49,8 @@ function calcularTotalesExtraordinarias() {
   const diarioExt = contarInspeccionesGrupo(ext);
   return {
     diarioArg, diarioExt,
-    anualArg: arg.acumuladoAnualPrevio + diarioArg,
-    anualExt: ext.acumuladoAnualPrevio + diarioExt
+    anualArg: (arg.acumuladoAnualPrevio || 0) + diarioArg,
+    anualExt: (ext.acumuladoAnualPrevio || 0) + diarioExt
   };
 }
 
@@ -58,10 +59,16 @@ function calcularResumenCategorias() {
   [D.inspeccionesExtraordinarias.argentina, D.inspeccionesExtraordinarias.extranjera].forEach(grupo => {
     Object.values(grupo.porDependencia).forEach(lista => {
       lista.forEach(insp => {
+        if (insp.tipo === 'seguimiento') return;
         const c = insp.categoria || 'pesquerosOtros';
         if (cat[c] !== undefined) cat[c]++;
       });
     });
+  });
+  // Valores corregidos a mano (si los hay) reemplazan al cálculo automático.
+  const man = D.inspeccionesExtraordinarias.resumenManual || {};
+  Object.keys(cat).forEach(k => {
+    if (man[k] !== undefined && man[k] !== null && man[k] !== '') cat[k] = parseInt(man[k], 10) || 0;
   });
   return cat;
 }
@@ -104,7 +111,7 @@ function renderInicio() {
             <div class="stat acc-1"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
             <div class="stat acc-2"><div class="valor">${D.buquesDetencionMapa.length}</div><div class="etiqueta">Buques con detención</div></div>
             <div class="stat acc-3"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
-            <div class="stat acc-4"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Cursos</div></div>
+            <div class="stat acc-4"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Cursos / Comisiones</div></div>
           </div>
         </div>
 
@@ -161,6 +168,7 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
           </div>` : ''}
         </div>`;
       if (insp.asunto) html += `<div style="margin-top:4px;">Ref. Caso MAS: ${esc(insp.asunto)}</div>`;
+      if (insp.proximoPuerto) html += `<div style="margin-top:2px;">Próx. puerto: ${esc(insp.proximoPuerto)}</div>`;
       if (insp.caracteristicasConvoy) {
         html += `<div style="margin-top:4px; font-size:12px; color:var(--gris-700);">${insp.caracteristicasConvoy.split('\n').filter(l => l.trim()).map(l => esc(l.trim())).join('<br>')}</div>`;
       }
@@ -168,7 +176,7 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
         html += `<div style="margin-top:4px; color:var(--acento); font-weight:600;">Sin registrar deficiencias</div>`;
       }
       if (insp.deficiencias && insp.deficiencias.length) {
-        html += `<ul style="margin:6px 0 0 18px; padding:0;">`;
+        html += `<ul style="margin:6px 0 0 0; padding:0; list-style:none;">`;
         insp.deficiencias.forEach(g => {
           html += `<li>${esc(textoGrupoDeficiencia(g, esPSC ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS))}${renderLineasDescripcionHtml(g)}</li>`;
         });
@@ -182,7 +190,7 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
             ${b.tipo === 'seguimiento' ? `<span class="tag seguimiento">IS de ID Fecha ${esc(b.fechaInspMasDetallada || '—')}</span>` : tagTipo(b.tipo)}
             <strong>"${esc(b.buque.nombre)}"</strong> (${esc(b.buque.matricula)}) — B/${esc(b.buque.bandera)}`;
           if (b.deficiencias && b.deficiencias.length) {
-            html += `<ul style="margin:4px 0 0 18px; padding:0;">${b.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g, CODIGOS_MEDIDAS))}${renderLineasDescripcionHtml(g)}</li>`).join('')}</ul>`;
+            html += `<ul style="margin:4px 0 0 0; padding:0; list-style:none;">${b.deficiencias.map(g => `<li>${esc(textoGrupoDeficiencia(g, CODIGOS_MEDIDAS))}${renderLineasDescripcionHtml(g)}</li>`).join('')}</ul>`;
           }
           if (b.nota) html += `<div style="font-style:italic; color:var(--gris-700);">Nota: ${esc(b.nota)}</div>`;
           html += `</div>`;
@@ -217,7 +225,7 @@ function renderExtraordinarias() {
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionExtraordinaria('extranjera')">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
-      <h2>Resumen de inspecciones <span style="font-size:10px; font-weight:400; text-transform:none; color:var(--gris-500);">(cálculo automático)</span></h2>
+      <h2>Resumen de inspecciones <span style="font-size:10px; font-weight:400; text-transform:none; color:var(--gris-500);">(cálculo automático, editable)</span></h2>
       <div class="grid-resumen">
         <div class="stat"><div class="valor">${cat.pesquerosOtros}</div><div class="etiqueta">Pesqueros/otros</div></div>
         <div class="stat"><div class="valor">${cat.porAveria}</div><div class="etiqueta">Por avería</div></div>
@@ -229,8 +237,9 @@ function renderExtraordinarias() {
       </div>
       <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
         El total diario y el total anual se calculan solos a partir de las inspecciones cargadas — no se ingresan a mano.
-        El diario se reinicia cada día; el anual es correlativo (suma lo acumulado + lo cargado hoy).
+        El diario se reinicia cada día; el anual es correlativo (suma lo acumulado + lo cargado hoy). Las inspecciones de seguimiento (IS) no computan.
       </p>
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:6px;" onclick="uiEditarResumenExtraordinarias()">Editar resumen</button>` : ''}
     </div>
   `;
 }
@@ -579,9 +588,9 @@ function renderDivisionControlGestion() {
 }
 
 function renderCursos() {
-  let html = `<div class="tarjeta"><h2>Cursos <span class="contador">${D.cursos.length}</span></h2>`;
+  let html = `<div class="tarjeta"><h2>Cursos / Comisiones <span class="contador">${D.cursos.length}</span></h2>`;
   if (!D.cursos.length) {
-    html += '<div class="placeholder-panel">Todavía no hay cursos cargados.</div>';
+    html += '<div class="placeholder-panel">Todavía no hay cursos ni comisiones cargados.</div>';
   } else {
     html += `<table class="tabla-datos"><thead><tr>
       <th>Personal</th><th>Curso</th><th>Modalidad</th><th>Inicio</th><th>Fin</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
@@ -620,10 +629,10 @@ function renderLicencias() {
     const esMedica = clave === 'medicas';
     html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>`;
     if (lista.length) {
-      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th><th>Oficina</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
       lista.forEach((l, idx) => {
         html += `<tr>
-          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
+          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}</td><td>${esc(l.oficina || '')}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
           ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
             <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${clave}',${idx})">Editar</button>
             <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button>
@@ -662,7 +671,7 @@ const PESTANAS = [
   { id: 'insp-tecnicas', grupo: 'Gestión', etiqueta: 'Inspecciones Técnicas', render: renderInspeccionesTecnicas },
   { id: 'control-gestion', grupo: 'Gestión', etiqueta: 'Div. Control de Gestión', render: renderDivisionControlGestion },
   { id: 'licencias', grupo: 'Gestión', etiqueta: 'Licencias', render: renderLicencias },
-  { id: 'cursos', grupo: 'Gestión', etiqueta: 'Cursos', render: renderCursos }
+  { id: 'cursos', grupo: 'Gestión', etiqueta: 'Cursos / Comisiones', render: renderCursos }
 ];
 
 async function iniciarDashboard() {
