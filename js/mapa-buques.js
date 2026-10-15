@@ -78,12 +78,22 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
       <div class="modal-header"><h3>Agregar buque con detención</h3><button type="button" onclick="cerrarModalInspeccion()">✕</button></div>
       <div class="modal-campos">
         <div class="fila-doble">
+          <div class="campo"><label>Prefectura de Zona</label>
+            <select id="mbPrefecturaZona">
+              <option value="">— Elegí la zona —</option>
+              ${DEPENDENCIAS_PNA.map(z => `<option value="${z.zona}">${z.zona} — ${esc(z.nombre)}</option>`).join('')}
+              <option value="__otra">Otra ubicación (cargar a mano)</option>
+            </select>
+          </div>
+          <div class="campo"><label>Dependencia</label>
+            <select id="mbDependencia" disabled><option value="">— Primero elegí la zona —</option></select>
+          </div>
+        </div>
+        <div class="campo oculto" id="mbBloqueLibre"><label>Dependencia / lugar (texto libre)</label><input type="text" id="mbDependenciaLibre" placeholder="Ej: Zona de fondeo Recalada"></div>
+        <div id="mbAvisoPos" style="font-size:11.5px; color:var(--gris-500); margin:-4px 0 10px;"></div>
+        <div class="fila-doble">
           <div class="campo"><label>Latitud</label><input type="text" id="mbLat" value="${esc(latPrecargada || '')}"></div>
           <div class="campo"><label>Longitud</label><input type="text" id="mbLon" value="${esc(lonPrecargada || '')}"></div>
-        </div>
-        <div class="fila-doble">
-          <div class="campo"><label>Prefectura de Zona</label><input type="text" id="mbPrefecturaZona" placeholder="Ej: PZDE"></div>
-          <div class="campo"><label>Dependencia</label><input type="text" id="mbDependencia" placeholder="Ej: DLUJ"></div>
         </div>
         <div class="fila-doble">
           <div class="campo"><label>Tipo de buque</label><input type="text" id="mbTipoBuque" placeholder="L/M, B/P, B/M, B/T..."></div>
@@ -120,6 +130,32 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
   `;
   document.body.appendChild(modal);
 
+  // Zona → dependencias (cuatrigrama) → el pin se ubica solo.
+  const selZona = document.getElementById('mbPrefecturaZona');
+  const selDep = document.getElementById('mbDependencia');
+  const aviso = document.getElementById('mbAvisoPos');
+  if (latPrecargada) { selZona.value = '__otra'; document.getElementById('mbBloqueLibre').classList.remove('oculto'); aviso.textContent = 'Ubicación tomada del clic en el mapa. Podés elegir una dependencia para que se ubique sola.'; }
+  selZona.addEventListener('change', () => {
+    document.getElementById('mbBloqueLibre').classList.toggle('oculto', selZona.value !== '__otra');
+    const zona = DEPENDENCIAS_PNA.find(z => z.zona === selZona.value);
+    if (!zona) {
+      selDep.innerHTML = '<option value="">' + (selZona.value === '__otra' ? '— Usá el texto libre —' : '— Primero elegí la zona —') + '</option>';
+      selDep.disabled = true;
+      return;
+    }
+    selDep.disabled = false;
+    selDep.innerHTML = '<option value="">— Elegí la dependencia —</option>' +
+      zona.dependencias.map((d, i) => `<option value="${i}">${d.cuatri ? esc(d.cuatri) + ' — ' : ''}${esc(d.nombre)}</option>`).join('');
+  });
+  selDep.addEventListener('change', () => {
+    const zona = DEPENDENCIAS_PNA.find(z => z.zona === selZona.value);
+    const d = zona && zona.dependencias[parseInt(selDep.value, 10)];
+    if (!d) return;
+    document.getElementById('mbLat').value = d.lat;
+    document.getElementById('mbLon').value = d.lon;
+    aviso.textContent = d.aprox ? 'Ubicación aproximada de la dependencia — podés ajustar latitud/longitud si hace falta.' : 'Ubicación cargada automáticamente.';
+  });
+
   function renderizarLista() {
     const cont = document.getElementById('mbListaDeficiencias');
     if (!lista.length) { cont.innerHTML = '<div style="font-size:12px; color:var(--gris-500);">Todavía no agregaste ninguna.</div>'; return; }
@@ -144,8 +180,10 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
     const lon = parseFloat(document.getElementById('mbLon').value);
     if (isNaN(lat) || isNaN(lon)) { alert('Latitud y longitud tienen que ser números.'); return; }
 
-    const prefecturaZona = document.getElementById('mbPrefecturaZona').value.trim();
-    const dependencia = document.getElementById('mbDependencia').value.trim();
+    const zonaSel = DEPENDENCIAS_PNA.find(z => z.zona === selZona.value);
+    const depSel = zonaSel && zonaSel.dependencias[parseInt(selDep.value, 10)];
+    const prefecturaZona = zonaSel ? zonaSel.zona : '';
+    const dependencia = depSel ? (depSel.cuatri || depSel.nombre) : document.getElementById('mbDependenciaLibre').value.trim();
     const tipoBuque = document.getElementById('mbTipoBuque').value.trim();
     const nombre = document.getElementById('mbNombre').value.trim();
     const matricula = document.getElementById('mbMatricula').value.trim();

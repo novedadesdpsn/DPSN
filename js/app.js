@@ -103,15 +103,15 @@ function renderInicio() {
         <div class="tarjeta">
           <h2>Resumen del parte</h2>
           <div class="grid-resumen">
-            <div class="stat acc-1"><div class="valor">${tot.diarioArg}</div><div class="etiqueta">Insp. Extraord. Argentina</div></div>
-            <div class="stat acc-2"><div class="valor">${tot.diarioExt}</div><div class="etiqueta">Insp. Extraord. Extranjera</div></div>
-            <div class="stat acc-3"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
-            <div class="stat acc-4"><div class="valor">${contarCasos(D.casosMAS)}</div><div class="etiqueta">Casos MAS pendientes</div></div>
-            <div class="stat acc-5"><div class="valor">${contarCasos(D.casosSAR)}</div><div class="etiqueta">Casos SAR pendientes</div></div>
-            <div class="stat acc-1"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
-            <div class="stat acc-2"><div class="valor">${D.buquesDetencionMapa.length}</div><div class="etiqueta">Buques con detención</div></div>
-            <div class="stat acc-3"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
-            <div class="stat acc-4"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Cursos / Comisiones</div></div>
+            <div class="stat acc-1 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-extraordinarias')"><div class="valor">${tot.diarioArg}</div><div class="etiqueta">Insp. Extraord. Argentina</div></div>
+            <div class="stat acc-2 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-extraordinarias')"><div class="valor">${tot.diarioExt}</div><div class="etiqueta">Insp. Extraord. Extranjera</div></div>
+            <div class="stat acc-3 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-psc')"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
+            <div class="stat acc-4 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('casos-mas')"><div class="valor">${contarCasos(D.casosMAS)}</div><div class="etiqueta">Casos MAS pendientes</div></div>
+            <div class="stat acc-5 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('casos-sar')"><div class="valor">${contarCasos(D.casosSAR)}</div><div class="etiqueta">Casos SAR pendientes</div></div>
+            <div class="stat acc-1 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('otros')"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
+            <div class="stat acc-2 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('buques-detencion')"><div class="valor">${D.buquesDetencionMapa.length}</div><div class="etiqueta">Buques con detención</div></div>
+            <div class="stat acc-3 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('licencias')"><div class="valor">${contarLicenciasTotal()}</div><div class="etiqueta">Personas de licencia</div></div>
+            <div class="stat acc-4 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('cursos')"><div class="valor">${D.cursos.length}</div><div class="etiqueta">Cursos / Comisiones</div></div>
           </div>
         </div>
 
