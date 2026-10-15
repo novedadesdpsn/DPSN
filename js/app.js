@@ -629,10 +629,10 @@ function renderLicencias() {
     const esMedica = clave === 'medicas';
     html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>`;
     if (lista.length) {
-      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th><th>Oficina</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
       lista.forEach((l, idx) => {
         html += `<tr>
-          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}</td><td>${esc(l.oficina || '')}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
+          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}${l.oficina ? ` (${esc(l.oficina)})` : ''}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
           ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
             <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${clave}',${idx})">Editar</button>
             <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button>

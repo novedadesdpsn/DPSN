@@ -240,7 +240,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       doc.setTextColor(20, 20, 20);
       lineasEnc.forEach((lns, i) => {
         if (i > 0) doc.line(margen + inicios[i], y, margen + inicios[i], y + alto);
-        lns.forEach((ln, li) => doc.text(ln, margen + inicios[i] + 4, y + 10 + li * 9));
+        lns.forEach((ln, li) => doc.text(ln, margen + inicios[i] + anchosCol[i] / 2, y + 10 + li * 9, { align: 'center' }));
       });
       doc.rect(margen, y, anchoUtil, alto);
       y += alto;
@@ -276,7 +276,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       doc.rect(margen, y, anchoUtil, alto);
       lineasCelda.forEach((lns, i) => {
         if (i > 0) doc.line(margen + inicios[i], y, margen + inicios[i], y + alto);
-        lns.forEach((ln, li) => doc.text(ln, margen + inicios[i] + 4, y + 10 + li * 9));
+        lns.forEach((ln, li) => doc.text(ln, margen + inicios[i] + anchosCol[i] / 2, y + 10 + li * 9, { align: 'center' }));
       });
       y += alto;
     });

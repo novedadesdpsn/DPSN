@@ -266,9 +266,12 @@ function textoLicencias() {
       tipo: 'tablas',
       tablas: conDatos.map(([titulo, lista, esMedica]) => ({
         titulo,
-        anchos: esMedica ? [0.09, 0.26, 0.17, 0.26, 0.11, 0.11] : [0.10, 0.40, 0.24, 0.13, 0.13],
-        columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Oficina', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Oficina', 'Inicia', 'Vence'],
-        filas: lista.map(l => esMedica ? [l.jerarquia, l.nombre, l.oficina || '', l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, l.nombre, l.oficina || '', l.inicia, l.vence])
+        anchos: esMedica ? [0.11, 0.30, 0.34, 0.125, 0.125] : [0.12, 0.60, 0.14, 0.14],
+        columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
+        filas: lista.map(l => {
+          const nom = l.nombre + (l.oficina ? ` (${l.oficina})` : '');
+          return esMedica ? [l.jerarquia, nom, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, nom, l.inicia, l.vence];
+        })
       }))
     }
   }];
