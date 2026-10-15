@@ -267,6 +267,8 @@ table.tabla-datos tr:hover td{ background: #fafbfc; }
   background: var(--gris-100); border-radius: var(--radio); padding:20px 14px;
   text-align:center; border-left:5px solid var(--gris-300);
 }
+.stat-link{ cursor:pointer; transition: transform .12s, box-shadow .12s; }
+.stat-link:hover{ transform: translateY(-2px); box-shadow: 0 4px 12px rgba(11,22,38,0.12); }
 .stat.acc-1{ border-left-color: var(--acento); }
 .stat.acc-2{ border-left-color: var(--coral); }
 .stat.acc-3{ border-left-color: var(--violeta); }
