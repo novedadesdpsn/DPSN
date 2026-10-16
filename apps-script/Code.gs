@@ -144,6 +144,9 @@ function doPost(e) {
     const carpeta = DriveApp.getFolderById(datos.carpetaId);
     const bytes = Utilities.base64Decode(datos.archivoBase64);
     const blob = Utilities.newBlob(bytes, 'application/pdf', datos.nombreArchivo);
+    // Un solo PDF por día: si ya hay uno con el mismo nombre (mismo día), se reemplaza por el último exportado.
+    const existentes = carpeta.getFilesByName(datos.nombreArchivo);
+    while (existentes.hasNext()) existentes.next().setTrashed(true);
     carpeta.createFile(blob);
     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);
