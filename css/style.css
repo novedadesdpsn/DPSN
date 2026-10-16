@@ -413,4 +413,4 @@ table.tabla-datos tr:hover td{ background: #fafbfc; }
   body.imprimiendo .tarjeta{ box-shadow:none; }
 }
 
-#btnDeshacer:disabled{ opacity:.45; cursor:default; }
+#btnDeshacer:disabled, #btnRehacer:disabled{ opacity:.45; cursor:default; }
