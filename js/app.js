@@ -634,27 +634,25 @@ function renderLicencias() {
     ['Asuntos Personales', D.licencias.personales, 'personales']
   ];
   let html = '';
-  secciones.forEach(([titulo, lista, clave]) => {
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:14px;" onclick="uiAgregarLicencia()">+ Agregar licencia</button>`;
+  // Solo se muestran las categorías que tienen personal cargado.
+  const conDatos = secciones.filter(([, lista]) => lista.length);
+  if (!conDatos.length) html += '<div class="placeholder-panel">No hay licencias cargadas.</div>';
+  conDatos.forEach(([titulo, lista, clave]) => {
     const esMedica = clave === 'medicas';
     html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>`;
-    if (lista.length) {
-      html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
-      lista.forEach((l, idx) => {
-        html += `<tr>
-          <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}${l.oficina ? ` (${esc(l.oficina)})` : ''}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
-          ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
-            <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${clave}',${idx})">Editar</button>
-            <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button>
-          </td>` : ''}
-        </tr>`;
-      });
-      html += `</tbody></table>`;
-    } else {
-      html += '<div class="placeholder-panel">Sin registros</div>';
-    }
-    html += `</div>`;
+    html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+    lista.forEach((l, idx) => {
+      html += `<tr>
+        <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}${l.oficina ? ` (${esc(l.oficina)})` : ''}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
+        ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${clave}',${idx})">Editar</button>
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button>
+        </td>` : ''}
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
   });
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" onclick="uiAgregarLicencia()">+ Agregar licencia</button>`;
   return html;
 }
 
@@ -721,6 +719,7 @@ async function iniciarDashboard() {
   await hidratarDatosGuardia();
 
   UNDO.iniciar();
+  iniciarPuntosRestauracion();
   mostrarPestana(PESTANAS[0].id);
   document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
 }

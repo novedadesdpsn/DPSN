@@ -9,17 +9,17 @@
 // ============================================================
 
 const PESTANAS_LIMPIABLES = [
-  { id: 'insp-extraordinarias', etiqueta: 'Insp. Extraordinarias', marcada: true },
-  { id: 'insp-psc', etiqueta: 'Estado Rector de Puerto', marcada: true },
+  { id: 'insp-extraordinarias', etiqueta: 'Insp. Extraordinarias', marcada: false },
+  { id: 'insp-psc', etiqueta: 'Estado Rector de Puerto', marcada: false },
   { id: 'casos-mas', etiqueta: 'Casos MAS (suelen tener continuidad)', marcada: false },
   { id: 'casos-sar', etiqueta: 'Casos SAR (suelen tener continuidad)', marcada: false },
-  { id: 'otros', etiqueta: 'Otros', marcada: true },
-  { id: 'oficinas', etiqueta: 'Oficinas', marcada: true },
-  { id: 'buques-detencion', etiqueta: 'Buques con Detención (tabla y mapa)', marcada: true },
-  { id: 'insp-tecnicas', etiqueta: 'Inspecciones Técnicas', marcada: true },
-  { id: 'control-gestion', etiqueta: 'Div. Control de Gestión', marcada: true },
-  { id: 'licencias', etiqueta: 'Licencias', marcada: true },
-  { id: 'cursos', etiqueta: 'Cursos / Comisiones', marcada: true }
+  { id: 'otros', etiqueta: 'Otros', marcada: false },
+  { id: 'oficinas', etiqueta: 'Oficinas', marcada: false },
+  { id: 'buques-detencion', etiqueta: 'Buques con Detención (tabla y mapa)', marcada: false },
+  { id: 'insp-tecnicas', etiqueta: 'Inspecciones Técnicas', marcada: false },
+  { id: 'control-gestion', etiqueta: 'Div. Control de Gestión', marcada: false },
+  { id: 'licencias', etiqueta: 'Licencias', marcada: false },
+  { id: 'cursos', etiqueta: 'Cursos / Comisiones', marcada: false }
 ];
 
 function cerrarModalFinalizarGuardia() {
@@ -36,7 +36,7 @@ function uiFinalizarGuardia() {
     <div class="modal-caja ancho">
       <div class="modal-header"><h3>Finalizar Guardia — Paso 1: ¿qué se limpia?</h3><button type="button" onclick="cerrarModalFinalizarGuardia()">✕</button></div>
       <div class="modal-lista" id="fgLista">
-        <p style="font-size:12px; color:var(--gris-700); margin:0 0 8px;">Las pestañas <strong>tildadas se vacían</strong>. Destildá las que querés conservar (por ejemplo, Casos MAS y SAR que siguen abiertos).</p>
+        <p style="font-size:12px; color:var(--gris-700); margin:0 0 8px;">Tildá las pestañas que querés <strong>vaciar</strong>. Las que dejes sin tildar se conservan (por ejemplo, Casos MAS y SAR que siguen abiertos).</p>
         ${PESTANAS_LIMPIABLES.map(p => `<label><input type="checkbox" class="fg-chk" value="${p.id}" ${p.marcada ? 'checked' : ''}> ${esc(p.etiqueta)}</label>`).join('')}
       </div>
       <div class="modal-footer">
@@ -122,6 +122,8 @@ function limpiarPestanaParaFinalizar(id) {
 }
 
 async function ejecutarFinalizarGuardia(seleccion, jefe, ayte) {
+  // Punto de restauración automático, por si hay que volver atrás.
+  try { if (typeof crearPuntoRestauracion === 'function') await crearPuntoRestauracion('auto', 'Antes de finalizar guardia'); } catch (e) { console.error(e); }
   // Resguardo: archivar el parte tal cual estaba antes de borrar.
   try { if (typeof archivarParteDelDia === 'function') await archivarParteDelDia(); } catch (e) { console.error('No se pudo archivar antes de finalizar:', e); }
 

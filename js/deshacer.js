@@ -8,11 +8,13 @@
 // foto anterior. Se pueden deshacer hasta 40 cambios seguidos, en
 // esta sesión (si se recarga la página, el historial de deshacer
 // arranca de nuevo). Atajo de teclado: Ctrl+Z (fuera de un campo
-// de texto).
+// de texto). También hay "Rehacer" (Ctrl+Y) para volver a aplicar un
+// cambio que se deshizo de más.
 // ============================================================
 
 const UNDO = {
   pila: [],
+  rehacerPila: [],
   base: null,
   ignorarProximo: false,
   MAX: 40,
@@ -33,22 +35,38 @@ const UNDO = {
     if (ahora === this.base) return;
     this.pila.push(this.base);
     if (this.pila.length > this.MAX) this.pila.shift();
+    this.rehacerPila = []; // un cambio nuevo invalida lo que se podía rehacer
     this.base = ahora;
     this.actualizarBoton();
   },
 
-  deshacer() {
-    if (!this.pila.length) return;
-    if (document.getElementById('modalFormulario') || document.getElementById('modalInspeccion')) return;
-    const anterior = JSON.parse(this.pila.pop());
-    SECCIONES_PERSISTIDAS.forEach(clave => { if (anterior[clave] !== undefined) DATOS_EJEMPLO[clave] = anterior[clave]; });
+  /** Aplica una foto completa del parte y la guarda (sin generar historial de deshacer). */
+  aplicarFoto(fotoStr) {
+    const f = JSON.parse(fotoStr);
+    SECCIONES_PERSISTIDAS.forEach(clave => { if (f[clave] !== undefined) DATOS_EJEMPLO[clave] = f[clave]; });
     this.ignorarProximo = true;
     persistirDatosGuardia();
     this.ignorarProximo = false;
     this.base = this.foto();
-    this.actualizarBoton();
     if (typeof refrescarPestanaActual === 'function') refrescarPestanaActual();
+  },
+
+  hayModalAbierto() { return !!(document.getElementById('modalFormulario') || document.getElementById('modalInspeccion')); },
+
+  deshacer() {
+    if (!this.pila.length || this.hayModalAbierto()) return;
+    this.rehacerPila.push(this.foto());
+    this.aplicarFoto(this.pila.pop());
+    this.actualizarBoton();
     this.aviso('Se deshizo el último cambio.');
+  },
+
+  rehacer() {
+    if (!this.rehacerPila.length || this.hayModalAbierto()) return;
+    this.pila.push(this.foto());
+    this.aplicarFoto(this.rehacerPila.pop());
+    this.actualizarBoton();
+    this.aviso('Se rehizo el cambio.');
   },
 
   actualizarBoton() {
@@ -57,6 +75,12 @@ const UNDO = {
     b.disabled = !this.pila.length;
     b.textContent = this.pila.length ? `↶ Deshacer (${this.pila.length})` : '↶ Deshacer';
     b.title = this.pila.length ? 'Deshace el último cambio (Ctrl+Z)' : 'No hay cambios para deshacer';
+    const r = document.getElementById('btnRehacer');
+    if (r) {
+      r.disabled = !this.rehacerPila.length;
+      r.textContent = this.rehacerPila.length ? `↷ Rehacer (${this.rehacerPila.length})` : '↷ Rehacer';
+      r.title = this.rehacerPila.length ? 'Vuelve a aplicar el cambio deshecho (Ctrl+Y)' : 'No hay cambios para rehacer';
+    }
   },
 
   aviso(texto) {
@@ -70,19 +94,22 @@ const UNDO = {
   iniciar() {
     const b = document.getElementById('btnDeshacer');
     if (b) {
-      if (SOLO_LECTURA_ACTUAL) { b.classList.add('oculto'); return; }
+      if (SOLO_LECTURA_ACTUAL) { b.classList.add('oculto'); const r0 = document.getElementById('btnRehacer'); if (r0) r0.classList.add('oculto'); return; }
       b.addEventListener('click', () => this.deshacer());
+      const r = document.getElementById('btnRehacer');
+      if (r) r.addEventListener('click', () => this.rehacer());
     }
     document.addEventListener('keydown', (e) => {
       if (SOLO_LECTURA_ACTUAL) return;
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
-        const t = e.target && e.target.tagName;
-        if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
-        e.preventDefault();
-        this.deshacer();
-      }
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const t = e.target && e.target.tagName;
+      if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); this.deshacer(); }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); this.rehacer(); }
     });
     this.pila = [];
+    this.rehacerPila = [];
     this.reiniciar();
   }
 };

@@ -46,24 +46,71 @@ function inicializarMapaBuquesDetencion() {
   }
 }
 
+// Cuando hay más de un buque en el mismo lugar, se muestra UN pin con un número
+// (la cantidad) y, al hacer clic, un cuadro con flechas ◀ ▶ para pasar de un buque al otro.
+let PINES_BUQUES = {};
+
+function htmlPopupBuque(b, idx, nav) {
+  const defs = (b.deficienciasLista && b.deficienciasLista.length) ? textoDeficienciasDetencion(b.deficienciasLista) : '—';
+  return `
+    <div style="font-family:inherit; font-size:12.5px; min-width:220px;">
+      ${nav || ''}
+      <strong>${esc(b.tipoBuque)} "${esc(b.nombre)}"</strong><br>
+      Matrícula: ${esc(b.matricula)} · Bandera: ${esc(b.bandera)}<br>
+      Puerto: ${esc(b.puerto)}<br>
+      Dependencia: ${esc(b.prefecturaZona)} — ${esc(b.dependencia)}<br>
+      Fecha: ${esc(b.fecha)} · Tipo Insp.: ${esc(b.tipoInsp)}<br>
+      Deficiencias: ${defs}
+      ${!SOLO_LECTURA_ACTUAL ? `<div style="margin-top:8px;"><button onclick="eliminarBuqueDetencionMapa(${idx})" style="background:var(--rojo,#dc4a3f); color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Eliminar</button></div>` : ''}
+    </div>`;
+}
+
+function contenidoPopupPin(clave) {
+  const pin = PINES_BUQUES[clave];
+  const idx = pin.idxs[pin.pos];
+  const b = D.buquesDetencionMapa[idx];
+  let nav = '';
+  if (pin.idxs.length > 1) {
+    nav = `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #ddd;">
+      <button onclick="navegarBuquesPin('${clave}',-1)" style="border:1px solid #bbb; background:#fff; border-radius:4px; padding:2px 10px; cursor:pointer;">◀</button>
+      <span style="font-weight:700;">Buque ${pin.pos + 1} de ${pin.idxs.length}</span>
+      <button onclick="navegarBuquesPin('${clave}',1)" style="border:1px solid #bbb; background:#fff; border-radius:4px; padding:2px 10px; cursor:pointer;">▶</button>
+    </div>`;
+  }
+  return htmlPopupBuque(b, idx, nav);
+}
+
+function navegarBuquesPin(clave, delta) {
+  const pin = PINES_BUQUES[clave];
+  if (!pin) return;
+  pin.pos = (pin.pos + delta + pin.idxs.length) % pin.idxs.length;
+  pin.marker.setPopupContent(contenidoPopupPin(clave));
+}
+
 function dibujarMarcadoresBuquesDetencion() {
   if (!capaMarcadoresBuques) return;
   capaMarcadoresBuques.clearLayers();
+  PINES_BUQUES = {};
 
+  // Agrupa por ubicación (~100 m): los buques del mismo lugar comparten pin.
+  const grupos = {};
   D.buquesDetencionMapa.forEach((b, idx) => {
-    const marker = L.marker([b.lat, b.lon]).addTo(capaMarcadoresBuques);
-    const defs = (b.deficienciasLista && b.deficienciasLista.length) ? textoDeficienciasDetencion(b.deficienciasLista) : '—';
-    marker.bindPopup(`
-      <div style="font-family:inherit; font-size:12.5px; min-width:200px;">
-        <strong>${esc(b.tipoBuque)} "${esc(b.nombre)}"</strong><br>
-        Matrícula: ${esc(b.matricula)} · Bandera: ${esc(b.bandera)}<br>
-        Puerto: ${esc(b.puerto)}<br>
-        Dependencia: ${esc(b.prefecturaZona)} — ${esc(b.dependencia)}<br>
-        Fecha: ${esc(b.fecha)} · Tipo Insp.: ${esc(b.tipoInsp)}<br>
-        Deficiencias: ${defs}
-        ${!SOLO_LECTURA_ACTUAL ? `<div style="margin-top:8px;"><button onclick="eliminarBuqueDetencionMapa(${idx})" style="background:var(--rojo,#dc4a3f); color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Eliminar</button></div>` : ''}
-      </div>
-    `);
+    const clave = `${Number(b.lat).toFixed(3)},${Number(b.lon).toFixed(3)}`;
+    (grupos[clave] = grupos[clave] || []).push(idx);
+  });
+
+  Object.entries(grupos).forEach(([clave, idxs]) => {
+    const b0 = D.buquesDetencionMapa[idxs[0]];
+    const opciones = idxs.length > 1 ? {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:#dc4a3f; color:#fff; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.4);">${idxs.length}</div>`,
+        iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15]
+      })
+    } : {};
+    const marker = L.marker([b0.lat, b0.lon], opciones).addTo(capaMarcadoresBuques);
+    PINES_BUQUES[clave] = { idxs, pos: idxs.length - 1, marker }; // arranca por el último cargado
+    marker.bindPopup(() => contenidoPopupPin(clave));
   });
 }
 
