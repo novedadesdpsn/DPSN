@@ -248,6 +248,7 @@ button{font-family:inherit; cursor:pointer;}
 }
 .tag.inicial{ background:#e7f8f3; color:var(--acento); }
 .tag.detallada{ background:#fef3e0; color:var(--ambar); }
+.tag.averia{ background:#e8f1fd; color:var(--azul-claro); }
 .tag.seguimiento{ background:#f2ecfe; color:var(--violeta); }
 .tag.abierto{ background:#fef3e0; color:var(--ambar); }
 .tag.pendiente{ background:#fef3e0; color:var(--ambar); }
@@ -411,3 +412,5 @@ table.tabla-datos tr:hover td{ background: #fafbfc; }
   body.imprimiendo .dash-contenido{ padding:0; }
   body.imprimiendo .tarjeta{ box-shadow:none; }
 }
+
+#btnDeshacer:disabled{ opacity:.45; cursor:default; }
