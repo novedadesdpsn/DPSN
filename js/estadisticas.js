@@ -61,7 +61,7 @@ function calcularResultadosExtraordinarias(bundles, bandera, codigo) {
             filas.push([
               etiquetaFecha, dep, nombreBandera,
               `${insp.buque.tipo} "${insp.buque.nombre}"`,
-              insp.tipo === 'inicial' ? 'Inicial' : (insp.tipo === 'detallada' ? 'Más detallada' : 'Seguimiento'),
+              insp.tipo === 'inicial' ? 'Inicial' : (insp.tipo === 'detallada' ? 'Más detallada' : (insp.tipo === 'averia' ? 'Por avería (IA)' : 'Seguimiento')),
               (insp.deficiencias || []).flatMap(codigosDeGrupo).join(', ') || '—'
             ]);
           }

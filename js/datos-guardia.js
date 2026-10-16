@@ -24,7 +24,9 @@ function persistirDatosGuardia() {
   // modo demo.
   const paquete = {};
   SECCIONES_PERSISTIDAS.forEach(clave => { paquete[clave] = DATOS_EJEMPLO[clave]; });
-  localStorage.setItem(CLAVE_DATOS_GUARDIA, JSON.stringify(paquete));
+  const fotoActual = JSON.stringify(paquete);
+  localStorage.setItem(CLAVE_DATOS_GUARDIA, fotoActual);
+  if (typeof UNDO !== 'undefined') UNDO.registrar(fotoActual);
 
   SECCIONES_PERSISTIDAS.forEach(clave => { registrarAuditoriaSiCambio(clave, DATOS_EJEMPLO[clave]); });
 
@@ -129,7 +131,8 @@ function activarEscuchaEnVivo() {
     db.collection(COLECCION_PARTE_DIARIO).doc(clave).onSnapshot(doc => {
       if (!doc.exists || doc.data().valor === undefined) return;
       DATOS_EJEMPLO[clave] = doc.data().valor;
-      sincronizarEstadoConocido(clave, doc.data().valor); // no genera entrada de auditoría: no es un cambio de esta sesión
+      sincronizarEstadoConocido(clave, doc.data().valor);
+      if (typeof UNDO !== 'undefined') UNDO.reiniciar(); // no genera entrada de auditoría: no es un cambio de esta sesión
       if (typeof refrescarPestanaActual === 'function') refrescarPestanaActual();
     }, err => console.error(`Escucha en vivo de "${clave}" interrumpida:`, err));
   });
@@ -173,16 +176,36 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
       ).join('')}</select>`;
     } else if (c.tipo === 'textarea') {
       controlHtml = `<textarea id="campo_${c.id}">${esc(valorActual)}</textarea>`;
+    } else if (c.tipo === 'checkbox') {
+      controlHtml = `<label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;"><input type="checkbox" id="campo_${c.id}" ${valorActual === 'si' ? 'checked' : ''} style="width:16px;height:16px;"> ${esc(c.textoCheck || 'Sí')}</label>`;
     } else {
       controlHtml = `<input type="text" id="campo_${c.id}" value="${esc(valorActual)}">`;
     }
-    div.innerHTML = `<label>${esc(c.label)}</label>${controlHtml}`;
+    div.innerHTML = (c.tipo === 'checkbox' ? '' : `<label>${esc(c.label)}</label>`) + controlHtml;
+    div.dataset.campo = c.id;
     contenedor.appendChild(div);
   });
 
+  // Campos que solo aparecen si un checkbox está tildado (visibleSi: 'idDelCheckbox').
+  function actualizarCondicionales() {
+    campos.forEach(c => {
+      if (!c.visibleSi) return;
+      const chk = document.getElementById(`campo_${c.visibleSi}`);
+      const fila = contenedor.querySelector(`[data-campo="${c.id}"]`);
+      if (fila && chk) fila.classList.toggle('oculto', !chk.checked);
+    });
+  }
+  campos.forEach(c => {
+    if (c.tipo === 'checkbox') document.getElementById(`campo_${c.id}`).addEventListener('change', actualizarCondicionales);
+  });
+  actualizarCondicionales();
+
   document.getElementById('btnGuardarFormulario').addEventListener('click', () => {
     const resultado = {};
-    campos.forEach(c => { resultado[c.id] = document.getElementById(`campo_${c.id}`).value.trim(); });
+    campos.forEach(c => {
+      const el = document.getElementById(`campo_${c.id}`);
+      resultado[c.id] = c.tipo === 'checkbox' ? (el.checked ? 'si' : 'no') : el.value.trim();
+    });
     cerrarModalFormulario();
     onGuardar(resultado);
   });
@@ -197,7 +220,7 @@ function construirDeficiencias(textoCodigos) {
 function uiAgregarInspeccionExtraordinaria(bandera) {
   abrirFormularioInspeccionEstandar({
     titulo: 'Agregar inspección extraordinaria',
-    etiquetasTipo: { inicial: 'Inicial (II)', detallada: 'Más Detallada (ID)', seguimiento: 'Seguimiento (IS)' },
+    etiquetasTipo: { inicial: 'Inicial (II)', detallada: 'Más Detallada (ID)', averia: 'Por Avería (IA)', seguimiento: 'Seguimiento (IS)' },
     incluirCategoria: true,
     onGuardar: (datos) => {
       const grupo = bandera === 'argentina' ? D.inspeccionesExtraordinarias.argentina : D.inspeccionesExtraordinarias.extranjera;
@@ -215,7 +238,7 @@ function uiEditarInspeccionExtraordinaria(bandera, dependencia, indice) {
   const actual = grupo.porDependencia[dependencia][indice];
   abrirFormularioInspeccionEstandar({
     titulo: 'Editar inspección extraordinaria',
-    etiquetasTipo: { inicial: 'Inicial (II)', detallada: 'Más Detallada (ID)', seguimiento: 'Seguimiento (IS)' },
+    etiquetasTipo: { inicial: 'Inicial (II)', detallada: 'Más Detallada (ID)', averia: 'Por Avería (IA)', seguimiento: 'Seguimiento (IS)' },
     incluirCategoria: true,
     valores: { ...actual, dependencia },
     onGuardar: (datos) => {
@@ -412,7 +435,7 @@ function uiEditarOtro(dependencia, indice) {
 }
 
 // ---------- Buques con Detención (tabla del parte) ----------
-const CODIGOS_DETENCION = ['17', '30', '99'];
+const CODIGOS_DETENCION = ['17', '18', '30', '99'];
 
 function textoDeficienciasDetencion(lista) {
   return (lista || []).map(d => `Cód. ${d.codigo} (${String(d.cantidad).padStart(2, '0')})`).join(' / ');
@@ -521,25 +544,49 @@ function camposInspeccionTecnica() {
     { id: 'requerimiento', label: 'Requerimiento' },
     { id: 'lugar', label: 'Lugar' },
     { id: 'inspector', label: 'Inspector / MOI' },
-    { id: 'extranjero', label: '¿Es en el extranjero?', tipo: 'select', opciones: [{ valor: 'no', etiqueta: 'No' }, { valor: 'si', etiqueta: 'Sí' }] },
-    { id: 'salidaFechaHora', label: 'Salida — Fecha y hora (si es en el extranjero)' },
-    { id: 'salidaVuelo', label: 'Salida — N.º de vuelo' },
-    { id: 'salidaDestino', label: 'Salida — Destino' },
-    { id: 'regresoFechaHora', label: 'Regreso — Fecha y hora' },
-    { id: 'regresoVuelo', label: 'Regreso — N.º de vuelo' },
-    { id: 'regresoDestino', label: 'Regreso — Destino' }
+    ...camposExterior()
   ];
 }
 
-function construirInspeccionTecnica(datos) {
+/** Campos compartidos por Inspecciones Técnicas y Control de Gestión cuando son en el extranjero. */
+function camposExterior() {
+  return [
+    { id: 'extranjero', label: '', tipo: 'checkbox', textoCheck: 'Es en el extranjero' },
+    { id: 'disposicion', label: 'N.º de la disposición que autoriza la inspección', visibleSi: 'extranjero' },
+    { id: 'salidaFechaHora', label: 'Salida — Fecha y hora (ej: 24/09 23:55)', visibleSi: 'extranjero' },
+    { id: 'salidaVuelo', label: 'Salida — N.º de vuelo', visibleSi: 'extranjero' },
+    { id: 'salidaDestino', label: 'Salida — Aeropuerto / destino', visibleSi: 'extranjero' },
+    { id: 'regresoFechaHora', label: 'Regreso — Fecha y hora', visibleSi: 'extranjero' },
+    { id: 'regresoVuelo', label: 'Regreso — N.º de vuelo', visibleSi: 'extranjero' },
+    { id: 'regresoDestino', label: 'Regreso — Aeropuerto / destino', visibleSi: 'extranjero' }
+  ];
+}
+
+/** Arma los datos de viaje a partir de lo cargado en el formulario. */
+function construirExterior(datos) {
   const salida = { fechaHora: datos.salidaFechaHora || '', vuelo: datos.salidaVuelo || '', destino: datos.salidaDestino || '' };
   const regreso = { fechaHora: datos.regresoFechaHora || '', vuelo: datos.regresoVuelo || '', destino: datos.regresoDestino || '' };
-  const hayDatosDeVuelo = !!(salida.fechaHora || salida.vuelo || salida.destino || regreso.fechaHora || regreso.vuelo || regreso.destino);
+  const extranjero = datos.extranjero === 'si';
+  return extranjero
+    ? { extranjero: true, disposicion: datos.disposicion || '', salida, regreso }
+    : { extranjero: false, disposicion: '', salida: {}, regreso: {} };
+}
+
+/** Inverso: valores para precargar el formulario al editar. */
+function valoresExterior(actual) {
+  const s = actual.salida || {}, r = actual.regreso || {};
+  return {
+    extranjero: actual.extranjero ? 'si' : 'no', disposicion: actual.disposicion || '',
+    salidaFechaHora: s.fechaHora || '', salidaVuelo: s.vuelo || '', salidaDestino: s.destino || '',
+    regresoFechaHora: r.fechaHora || '', regresoVuelo: r.vuelo || '', regresoDestino: r.destino || ''
+  };
+}
+
+function construirInspeccionTecnica(datos) {
   return {
     especialidad: datos.especialidad, embarcacion: datos.embarcacion, requerimiento: datos.requerimiento,
     lugar: datos.lugar, inspector: datos.inspector,
-    extranjero: datos.extranjero === 'si' || hayDatosDeVuelo,
-    salida, regreso
+    ...construirExterior(datos)
   };
 }
 
@@ -555,9 +602,8 @@ function uiEditarInspeccionTecnica(indice) {
   const actual = D.inspeccionesTecnicas[indice];
   const valoresIniciales = {
     especialidad: actual.especialidad, embarcacion: actual.embarcacion, requerimiento: actual.requerimiento,
-    lugar: actual.lugar, inspector: actual.inspector, extranjero: actual.extranjero ? 'si' : 'no',
-    salidaFechaHora: actual.salida ? actual.salida.fechaHora : '', salidaVuelo: actual.salida ? actual.salida.vuelo : '', salidaDestino: actual.salida ? actual.salida.destino : '',
-    regresoFechaHora: actual.regreso ? actual.regreso.fechaHora : '', regresoVuelo: actual.regreso ? actual.regreso.vuelo : '', regresoDestino: actual.regreso ? actual.regreso.destino : ''
+    lugar: actual.lugar, inspector: actual.inspector,
+    ...valoresExterior(actual)
   };
   abrirModalFormulario('Editar inspección técnica', camposInspeccionTecnica(), valoresIniciales, (datos) => {
     D.inspeccionesTecnicas[indice] = construirInspeccionTecnica(datos);
@@ -580,13 +626,21 @@ function camposAuditoria() {
     { id: 'embarcacion', label: 'Embarcación / Empresa' },
     { id: 'alcance', label: 'Alcance (ej: Renovación)' },
     { id: 'lugar', label: 'Lugar' },
-    { id: 'auditor', label: 'Auditor' }
+    { id: 'auditor', label: 'Auditor' },
+    ...camposExterior()
   ];
+}
+
+function construirAuditoria(datos) {
+  return {
+    tipoAuditoria: datos.tipoAuditoria, embarcacion: datos.embarcacion, alcance: datos.alcance,
+    lugar: datos.lugar, auditor: datos.auditor, ...construirExterior(datos)
+  };
 }
 
 function uiAgregarAuditoria() {
   abrirModalFormulario('Agregar auditoría', camposAuditoria(), {}, (datos) => {
-    D.divisionControlGestion.push(datos);
+    D.divisionControlGestion.push(construirAuditoria(datos));
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -594,8 +648,8 @@ function uiAgregarAuditoria() {
 
 function uiEditarAuditoria(indice) {
   const actual = D.divisionControlGestion[indice];
-  abrirModalFormulario('Editar auditoría', camposAuditoria(), actual, (datos) => {
-    D.divisionControlGestion[indice] = datos;
+  abrirModalFormulario('Editar auditoría', camposAuditoria(), { ...actual, ...valoresExterior(actual) }, (datos) => {
+    D.divisionControlGestion[indice] = construirAuditoria(datos);
     persistirDatosGuardia();
     refrescarPestanaActual();
   });

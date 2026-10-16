@@ -187,22 +187,20 @@ function diaMesDeTexto(t) {
   return m ? { dia: parseInt(m[1], 10), mes: parseInt(m[2], 10) } : null;
 }
 
-function textoInspeccionesTecnicas() {
-  const columnas = ['ESP', 'EMBARCACION', 'REQUERIMIENTO', 'LUGAR', 'INSPECTOR/MOI'];
-  const locales = D.inspeccionesTecnicas.filter(i => !(i.salida && (i.salida.fechaHora || i.salida.vuelo)));
-  const exterior = D.inspeccionesTecnicas.filter(i => i.salida && (i.salida.fechaHora || i.salida.vuelo));
+/**
+ * Arma una o dos secciones: las que se hacen en el país y, aparte, las "al exterior"
+ * (con banda gris de fechas y, debajo de la tabla, disposición y vuelos).
+ */
+function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, filaDe, personaDe) {
+  const esExt = (i) => i.extranjero || !!(i.salida && (i.salida.fechaHora || i.salida.vuelo));
+  const locales = lista.filter(i => !esExt(i));
+  const exterior = lista.filter(esExt);
   const secciones = [];
 
   if (locales.length || !exterior.length) {
     secciones.push({
-      titulo: 'Inspecciones Técnicas',
-      contenido: {
-        tipo: 'tablas',
-        tablas: [{
-          columnas,
-          filas: locales.map(i => [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, i.inspector + (i.extranjero ? ' (EXTRANJERO)' : '')])
-        }]
-      }
+      titulo: tituloLocal,
+      contenido: { tipo: 'tablas', tablas: [{ columnas, filas: locales.map(i => filaDe(i, '')) }] }
     });
   }
 
@@ -212,12 +210,14 @@ function textoInspeccionesTecnicas() {
     const filas = exterior.map((i, idx) => {
       const marca = '(' + '*'.repeat(idx + 1) + ')';
       const s = i.salida || {}, r = i.regreso || {};
-      pie.push(`${marca} Salida: Vuelo ${s.vuelo || '—'} FH ${s.fechaHora || '—'} ${s.destino || ''}`.trim() + (/[.]$/.test(s.destino || '') ? '' : '.'));
-      if (r.fechaHora || r.vuelo) pie.push(`Regreso: Vuelo ${r.vuelo || '—'} FH ${r.fechaHora || '—'} ${r.destino || ''}`.trim() + (/[.]$/.test(r.destino || '') ? '' : '.'));
+      const disp = i.disposicion ? `Disp. N.º ${i.disposicion}. ` : '';
+      const fin = (t) => /[.]$/.test(t || '') ? '' : '.';
+      pie.push(`${marca} ${disp}Salida: Vuelo ${s.vuelo || '—'} FH ${s.fechaHora || '—'} ${s.destino || ''}`.trim() + fin(s.destino));
+      if (r.fechaHora || r.vuelo) pie.push(`Regreso: Vuelo ${r.vuelo || '—'} FH ${r.fechaHora || '—'} ${r.destino || ''}`.trim() + fin(r.destino));
       const fs = diaMesDeTexto(s.fechaHora), fr = diaMesDeTexto(r.fechaHora);
-      if (fs) fechas.push({ ...fs, orden: 'ini' });
-      if (fr) fechas.push({ ...fr, orden: 'fin' });
-      return [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, `${i.inspector}${i.extranjero ? ' (EXTRANJERO)' : ''} ${marca}`];
+      if (fs) fechas.push(fs);
+      if (fr) fechas.push(fr);
+      return filaDe(i, marca);
     });
     let banda = '';
     if (fechas.length) {
@@ -228,24 +228,27 @@ function textoInspeccionesTecnicas() {
       banda = `DEL ${f2(a.dia)} DE ${MESES_BANDA[a.mes - 1] || ''} AL ${f2(b.dia)} DE ${MESES_BANDA[b.mes - 1] || ''}`;
     }
     secciones.push({
-      titulo: 'Inspecciones al Exterior',
+      titulo: tituloExterior,
       contenido: { tipo: 'tablas', tablas: [{ columnas, filas, banda, pie }] }
     });
   }
   return secciones;
 }
 
+function textoInspeccionesTecnicas() {
+  return seccionesConExterior(
+    D.inspeccionesTecnicas, 'Inspecciones Técnicas', 'Inspecciones al Exterior',
+    ['ESP', 'EMBARCACION', 'REQUERIMIENTO', 'LUGAR', 'INSPECTOR/MOI'],
+    (i, marca) => [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, `${i.inspector}${marca ? ' ' + marca : ''}`]
+  );
+}
+
 function textoDivisionControlGestion() {
-  return [{
-    titulo: 'División Control de Gestión',
-    contenido: {
-      tipo: 'tablas',
-      tablas: [{
-        columnas: ['Tipo de Auditoría', 'Embarcación/Empresa', 'Alcance', 'Lugar', 'Auditor'],
-        filas: D.divisionControlGestion.map(a => [a.tipoAuditoria, a.embarcacion, a.alcance, a.lugar, a.auditor])
-      }]
-    }
-  }];
+  return seccionesConExterior(
+    D.divisionControlGestion, 'División Control de Gestión', 'Auditorías al Exterior',
+    ['Tipo de Auditoría', 'Embarcación/Empresa', 'Alcance', 'Lugar', 'Auditor'],
+    (a, marca) => [a.tipoAuditoria, a.embarcacion, a.alcance, a.lugar, `${a.auditor}${marca ? ' ' + marca : ''}`]
+  );
 }
 
 function textoLicencias() {

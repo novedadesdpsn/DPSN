@@ -19,7 +19,7 @@ function opcionesCodigoHtml(lista) {
 
 function opcionesCantidadHtml() {
   let out = '';
-  for (let i = 1; i <= 20; i++) out += `<option value="${i}">${i}</option>`;
+  for (let i = 1; i <= 30; i++) out += `<option value="${i}">${i}</option>`;
   return out;
 }
 
@@ -43,6 +43,28 @@ function lineasDescripcionGrupo(g) {
 
 function textoComoSeSubsano(g) {
   return (g.comoSeSubsano || '').trim();
+}
+
+/**
+ * Empareja cada deficiencia con su subsanación (1.ª con 1.ª, 2.ª con 2.ª...).
+ * Se emparejan cuando hay una subsanación por línea (o una sola deficiencia con una sola subsanación);
+ * si no, la subsanación queda "suelta" (extra) como antes.
+ */
+function paresDeficiencia(g) {
+  const descs = lineasDescripcionGrupo(g);
+  const subs = textoComoSeSubsano(g).split('\n').map(l => l.trim()).filter(Boolean);
+  const emparejar = descs.length > 0 && (subs.length > 1 || (subs.length === 1 && descs.length === 1));
+  if (!emparejar) return { items: descs.map(t => ({ texto: t, subsano: '' })), extra: subs };
+  const n = Math.max(descs.length, subs.length);
+  const items = [];
+  for (let i = 0; i < n; i++) items.push({ texto: descs[i] || '', subsano: subs[i] || '' });
+  return { items, extra: [] };
+}
+
+function subsanoEntreParentesis(t) {
+  const x = String(t || '').trim();
+  if (!x) return '';
+  return x.startsWith('(') ? x : `(${x})`;
 }
 
 function codigosDeGrupo(g) {
@@ -102,6 +124,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
           <select id="insTipo">
             <option value="inicial" ${v.tipo === 'inicial' ? 'selected' : ''}>${esc(opciones.etiquetasTipo.inicial)}</option>
             <option value="detallada" ${v.tipo === 'detallada' ? 'selected' : ''}>${esc(opciones.etiquetasTipo.detallada)}</option>
+            ${opciones.etiquetasTipo.averia ? `<option value="averia" ${v.tipo === 'averia' ? 'selected' : ''}>${esc(opciones.etiquetasTipo.averia)}</option>` : ''}
             <option value="seguimiento" ${v.tipo === 'seguimiento' ? 'selected' : ''}>${esc(opciones.etiquetasTipo.seguimiento)}</option>
           </select>
         </div>
@@ -162,7 +185,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
               <textarea id="defDescripcion" placeholder="Si hay varias del mismo código, escribí una por línea (Enter). Ej: qué se detectó."></textarea>
             </div>
             <div class="campo" style="margin-bottom:8px;">
-              <label>Cómo se subsanó / observación (opcional)</label>
+              <label>Cómo se subsanó (opcional) — una por línea, en el mismo orden que las deficiencias: la 1.ª línea corresponde a la 1.ª deficiencia, la 2.ª a la 2.ª, y así</label>
               <textarea id="defComoSubsano" placeholder="Ej: Se verificó el correcto funcionamiento del generador N.º 1."></textarea>
             </div>
             <button type="button" class="btn-secundario" id="btnAgregarGrupoDef">+ Agregar deficiencia</button>
@@ -217,14 +240,13 @@ function abrirFormularioInspeccionEstandar(opciones) {
       return;
     }
     cont.innerHTML = grupos.map((g, i) => {
-      const lineas = lineasDescripcionGrupo(g);
-      const subsano = textoComoSeSubsano(g);
+      const { items, extra } = paresDeficiencia(g);
       return `
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; background:#fff; border:1px solid var(--gris-300); border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
         <div>
           <div>${esc(textoGrupoDeficiencia(g, listaCodigos))}</div>
-          ${lineas.length ? `<ol style="margin:3px 0 0 20px; padding:0; list-style:decimal;">${lineas.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` : ''}
-          ${subsano ? `<div style="margin-top:3px; font-weight:600;">${esc(subsano)}</div>` : ''}
+          ${items.length ? `<ol style="margin:3px 0 0 20px; padding:0; list-style:decimal;">${items.map(it => `<li>${esc(it.texto)}${it.subsano ? ` <strong>${esc(subsanoEntreParentesis(it.subsano))}</strong>` : ''}</li>`).join('')}</ol>` : ''}
+          ${extra.length ? `<div style="margin-top:3px; font-weight:600;">${extra.map(esc).join('<br>')}</div>` : ''}
         </div>
         <button type="button" data-idx="${i}" class="btnQuitarGrupo" style="background:none;border:none;color:var(--rojo);font-size:14px; flex-shrink:0;">✕</button>
       </div>

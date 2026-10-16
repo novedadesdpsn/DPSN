@@ -320,14 +320,16 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       ], xIndent, anchoDisp, y, 9);
     }
 
-    // Qué se detectó, en lista numerada — sin negrita.
-    const lineasDesc = lineasDescripcionGrupo(g);
-    lineasDesc.forEach((l, i) => {
-      y = escribirParrafoMixto([{ texto: `${i + 1}) ${l}`, negrita: false }], xIndent + 10, anchoDisp - 10, y, 9);
+    // Qué se detectó, en lista numerada; la subsanación de cada una va al lado, en negrita.
+    const { items: itemsDef, extra: extraSub } = paresDeficiencia(g);
+    itemsDef.forEach((it, i) => {
+      const runs = [{ texto: `${i + 1})`, negrita: true }, { texto: it.texto, negrita: false }];
+      if (it.subsano) runs.push({ texto: subsanoEntreParentesis(it.subsano), negrita: true });
+      y = escribirParrafoMixto(runs, xIndent + 10, anchoDisp - 10, y, 9);
     });
 
-    // Cómo se subsanó — en negrita, aparte.
-    const subsano = textoComoSeSubsano(g);
+    // Subsanación general (no emparejada) — en negrita, aparte.
+    const subsano = extraSub.join(' ');
     if (subsano) {
       const m = subsano.match(/^(C[óo]d\.?\s*[\d\/-]+\s*:)\s*([\s\S]*)$/i);
       const runsSub = m
@@ -357,7 +359,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         const listaCod = familia === 'psc' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS;
         const marcaDe = (x) => {
           if (familia === 'psc') return x.tipo === 'inicial' ? '(IISD)' : x.tipo === 'detallada' ? '(IICD)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
-          return x.tipo === 'inicial' ? '(II)' : x.tipo === 'detallada' ? '(ID)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
+          return x.tipo === 'inicial' ? '(II)' : x.tipo === 'detallada' ? '(ID)' : x.tipo === 'averia' ? '(IA)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
         };
         const esConvoy = insp.categoria === 'convoyesExtr' || insp.categoria === 'convoyArgentino';
         let tituloTexto;

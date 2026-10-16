@@ -12,20 +12,19 @@ function esc(html) {
 }
 
 function renderLineasDescripcionHtml(g) {
-  const lineas = lineasDescripcionGrupo(g);
-  const subsano = textoComoSeSubsano(g);
+  const { items, extra } = paresDeficiencia(g);
   let html = '';
-  if (lineas.length) {
-    html += `<ol style="margin:4px 0 0 20px; padding:0; list-style:decimal;">` + lineas.map(l => `<li>${esc(l)}</li>`).join('') + `</ol>`;
+  if (items.length) {
+    html += `<ol style="margin:4px 0 0 20px; padding:0; list-style:decimal;">` + items.map(it => `<li>${esc(it.texto)}${it.subsano ? ` <strong>${esc(subsanoEntreParentesis(it.subsano))}</strong>` : ''}</li>`).join('') + `</ol>`;
   }
-  if (subsano) {
-    html += `<div style="margin-top:3px; font-weight:700;">${esc(subsano)}</div>`;
+  if (extra.length) {
+    html += `<div style="margin-top:3px; font-weight:700;">${extra.map(esc).join('<br>')}</div>`;
   }
   return html;
 }
 
 function tagTipo(tipo) {
-  const nombres = { inicial: 'Inicial', detallada: 'Más detallada', seguimiento: 'Seguimiento' };
+  const nombres = { inicial: 'Inicial', detallada: 'Más detallada', averia: 'Por avería (IA)', seguimiento: 'Seguimiento' };
   return `<span class="tag ${tipo}">${nombres[tipo] || tipo}</span>`;
 }
 
@@ -121,7 +120,7 @@ function renderInicio() {
             ${renderGuardiaLista('Saliente', D.guardia.saliente)}
             ${renderGuardiaLista('Entrante', D.guardia.entrante)}
           </div>
-          ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarGuardia()">Editar</button>` : ''}
+          ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarGuardia()">Editar</button> <button class="btn-primario" type="button" style="margin-top:10px; background:var(--coral,#dc4a3f);" onclick="uiFinalizarGuardia()">Finalizar Guardia</button>` : ''}
         </div>
       </div>
 
@@ -525,16 +524,29 @@ function renderBuquesDetencion() {
       <td>${esc(b.numero)}</td><td>${esc(b.dependencia)}</td><td>${esc(b.buque)}</td>
       <td>${esc(b.fecha)}</td><td>${esc(b.tipoInsp)}</td>
       <td>${(b.deficienciasLista || []).length ? `<ul style="margin:0 0 0 14px; padding:0;">${b.deficienciasLista.map(d => `<li>Cód. ${esc(d.codigo)} (${String(d.cantidad).padStart(2,'0')})</li>`).join('')}</ul>` : esc(b.deficiencias || '')}</td>
-      ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+      ${!SOLO_LECTURA_ACTUAL ? (b.idVinculo
+        ? `<td style="font-size:10.5px; color:var(--gris-500);">Se gestiona desde el Inicio</td>`
+        : `<td style="display:flex; gap:4px;">
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarBuqueDetencionTabla(${idx})">Editar</button>
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarBuqueDetencionTabla(${idx})">✕</button>
-      </td>` : ''}
+      </td>`) : ''}
     </tr>`;
   });
   html += `</tbody></table>`;
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarBuqueDetencionTabla()">+ Agregar buque</button>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">Los buques con detención se cargan desde el mapa del Inicio ("+ Agregar nuevo") y se listan acá automáticamente.</p>`;
   html += `</div>`;
   return html;
+}
+
+/** Disposición + vuelos, para Inspecciones Técnicas y Control de Gestión en el extranjero. */
+function htmlDatosExterior(i) {
+  if (!i.extranjero) return '';
+  const s = i.salida || {}, r = i.regreso || {};
+  const lineas = [];
+  if (i.disposicion) lineas.push(`Disposición N.º ${esc(i.disposicion)}`);
+  if (s.fechaHora || s.vuelo || s.destino) lineas.push(`Salida: ${esc(s.fechaHora || '—')} · Vuelo ${esc(s.vuelo || '—')} · ${esc(s.destino || '')}`);
+  if (r.fechaHora || r.vuelo || r.destino) lineas.push(`Regreso: ${esc(r.fechaHora || '—')} · Vuelo ${esc(r.vuelo || '—')} · ${esc(r.destino || '')}`);
+  return lineas.length ? `<div style="font-size:11px; color:var(--gris-700); margin-top:4px;">${lineas.join('<br>')}</div>` : '';
 }
 
 function renderInspeccionesTecnicas() {
@@ -550,10 +562,7 @@ function renderInspeccionesTecnicas() {
       <td>
         ${esc(i.inspector)}
         ${i.extranjero ? '<span class="tag detallada" style="margin-left:6px;">Extranjero</span>' : ''}
-        ${i.salida && i.salida.fechaHora ? `<div style="font-size:11px; color:var(--gris-700); margin-top:4px;">
-          Salida: ${esc(i.salida.fechaHora)} · Vuelo ${esc(i.salida.vuelo)} · ${esc(i.salida.destino)}<br>
-          Regreso: ${esc(i.regreso.fechaHora)} · Vuelo ${esc(i.regreso.vuelo)} · ${esc(i.regreso.destino)}
-        </div>` : ''}
+        ${htmlDatosExterior(i)}
       </td>
       ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarInspeccionTecnica(${idx})">Editar</button>
@@ -574,7 +583,7 @@ function renderDivisionControlGestion() {
   </tr></thead><tbody>`;
   D.divisionControlGestion.forEach((a, idx) => {
     html += `<tr>
-      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}</td>
+      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}${a.extranjero ? ' <span class="tag detallada" style="margin-left:6px;">Extranjero</span>' : ''}${htmlDatosExterior(a)}</td>
       ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarAuditoria(${idx})">Editar</button>
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarAuditoria(${idx})">✕</button>
@@ -711,6 +720,7 @@ async function iniciarDashboard() {
   document.getElementById('contenidoPanel').innerHTML = '<div class="placeholder-panel">Cargando datos…</div>';
   await hidratarDatosGuardia();
 
+  UNDO.iniciar();
   mostrarPestana(PESTANAS[0].id);
   document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
 }
