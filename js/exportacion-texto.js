@@ -192,15 +192,36 @@ function diaMesDeTexto(t) {
  * (con banda gris de fechas y, debajo de la tabla, disposición y vuelos).
  */
 function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, filaDe, personaDe) {
-  const esExt = (i) => i.extranjero || !!(i.salida && (i.salida.fechaHora || i.salida.vuelo));
+  const esExt = (i) => i.extranjero || (!i.viaAerea && !!(i.salida && (i.salida.fechaHora || i.salida.vuelo)));
   const locales = lista.filter(i => !esExt(i));
   const exterior = lista.filter(esExt);
   const secciones = [];
+  const fin = (t) => /[.]$/.test(t || '') ? '' : '.';
+
+  // Líneas de pie con disposición y vuelos (GFH) de un ítem.
+  const lineasVuelo = (i, marca) => {
+    const s = i.salida || {}, r = i.regreso || {};
+    const disp = i.extranjero && i.disposicion ? `Disp. N.º ${i.disposicion}. ` : '';
+    const lineas = [];
+    if (s.fechaHora || s.vuelo || s.destino || disp) lineas.push(`${marca} ${disp}Salida: Vuelo ${s.vuelo || '—'} GFH ${s.fechaHora || '—'} ${s.destino || ''}`.trim() + fin(s.destino));
+    if (r.fechaHora || r.vuelo) lineas.push(`Retorno: Vuelo ${r.vuelo || '—'} GFH ${r.fechaHora || '—'} ${r.destino || ''}`.trim() + fin(r.destino));
+    return lineas;
+  };
 
   if (locales.length || !exterior.length) {
+    // Los de vía aérea dentro del país van en la tabla local, con marca y sus vuelos debajo.
+    const pieLocal = [];
+    let nAerea = 0;
+    const filas = locales.map(i => {
+      if (!i.viaAerea) return filaDe(i, '');
+      nAerea++;
+      const marca = '(' + '*'.repeat(nAerea) + ')';
+      pieLocal.push(...lineasVuelo(i, marca));
+      return filaDe(i, marca);
+    });
     secciones.push({
       titulo: tituloLocal,
-      contenido: { tipo: 'tablas', tablas: [{ columnas, filas: locales.map(i => filaDe(i, '')) }] }
+      contenido: { tipo: 'tablas', tablas: [{ columnas, filas, pie: pieLocal }] }
     });
   }
 
@@ -210,10 +231,7 @@ function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, fila
     const filas = exterior.map((i, idx) => {
       const marca = '(' + '*'.repeat(idx + 1) + ')';
       const s = i.salida || {}, r = i.regreso || {};
-      const disp = i.disposicion ? `Disp. N.º ${i.disposicion}. ` : '';
-      const fin = (t) => /[.]$/.test(t || '') ? '' : '.';
-      pie.push(`${marca} ${disp}Salida: Vuelo ${s.vuelo || '—'} FH ${s.fechaHora || '—'} ${s.destino || ''}`.trim() + fin(s.destino));
-      if (r.fechaHora || r.vuelo) pie.push(`Regreso: Vuelo ${r.vuelo || '—'} FH ${r.fechaHora || '—'} ${r.destino || ''}`.trim() + fin(r.destino));
+      pie.push(...lineasVuelo(i, marca));
       const fs = diaMesDeTexto(s.fechaHora), fr = diaMesDeTexto(r.fechaHora);
       if (fs) fechas.push(fs);
       if (fr) fechas.push(fr);

@@ -39,11 +39,8 @@ function inicializarMapaBuquesDetencion() {
   capaMarcadoresBuques = L.layerGroup().addTo(mapaBuquesDetencionInstancia);
   dibujarMarcadoresBuquesDetencion();
 
-  if (!SOLO_LECTURA_ACTUAL) {
-    mapaBuquesDetencionInstancia.on('click', (e) => {
-      uiAgregarBuqueDetencionMapa(e.latlng.lat.toFixed(5), e.latlng.lng.toFixed(5));
-    });
-  }
+  // Los buques se cargan SOLO con el botón "+ Agregar nuevo" (zona → dependencia).
+  // El mapa no escucha clics para dar de alta, así los cuadros emergentes no se cierran al tocar las flechas.
 }
 
 // Cuando hay más de un buque en el mismo lugar, se muestra UN pin con un número
@@ -61,7 +58,10 @@ function htmlPopupBuque(b, idx, nav) {
       Dependencia: ${esc(b.prefecturaZona)} — ${esc(b.dependencia)}<br>
       Fecha: ${esc(b.fecha)} · Tipo Insp.: ${esc(b.tipoInsp)}<br>
       Deficiencias: ${defs}
-      ${!SOLO_LECTURA_ACTUAL ? `<div style="margin-top:8px;"><button onclick="eliminarBuqueDetencionMapa(${idx})" style="background:var(--rojo,#dc4a3f); color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Eliminar</button></div>` : ''}
+      ${!SOLO_LECTURA_ACTUAL ? `<div style="margin-top:8px; display:flex; gap:6px;">
+        <button onclick="uiAgregarBuqueDetencionMapa(${idx})" style="background:var(--azul-medio,#2f6fb3); color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Editar</button>
+        <button onclick="eliminarBuqueDetencionMapa(${idx})" style="background:var(--rojo,#dc4a3f); color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Eliminar</button>
+      </div>` : ''}
     </div>`;
 }
 
@@ -114,15 +114,17 @@ function dibujarMarcadoresBuquesDetencion() {
   });
 }
 
-function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
+/** Sin argumento: alta de un buque nuevo. Con el índice de un buque ya cargado: edición (se corrigen los datos sin borrar y volver a cargar). */
+function uiAgregarBuqueDetencionMapa(indiceEdicion) {
   cerrarModalInspeccion();
-  let lista = [];
+  const edicion = (indiceEdicion !== undefined && indiceEdicion !== null) ? D.buquesDetencionMapa[indiceEdicion] : null;
+  let lista = edicion ? (edicion.deficienciasLista || []).map(d => ({ ...d })) : [];
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   modal.id = 'modalInspeccion';
   modal.innerHTML = `
     <div class="modal-caja ancho">
-      <div class="modal-header"><h3>Agregar buque con detención</h3><button type="button" onclick="cerrarModalInspeccion()">✕</button></div>
+      <div class="modal-header"><h3>${edicion ? 'Editar buque con detención' : 'Agregar buque con detención'}</h3><button type="button" onclick="cerrarModalInspeccion()">✕</button></div>
       <div class="modal-campos">
         <div class="fila-doble">
           <div class="campo"><label>Prefectura de Zona</label>
@@ -139,8 +141,8 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
         <div class="campo oculto" id="mbBloqueLibre"><label>Dependencia / lugar (texto libre)</label><input type="text" id="mbDependenciaLibre" placeholder="Ej: Zona de fondeo Recalada"></div>
         <div id="mbAvisoPos" style="font-size:11.5px; color:var(--gris-500); margin:-4px 0 10px;"></div>
         <div class="fila-doble">
-          <div class="campo"><label>Latitud</label><input type="text" id="mbLat" value="${esc(latPrecargada || '')}"></div>
-          <div class="campo"><label>Longitud</label><input type="text" id="mbLon" value="${esc(lonPrecargada || '')}"></div>
+          <div class="campo"><label>Latitud</label><input type="text" id="mbLat" value=""></div>
+          <div class="campo"><label>Longitud</label><input type="text" id="mbLon" value=""></div>
         </div>
         <div class="fila-doble">
           <div class="campo"><label>Tipo de buque</label><input type="text" id="mbTipoBuque" placeholder="L/M, B/P, B/M, B/T..."></div>
@@ -181,7 +183,6 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
   const selZona = document.getElementById('mbPrefecturaZona');
   const selDep = document.getElementById('mbDependencia');
   const aviso = document.getElementById('mbAvisoPos');
-  if (latPrecargada) { selZona.value = '__otra'; document.getElementById('mbBloqueLibre').classList.remove('oculto'); aviso.textContent = 'Ubicación tomada del clic en el mapa. Podés elegir una dependencia para que se ubique sola.'; }
   selZona.addEventListener('change', () => {
     document.getElementById('mbBloqueLibre').classList.toggle('oculto', selZona.value !== '__otra');
     const zona = DEPENDENCIAS_PNA.find(z => z.zona === selZona.value);
@@ -202,6 +203,27 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
     document.getElementById('mbLon').value = d.lon;
     aviso.textContent = d.aprox ? 'Ubicación aproximada de la dependencia — podés ajustar latitud/longitud si hace falta.' : 'Ubicación cargada automáticamente.';
   });
+
+  // Edición: se precargan todos los campos del buque.
+  if (edicion) {
+    const poner = (id, v) => { document.getElementById(id).value = v === undefined || v === null ? '' : v; };
+    const zonaEd = DEPENDENCIAS_PNA.find(z => z.zona === edicion.prefecturaZona);
+    let depEncontrada = -1;
+    if (zonaEd) {
+      selZona.value = zonaEd.zona;
+      selZona.dispatchEvent(new Event('change'));
+      depEncontrada = zonaEd.dependencias.findIndex(d => (d.cuatri || d.nombre) === edicion.dependencia);
+      if (depEncontrada >= 0) selDep.value = String(depEncontrada);
+    }
+    if (!zonaEd || depEncontrada < 0) {
+      selZona.value = '__otra';
+      selZona.dispatchEvent(new Event('change'));
+      poner('mbDependenciaLibre', edicion.dependencia);
+    }
+    poner('mbLat', edicion.lat); poner('mbLon', edicion.lon);
+    poner('mbTipoBuque', edicion.tipoBuque); poner('mbNombre', edicion.nombre); poner('mbMatricula', edicion.matricula);
+    poner('mbBandera', edicion.bandera); poner('mbPuerto', edicion.puerto); poner('mbFecha', edicion.fecha); poner('mbTipoInsp', edicion.tipoInsp);
+  }
 
   function renderizarLista() {
     const cont = document.getElementById('mbListaDeficiencias');
@@ -239,20 +261,33 @@ function uiAgregarBuqueDetencionMapa(latPrecargada, lonPrecargada) {
     const fecha = document.getElementById('mbFecha').value.trim();
     const tipoInsp = document.getElementById('mbTipoInsp').value.trim();
 
-    const idVinculo = 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    if (edicion) {
+      // Se actualiza el mismo buque (mapa) y su fila en la tabla de Buques con Detención, conservando el N.º.
+      Object.assign(edicion, { lat, lon, prefecturaZona, dependencia, tipoBuque, nombre, matricula, bandera, puerto, fecha, tipoInsp, deficienciasLista: lista });
+      const fila = edicion.idVinculo ? D.buquesDetencion.find(b => b.idVinculo === edicion.idVinculo) : null;
+      if (fila) {
+        Object.assign(fila, {
+          dependencia: [prefecturaZona, dependencia].filter(Boolean).join(' — '),
+          buque: `${tipoBuque} "${nombre}" (${matricula})`,
+          fecha, tipoInsp, deficienciasLista: lista
+        });
+      }
+    } else {
+      const idVinculo = 'v_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
-    D.buquesDetencionMapa.push({
-      lat, lon, prefecturaZona, dependencia, tipoBuque, nombre, matricula, bandera, puerto,
-      fecha, tipoInsp, deficienciasLista: lista, idVinculo
-    });
+      D.buquesDetencionMapa.push({
+        lat, lon, prefecturaZona, dependencia, tipoBuque, nombre, matricula, bandera, puerto,
+        fecha, tipoInsp, deficienciasLista: lista, idVinculo
+      });
 
-    // Se agrega sola a la tabla de Buques con Detención, sin pisar lo que ya haya.
-    D.buquesDetencion.push({
-      numero: D.buquesDetencion.length + 1,
-      dependencia: [prefecturaZona, dependencia].filter(Boolean).join(' — '),
-      buque: `${tipoBuque} "${nombre}" (${matricula})`,
-      fecha, tipoInsp, deficienciasLista: lista, idVinculo
-    });
+      // Se agrega sola a la tabla de Buques con Detención, sin pisar lo que ya haya.
+      D.buquesDetencion.push({
+        numero: D.buquesDetencion.length + 1,
+        dependencia: [prefecturaZona, dependencia].filter(Boolean).join(' — '),
+        buque: `${tipoBuque} "${nombre}" (${matricula})`,
+        fecha, tipoInsp, deficienciasLista: lista, idVinculo
+      });
+    }
 
     cerrarModalInspeccion();
     persistirDatosGuardia();

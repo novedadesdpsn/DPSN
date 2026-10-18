@@ -265,7 +265,16 @@ function abrirFormularioInspeccionEstandar(opciones) {
     $('bloqueDeficiencias').classList.toggle('oculto', tipo === 'inicial');
     $('bloqueFechaID').classList.toggle('oculto', tipo !== 'seguimiento');
   }
-  $('insTipo').addEventListener('change', actualizarVisibilidadPorTipo);
+  $('insTipo').addEventListener('change', () => {
+    actualizarVisibilidadPorTipo();
+    // Por avería (IA) → la categoría del resumen se marca sola en "Por avería" (se puede cambiar a mano).
+    if (opciones.incluirCategoria && !esBarcaza) {
+      const cat = $('insCategoria');
+      if ($('insTipo').value === 'averia') cat.value = 'porAveria';
+      else if (cat.value === 'porAveria') cat.value = 'pesquerosOtros';
+      cat.dispatchEvent(new Event('change'));
+    }
+  });
   actualizarVisibilidadPorTipo();
 
   $('defAccion').addEventListener('change', (e) => {

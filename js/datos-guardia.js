@@ -55,6 +55,59 @@ function normalizarLicencias() {
   return false;
 }
 
+/**
+ * Precargas (licencias e inspecciones técnicas previstas) pendientes de confirmar.
+ * Son PRIVADAS de cada usuario: no forman parte del parte compartido (no están en
+ * SECCIONES_PERSISTIDAS), así que nadie más las ve, no van al historial ni a los
+ * puntos de restauración. Se guardan en Firestore en precargasUsuario/{uid}
+ * (en modo demo, en localStorage con el DNI).
+ */
+function normalizarPrecargas() {
+  let corregido = false;
+  if (!DATOS_EJEMPLO.precargas || typeof DATOS_EJEMPLO.precargas !== 'object') { DATOS_EJEMPLO.precargas = {}; corregido = true; }
+  ['licencias', 'inspeccionesTecnicas'].forEach(k => {
+    if (!Array.isArray(DATOS_EJEMPLO.precargas[k])) { DATOS_EJEMPLO.precargas[k] = []; corregido = true; }
+  });
+  return corregido;
+}
+
+function claveLocalPrecargas() {
+  const u = (typeof obtenerSesion === 'function') ? obtenerSesion() : null;
+  return `novedades_dpsn_precargas_${u ? (u.uid || u.dni) : 'anon'}`;
+}
+
+/** Trae las precargas del usuario que ingresó (solo las suyas). */
+async function cargarPrecargasPrivadas() {
+  normalizarPrecargas();
+  const u = (typeof obtenerSesion === 'function') ? obtenerSesion() : null;
+  try {
+    let guardado = null;
+    if (!DEMO_MODE && u && u.uid) {
+      const doc = await db.collection('precargasUsuario').doc(u.uid).get();
+      if (doc.exists) guardado = doc.data();
+    } else {
+      const raw = localStorage.getItem(claveLocalPrecargas());
+      if (raw) guardado = JSON.parse(raw);
+    }
+    if (guardado) {
+      D.precargas.licencias = Array.isArray(guardado.licencias) ? guardado.licencias : [];
+      D.precargas.inspeccionesTecnicas = Array.isArray(guardado.inspeccionesTecnicas) ? guardado.inspeccionesTecnicas : [];
+    }
+  } catch (err) { console.error('No se pudieron leer las precargas:', err); }
+}
+
+/** Guarda SOLO las precargas del usuario (no toca el parte compartido). */
+function persistirPrecargas() {
+  normalizarPrecargas();
+  const paquete = { licencias: D.precargas.licencias, inspeccionesTecnicas: D.precargas.inspeccionesTecnicas };
+  try { localStorage.setItem(claveLocalPrecargas(), JSON.stringify(paquete)); } catch (e) { /* sin caché local */ }
+  const u = (typeof obtenerSesion === 'function') ? obtenerSesion() : null;
+  if (!DEMO_MODE && u && u.uid) {
+    db.collection('precargasUsuario').doc(u.uid).set(paquete)
+      .catch(err => console.error('No se pudieron guardar las precargas:', err));
+  }
+}
+
 function filasRNBUVacias() {
   const f = (nroOrden) => ({ nroOrden, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 });
   return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), aprobarFolio: f(8), darSalida: f(11) };
@@ -103,6 +156,7 @@ async function hidratarDatosGuardia() {
     }
     if (normalizarOficinas() || normalizarLicencias()) persistirDatosGuardia();
     inicializarEstadoConocido();
+    await cargarPrecargasPrivadas();
     return;
   }
 
@@ -122,6 +176,7 @@ async function hidratarDatosGuardia() {
 
   if (normalizarOficinas() || normalizarLicencias()) persistirDatosGuardia();
   inicializarEstadoConocido();
+  await cargarPrecargasPrivadas();
   activarEscuchaEnVivo();
 }
 
@@ -186,13 +241,14 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
     contenedor.appendChild(div);
   });
 
-  // Campos que solo aparecen si un checkbox está tildado (visibleSi: 'idDelCheckbox').
+  // Campos que solo aparecen si algún checkbox está tildado (visibleSi: 'idDelCheckbox' o ['id1','id2']).
   function actualizarCondicionales() {
     campos.forEach(c => {
       if (!c.visibleSi) return;
-      const chk = document.getElementById(`campo_${c.visibleSi}`);
+      const ids = Array.isArray(c.visibleSi) ? c.visibleSi : [c.visibleSi];
       const fila = contenedor.querySelector(`[data-campo="${c.id}"]`);
-      if (fila && chk) fila.classList.toggle('oculto', !chk.checked);
+      const algunoTildado = ids.some(id => { const chk = document.getElementById(`campo_${id}`); return chk && chk.checked; });
+      if (fila) fila.classList.toggle('oculto', !algunoTildado);
     });
   }
   campos.forEach(c => {
@@ -328,8 +384,8 @@ function camposCaso(esSAR) {
   ] : [];
   return [...base, ...sar, ...requiereInspeccion,
     { id: 'posicion', label: 'Posición (lat/lon o referencia)' },
-    { id: 'novedad', label: 'Novedad', tipo: 'textarea' },
     { id: 'caracteristicas', label: 'Características', tipo: 'textarea' },
+    { id: 'novedad', label: 'Novedad', tipo: 'textarea' },
     { id: 'situacion', label: 'Situación', tipo: 'textarea' }
   ];
 }
@@ -548,35 +604,40 @@ function camposInspeccionTecnica() {
   ];
 }
 
-/** Campos compartidos por Inspecciones Técnicas y Control de Gestión cuando son en el extranjero. */
+/** Campos compartidos por Inspecciones Técnicas y Control de Gestión: en el extranjero y/o por vía aérea. */
 function camposExterior() {
+  const vuelos = ['extranjero', 'viaAerea'];
   return [
     { id: 'extranjero', label: '', tipo: 'checkbox', textoCheck: 'Es en el extranjero' },
+    { id: 'viaAerea', label: '', tipo: 'checkbox', textoCheck: 'Se viaja por vía aérea (ej: destino en el sur del país)' },
     { id: 'disposicion', label: 'N.º de la disposición que autoriza la inspección', visibleSi: 'extranjero' },
-    { id: 'salidaFechaHora', label: 'Salida — Fecha y hora (ej: 24/09 23:55)', visibleSi: 'extranjero' },
-    { id: 'salidaVuelo', label: 'Salida — N.º de vuelo', visibleSi: 'extranjero' },
-    { id: 'salidaDestino', label: 'Salida — Aeropuerto / destino', visibleSi: 'extranjero' },
-    { id: 'regresoFechaHora', label: 'Regreso — Fecha y hora', visibleSi: 'extranjero' },
-    { id: 'regresoVuelo', label: 'Regreso — N.º de vuelo', visibleSi: 'extranjero' },
-    { id: 'regresoDestino', label: 'Regreso — Aeropuerto / destino', visibleSi: 'extranjero' }
+    { id: 'salidaFechaHora', label: 'Salida — GFH (ej: 24/09 23:55)', visibleSi: vuelos },
+    { id: 'salidaVuelo', label: 'Salida — N.º de vuelo', visibleSi: vuelos },
+    { id: 'salidaDestino', label: 'Salida — Destino (aeropuerto)', visibleSi: vuelos },
+    { id: 'regresoFechaHora', label: 'Retorno — GFH', visibleSi: vuelos },
+    { id: 'regresoVuelo', label: 'Retorno — N.º de vuelo', visibleSi: vuelos },
+    { id: 'regresoDestino', label: 'Retorno — Destino (aeropuerto)', visibleSi: vuelos }
   ];
 }
 
 /** Arma los datos de viaje a partir de lo cargado en el formulario. */
 function construirExterior(datos) {
-  const salida = { fechaHora: datos.salidaFechaHora || '', vuelo: datos.salidaVuelo || '', destino: datos.salidaDestino || '' };
-  const regreso = { fechaHora: datos.regresoFechaHora || '', vuelo: datos.regresoVuelo || '', destino: datos.regresoDestino || '' };
   const extranjero = datos.extranjero === 'si';
-  return extranjero
-    ? { extranjero: true, disposicion: datos.disposicion || '', salida, regreso }
-    : { extranjero: false, disposicion: '', salida: {}, regreso: {} };
+  const viaAerea = datos.viaAerea === 'si';
+  const conVuelos = extranjero || viaAerea;
+  return {
+    extranjero, viaAerea,
+    disposicion: extranjero ? (datos.disposicion || '') : '',
+    salida: conVuelos ? { fechaHora: datos.salidaFechaHora || '', vuelo: datos.salidaVuelo || '', destino: datos.salidaDestino || '' } : {},
+    regreso: conVuelos ? { fechaHora: datos.regresoFechaHora || '', vuelo: datos.regresoVuelo || '', destino: datos.regresoDestino || '' } : {}
+  };
 }
 
 /** Inverso: valores para precargar el formulario al editar. */
 function valoresExterior(actual) {
   const s = actual.salida || {}, r = actual.regreso || {};
   return {
-    extranjero: actual.extranjero ? 'si' : 'no', disposicion: actual.disposicion || '',
+    extranjero: actual.extranjero ? 'si' : 'no', viaAerea: actual.viaAerea ? 'si' : 'no', disposicion: actual.disposicion || '',
     salidaFechaHora: s.fechaHora || '', salidaVuelo: s.vuelo || '', salidaDestino: s.destino || '',
     regresoFechaHora: r.fechaHora || '', regresoVuelo: r.vuelo || '', regresoDestino: r.destino || ''
   };
@@ -717,6 +778,120 @@ function uiEditarLicencia(claveActual, indice) {
 function eliminarLicencia(clave, indice) {
   if (!confirm('¿Eliminar esta licencia?')) return;
   D.licencias[clave].splice(indice, 1);
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+// ---------- Precargas (licencias e inspecciones técnicas previstas) ----------
+// Se cargan de a poco, con anticipación, y recién al "Confirmar" pasan al parte real
+// (tabla, contadores, PDF). Mientras tanto viven aparte en D.precargas.
+function fechaDesdeTexto(t) {
+  const m = String(t || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10)) : null;
+}
+
+function licenciaDesdePrecarga(p) {
+  return { jerarquia: p.jerarquia, nombre: p.nombre, oficina: p.oficina, inicia: p.inicia, vence: p.vence,
+    diagnostico: p.categoria === 'medica' ? (p.diagnostico || '') : '' };
+}
+
+const CONFIG_PRECARGA = {
+  licencias: {
+    titulo: 'licencia',
+    campos: () => camposLicencia(),
+    construir: (datos) => ({ categoria: datos.categoria, jerarquia: datos.jerarquia, nombre: datos.nombre, oficina: datos.oficina,
+      diagnostico: datos.diagnostico, inicia: datos.inicia, vence: datos.vence }),
+    valores: (p) => ({ ...p }),
+    columnas: ['Categoría', 'Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
+    fila: (p) => [(OPCIONES_CATEGORIA_LICENCIA.find(o => o.valor === p.categoria) || {}).etiqueta || '', p.jerarquia, p.nombre + (p.oficina ? ` (${p.oficina})` : ''), p.inicia, p.vence],
+    confirmar: (p) => { const clave = MAPA_CATEGORIA_LICENCIA[p.categoria]; if (!D.licencias[clave]) D.licencias[clave] = []; D.licencias[clave].push(licenciaDesdePrecarga(p)); },
+    corresponde: (p) => { const f = fechaDesdeTexto(p.inicia); const h = new Date(); h.setHours(0, 0, 0, 0); return !!f && f <= h; }
+  },
+  inspeccionesTecnicas: {
+    titulo: 'inspección técnica prevista',
+    campos: () => camposInspeccionTecnica(),
+    construir: (datos) => construirInspeccionTecnica(datos),
+    valores: (p) => ({ especialidad: p.especialidad, embarcacion: p.embarcacion, requerimiento: p.requerimiento, lugar: p.lugar, inspector: p.inspector, ...valoresExterior(p) }),
+    columnas: ['Especialidad', 'Embarcación/Empresa', 'Requerimiento', 'Lugar', 'Inspector/MOI'],
+    fila: (p) => [p.especialidad, p.embarcacion, p.requerimiento, p.lugar, p.inspector],
+    confirmar: (p) => { D.inspeccionesTecnicas.push(p); },
+    corresponde: () => false
+  }
+};
+
+function listaPrecargas(tipo) {
+  if (!D.precargas) D.precargas = {};
+  if (!Array.isArray(D.precargas[tipo])) D.precargas[tipo] = [];
+  return D.precargas[tipo];
+}
+
+function precargasHtml(tipo) {
+  const lista = listaPrecargas(tipo);
+  if (!lista.length) return '';
+  const cfg = CONFIG_PRECARGA[tipo];
+  const editable = !SOLO_LECTURA_ACTUAL;
+  let html = `<div class="tarjeta" style="background:#fff8e6; border:1px dashed #d9a21b; margin-bottom:14px;">
+    <h2>Precargadas — pendientes de confirmar <span class="contador">${lista.length}</span></h2>
+    <p style="font-size:11.5px; color:var(--gris-700); margin:0 0 8px;">Solo las ves vos con tu usuario. No figuran en el parte, ni en el PDF, ni en los contadores, y el resto del personal no las ve, hasta que las confirmes.</p>
+    <table class="tabla-datos"><thead><tr>${cfg.columnas.map(c => `<th>${esc(c)}</th>`).join('')}${editable ? '<th></th>' : ''}</tr></thead><tbody>`;
+  lista.forEach((p, i) => {
+    const celdas = cfg.fila(p).map(c => `<td>${esc(c)}</td>`).join('');
+    html += `<tr>${celdas}${editable ? `<td style="display:flex; gap:4px; flex-wrap:wrap;">
+      ${cfg.corresponde(p) ? '<span class="tag averia" title="La fecha de inicio ya llegó">Corresponde</span>' : ''}
+      <button type="button" class="btn-primario" style="padding:2px 8px;" onclick="confirmarPrecarga('${tipo}',${i})">Confirmar</button>
+      <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarPrecarga('${tipo}',${i})">Editar</button>
+      <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarPrecarga('${tipo}',${i})">✕</button>
+    </td>` : ''}</tr>`;
+  });
+  html += `</tbody></table>`;
+  if (editable) html += `<button type="button" class="btn-primario" style="margin-top:10px;" onclick="confirmarTodasPrecargas('${tipo}')">Confirmar todas (${lista.length})</button>`;
+  return html + `</div>`;
+}
+
+function uiPrecargar(tipo) {
+  const cfg = CONFIG_PRECARGA[tipo];
+  abrirModalFormulario(`Precargar ${cfg.titulo}`, cfg.campos(), {}, (datos) => {
+    listaPrecargas(tipo).push(cfg.construir(datos));
+    persistirPrecargas();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarPrecarga(tipo, indice) {
+  const cfg = CONFIG_PRECARGA[tipo];
+  const actual = listaPrecargas(tipo)[indice];
+  abrirModalFormulario(`Editar precarga — ${cfg.titulo}`, cfg.campos(), cfg.valores(actual), (datos) => {
+    listaPrecargas(tipo)[indice] = cfg.construir(datos);
+    persistirPrecargas();
+    refrescarPestanaActual();
+  });
+}
+
+function eliminarPrecarga(tipo, indice) {
+  if (!confirm('¿Eliminar esta precarga?')) return;
+  listaPrecargas(tipo).splice(indice, 1);
+  persistirPrecargas();
+  refrescarPestanaActual();
+}
+
+function confirmarPrecarga(tipo, indice) {
+  const lista = listaPrecargas(tipo);
+  const p = lista[indice];
+  if (!p) return;
+  CONFIG_PRECARGA[tipo].confirmar(p);
+  lista.splice(indice, 1);
+  persistirPrecargas();
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+}
+
+function confirmarTodasPrecargas(tipo) {
+  const lista = listaPrecargas(tipo);
+  if (!lista.length) return;
+  if (!confirm(`¿Confirmar las ${lista.length} precargadas? Pasan al parte de hoy.`)) return;
+  lista.forEach(p => CONFIG_PRECARGA[tipo].confirmar(p));
+  D.precargas[tipo] = [];
+  persistirPrecargas();
   persistirDatosGuardia();
   refrescarPestanaActual();
 }

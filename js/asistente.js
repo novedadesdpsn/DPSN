@@ -93,7 +93,7 @@ function renderResultadoAsistente(r) {
       <span style="font-size:10.5px; color:var(--gris-500); white-space:nowrap;">${esc(r.fechaParte || '')}</span>
     </div>`;
   if (r.buque) {
-    const tipoTexto = r.tipo === 'inicial' ? 'Inicial (II)' : (r.tipo === 'detallada' ? 'Más Detallada (ID)' : `IS de ID Fecha ${r.fechaInspMasDetallada || '—'}`);
+    const tipoTexto = r.tipo === 'inicial' ? 'Inicial (II)' : (r.tipo === 'detallada' ? 'Más Detallada (ID)' : (r.tipo === 'averia' ? 'Por Avería (IA)' : `IS de ID Fecha ${r.fechaInspMasDetallada || '—'}`));
     html += `<div style="margin-top:4px;">${esc(r.buque.tipo || '')} "${esc(r.buque.nombre || '')}" (${esc(r.buque.matricula || '')}) — B/${esc(r.buque.bandera || '')}</div>`;
     html += `<div style="margin-top:2px; color:var(--gris-700);">Tipo de inspección: ${tipoTexto}</div>`;
     if (r.deficiencias && r.deficiencias.length) {

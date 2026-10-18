@@ -211,17 +211,17 @@ function renderExtraordinarias() {
   return `
     <div class="tarjeta">
       <h2>Inspecciones Extraordinarias — Bandera Argentina <span class="contador">${tot.diarioArg} hoy</span></h2>
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarInspeccionExtraordinaria('argentina')">+ Agregar inspección</button>` : ''}
       ${Object.keys(arg.porDependencia).length
         ? renderInspeccionesPorDependencia(arg, 'argentina')
         : '<div class="placeholder-panel">NIL — sin novedades para bandera argentina en este parte.</div>'}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionExtraordinaria('argentina')">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Inspecciones Extraordinarias — Bandera Extranjera <span class="contador">${tot.diarioExt} hoy</span></h2>
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarInspeccionExtraordinaria('extranjera')">+ Agregar inspección</button>` : ''}
       ${Object.keys(ext.porDependencia).length
         ? renderInspeccionesPorDependencia(ext, 'extranjera')
         : '<div class="placeholder-panel">NIL — sin novedades para bandera extranjera en este parte.</div>'}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionExtraordinaria('extranjera')">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Resumen de inspecciones <span style="font-size:10px; font-weight:400; text-transform:none; color:var(--gris-500);">(cálculo automático, editable)</span></h2>
@@ -236,7 +236,7 @@ function renderExtraordinarias() {
       </div>
       <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
         El total diario y el total anual se calculan solos a partir de las inspecciones cargadas — no se ingresan a mano.
-        El diario se reinicia cada día; el anual es correlativo (suma lo acumulado + lo cargado hoy). Las inspecciones de seguimiento (IS) no computan.
+        El diario se reinicia cada día; el anual es correlativo (suma lo acumulado + lo cargado hoy). Computan las iniciales, las más detalladas y las por avería (IA); las de seguimiento (IS) no.
       </p>
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:6px;" onclick="uiEditarResumenExtraordinarias()">Editar resumen</button>` : ''}
     </div>
@@ -252,8 +252,8 @@ function renderEstadoRectorPuerto() {
   return `
     <div class="tarjeta">
       <h2>Inspecciones por Estado Rector del Puerto</h2>
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarInspeccionPSC()">+ Agregar inspección</button>` : ''}
       ${renderInspeccionesPorDependencia(D.estadoRectorPuerto, 'psc')}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiAgregarInspeccionPSC()">+ Agregar inspección</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Resumen PSC (Port State Control)</h2>
@@ -277,24 +277,24 @@ function renderEstadoRectorPuerto() {
 // ---------- Casos MAS / SAR ----------
 function renderCasosMAS() {
   let html = `<div class="tarjeta"><h2>Casos MAS</h2>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarCaso('MAS')">+ Agregar caso</button>`;
   Object.entries(D.casosMAS.porDependencia).forEach(([dep, casos]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
     casos.forEach((c, idx) => { html += renderTarjetaCaso(c, false, dep, idx); });
     html += `</details>`;
   });
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" onclick="uiAgregarCaso('MAS')">+ Agregar caso</button>`;
   html += `</div>`;
   return html;
 }
 
 function renderCasosSAR() {
   let html = `<div class="tarjeta"><h2>Casos SAR</h2>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarCaso('SAR')">+ Agregar caso</button>`;
   Object.entries(D.casosSAR.porDependencia).forEach(([dep, casos]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
     casos.forEach((c, idx) => { html += renderTarjetaCaso(c, true, dep, idx); });
     html += `</details>`;
   });
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" onclick="uiAgregarCaso('SAR')">+ Agregar caso</button>`;
   html += `</div>`;
   return html;
 }
@@ -315,8 +315,8 @@ function renderTarjetaCaso(c, esSAR, dependencia, indice) {
         Inicio: ${esc(c.fechaInicio)} ${c.fechaCierre ? '· Cierre: ' + esc(c.fechaCierre) : ''}
       </div>` : ''}
       <div class="texto-justificado" style="margin-top:8px; font-size:13px;"><strong>Posición:</strong> ${esc(c.posicion)}</div>
-      <div class="texto-justificado" style="margin-top:4px; font-size:13px; color:var(--rojo);"><strong>Novedad:</strong> ${esc(c.novedad)}</div>
       <div class="texto-justificado" style="margin-top:4px; font-size:13px;"><strong>Características:</strong> ${esc(c.caracteristicas)}</div>
+      <div class="texto-justificado" style="margin-top:4px; font-size:13px; color:var(--rojo);"><strong>Novedad:</strong> ${esc(c.novedad)}</div>
       <div class="texto-justificado" style="margin-top:4px; font-size:13px;"><strong>Situación:</strong> ${esc(c.situacion)}</div>
       ${!SOLO_LECTURA_ACTUAL ? `
       <div style="margin-top:8px; display:flex; gap:8px;">
@@ -330,6 +330,13 @@ function renderTarjetaCaso(c, esSAR, dependencia, indice) {
 // ---------- Otros ----------
 function renderOtros() {
   let html = `<div class="tarjeta"><h2>Otros</h2>`;
+  if (!SOLO_LECTURA_ACTUAL) {
+    html += `
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <button class="btn-primario" type="button" onclick="uiAgregarOtroTexto()">+ Agregar bloque de texto</button>
+        <button class="btn-primario" type="button" onclick="uiAgregarOtroTabla()">+ Agregar bloque de tabla</button>
+      </div>`;
+  }
   Object.entries(D.otros.porDependencia).forEach(([dep, bloques]) => {
     html += `<details class="dependencia-bloque" open><summary>${esc(dep)}</summary>`;
     bloques.forEach((b, idx) => {
@@ -346,13 +353,6 @@ function renderOtros() {
     });
     html += `</details>`;
   });
-  if (!SOLO_LECTURA_ACTUAL) {
-    html += `
-      <div style="display:flex; gap:10px; margin-top:10px;">
-        <button class="btn-secundario" type="button" onclick="uiAgregarOtroTexto()">+ Agregar bloque de texto</button>
-        <button class="btn-secundario" type="button" onclick="uiAgregarOtroTabla()">+ Agregar bloque de tabla</button>
-      </div>`;
-  }
   html += `</div>`;
   return html;
 }
@@ -516,41 +516,43 @@ function renderTablaGenerica(columnas, filas) {
 
 function renderBuquesDetencion() {
   let html = `<div class="tarjeta"><h2>Buques con Detención <span class="contador">${D.buquesDetencion.length}</span></h2>`;
+  // Esta pestaña es solo de consulta: los buques se cargan y editan desde el mapa del Inicio.
   html += `<table class="tabla-datos"><thead><tr>
-    <th>N.º</th><th>Dependencia</th><th>Buque</th><th>Fecha</th><th>Tipo Insp.</th><th>Deficiencias</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+    <th>N.º</th><th>Dependencia</th><th>Buque</th><th>Fecha</th><th>Tipo Insp.</th><th>Deficiencias</th>
   </tr></thead><tbody>`;
   D.buquesDetencion.forEach((b, idx) => {
     html += `<tr>
       <td>${esc(b.numero)}</td><td>${esc(b.dependencia)}</td><td>${esc(b.buque)}</td>
       <td>${esc(b.fecha)}</td><td>${esc(b.tipoInsp)}</td>
       <td>${(b.deficienciasLista || []).length ? `<ul style="margin:0 0 0 14px; padding:0;">${b.deficienciasLista.map(d => `<li>Cód. ${esc(d.codigo)} (${String(d.cantidad).padStart(2,'0')})</li>`).join('')}</ul>` : esc(b.deficiencias || '')}</td>
-      ${!SOLO_LECTURA_ACTUAL ? (b.idVinculo
-        ? `<td style="font-size:10.5px; color:var(--gris-500);">Se gestiona desde el Inicio</td>`
-        : `<td style="display:flex; gap:4px;">
-        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarBuqueDetencionTabla(${idx})">Editar</button>
-        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarBuqueDetencionTabla(${idx})">✕</button>
-      </td>`) : ''}
     </tr>`;
   });
   html += `</tbody></table>`;
-  if (!SOLO_LECTURA_ACTUAL) html += `<p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">Los buques con detención se cargan desde el mapa del Inicio ("+ Agregar nuevo") y se listan acá automáticamente.</p>`;
+  html += `<p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">Los buques con detención se cargan y se editan desde el mapa del Inicio ("+ Agregar nuevo" y "Editar" en el cuadro de cada buque); acá se listan automáticamente.</p>`;
   html += `</div>`;
   return html;
 }
 
-/** Disposición + vuelos, para Inspecciones Técnicas y Control de Gestión en el extranjero. */
+/** Disposición + vuelos (GFH), para Inspecciones Técnicas y Control de Gestión en el extranjero o por vía aérea. */
 function htmlDatosExterior(i) {
-  if (!i.extranjero) return '';
+  if (!i.extranjero && !i.viaAerea) return '';
   const s = i.salida || {}, r = i.regreso || {};
   const lineas = [];
-  if (i.disposicion) lineas.push(`Disposición N.º ${esc(i.disposicion)}`);
+  if (i.extranjero && i.disposicion) lineas.push(`Disposición N.º ${esc(i.disposicion)}`);
   if (s.fechaHora || s.vuelo || s.destino) lineas.push(`Salida: ${esc(s.fechaHora || '—')} · Vuelo ${esc(s.vuelo || '—')} · ${esc(s.destino || '')}`);
-  if (r.fechaHora || r.vuelo || r.destino) lineas.push(`Regreso: ${esc(r.fechaHora || '—')} · Vuelo ${esc(r.vuelo || '—')} · ${esc(r.destino || '')}`);
+  if (r.fechaHora || r.vuelo || r.destino) lineas.push(`Retorno: ${esc(r.fechaHora || '—')} · Vuelo ${esc(r.vuelo || '—')} · ${esc(r.destino || '')}`);
   return lineas.length ? `<div style="font-size:11px; color:var(--gris-700); margin-top:4px;">${lineas.join('<br>')}</div>` : '';
 }
 
+function tagsViaje(i) {
+  return `${i.extranjero ? '<span class="tag detallada" style="margin-left:6px;">Extranjero</span>' : ''}${i.viaAerea ? '<span class="tag inicial" style="margin-left:6px;">Vía aérea</span>' : ''}`;
+}
+
 function renderInspeccionesTecnicas() {
-  let html = `<div class="tarjeta"><h2>Inspecciones Técnicas <span class="contador">${D.inspeccionesTecnicas.length}</span></h2><table class="tabla-datos"><thead><tr>
+  let html = `<div class="tarjeta"><h2>Inspecciones Técnicas <span class="contador">${D.inspeccionesTecnicas.length}</span></h2>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"><button class="btn-primario" type="button" onclick="uiAgregarInspeccionTecnica()">+ Agregar inspección prevista</button><button class="btn-secundario" type="button" title="Se guarda aparte y no figura en el parte hasta confirmarla" onclick="uiPrecargar('inspeccionesTecnicas')">+ Precargar</button></div>`;
+  html += precargasHtml('inspeccionesTecnicas');
+  html += `<table class="tabla-datos"><thead><tr>
     <th>Especialidad</th><th>Embarcación/Empresa</th><th>Requerimiento</th><th>Lugar</th><th>Inspector/MOI</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   D.inspeccionesTecnicas.forEach((i, idx) => {
@@ -561,7 +563,7 @@ function renderInspeccionesTecnicas() {
       <td>${esc(i.lugar)}</td>
       <td>
         ${esc(i.inspector)}
-        ${i.extranjero ? '<span class="tag detallada" style="margin-left:6px;">Extranjero</span>' : ''}
+        ${tagsViaje(i)}
         ${htmlDatosExterior(i)}
       </td>
       ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
@@ -571,19 +573,19 @@ function renderInspeccionesTecnicas() {
     </tr>`;
   });
   html += `</tbody></table>`;
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarInspeccionTecnica()">+ Agregar inspección prevista</button>`;
   html += `</div>`;
   return html;
 }
 
 function renderDivisionControlGestion() {
   let html = `<div class="tarjeta"><h2>División Control de Gestión <span class="contador">${D.divisionControlGestion.length}</span></h2>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarAuditoria()">+ Agregar auditoría</button>`;
   html += `<table class="tabla-datos"><thead><tr>
     <th>Tipo de auditoría</th><th>Embarcación/Empresa</th><th>Alcance</th><th>Lugar</th><th>Auditor</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   D.divisionControlGestion.forEach((a, idx) => {
     html += `<tr>
-      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}${a.extranjero ? ' <span class="tag detallada" style="margin-left:6px;">Extranjero</span>' : ''}${htmlDatosExterior(a)}</td>
+      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}${tagsViaje(a)}${htmlDatosExterior(a)}</td>
       ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarAuditoria(${idx})">Editar</button>
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarAuditoria(${idx})">✕</button>
@@ -591,13 +593,13 @@ function renderDivisionControlGestion() {
     </tr>`;
   });
   html += `</tbody></table>`;
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarAuditoria()">+ Agregar auditoría</button>`;
   html += `</div>`;
   return html;
 }
 
 function renderCursos() {
   let html = `<div class="tarjeta"><h2>Cursos / Comisiones <span class="contador">${D.cursos.length}</span></h2>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarCurso()">+ Agregar nuevo curso</button>`;
   if (!D.cursos.length) {
     html += '<div class="placeholder-panel">Todavía no hay cursos ni comisiones cargados.</div>';
   } else {
@@ -618,7 +620,6 @@ function renderCursos() {
     });
     html += `</tbody></table>`;
   }
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-top:12px;" onclick="uiAgregarCurso()">+ Agregar nuevo curso</button>`;
   html += `</div>`;
   return html;
 }
@@ -634,7 +635,8 @@ function renderLicencias() {
     ['Asuntos Personales', D.licencias.personales, 'personales']
   ];
   let html = '';
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:14px;" onclick="uiAgregarLicencia()">+ Agregar licencia</button>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"><button class="btn-primario" type="button" onclick="uiAgregarLicencia()">+ Agregar licencia</button><button class="btn-secundario" type="button" title="Se guarda aparte y no figura en el parte hasta confirmarla" onclick="uiPrecargar('licencias')">+ Precargar licencia</button></div>`;
+  html += precargasHtml('licencias');
   // Solo se muestran las categorías que tienen personal cargado.
   const conDatos = secciones.filter(([, lista]) => lista.length);
   if (!conDatos.length) html += '<div class="placeholder-panel">No hay licencias cargadas.</div>';

@@ -16,6 +16,42 @@ function fechaHoy() {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+/**
+ * Interlineado del PDF, como múltiplo del tamaño de letra.
+ * 1.4 equivale al "1,15" de Word (que se mide sobre la altura natural de la fuente).
+ * Si se quiere más aire, 1.5 es lo máximo que sigue viéndose prolijo; 1.8 sería el "1,5" de Word (muy espaciado).
+ */
+const INTERLINEADO_PDF = 1.4;
+
+// Abreviaturas que terminan en punto pero NO cierran una oración (no se capitaliza lo que sigue).
+const ABREVIATURAS_SIN_MAYUS = ['próx', 'prox', 'cód', 'cod', 'def', 'mat', 'aprox', 'etc', 'núm', 'num', 'sra', 'fig', 'pág', 'pag', 'art', 'inc', 'ref', 'apdo'];
+
+/** Primera letra en mayúscula al inicio del texto y después de cada punto (seguido o aparte). */
+function mayusInicioOracion(texto, tambienAlInicio) {
+  const re = tambienAlInicio ? /(^|[.!?]\s+)([a-záéíóúüñ])/g : /([.!?]\s+)([a-záéíóúüñ])/g;
+  return String(texto).replace(re, (m, pre, ch, off, str) => {
+    if (pre) {
+      const antes = str.slice(0, off).match(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9º]+)$/);
+      const palabra = antes ? antes[1].toLowerCase() : '';
+      if (!palabra || /\d/.test(palabra) || palabra.length <= 2 || ABREVIATURAS_SIN_MAYUS.includes(palabra)) return m;
+    }
+    return pre + ch.toUpperCase();
+  });
+}
+
+/** Aplica mayúsculas de oración a los tramos de un párrafo y capitaliza el comienzo del párrafo. */
+function prepararRunsMayusculas(runs) {
+  const conLetras = (t) => /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(t);
+  const primero = runs.findIndex(r => conLetras(String(r.texto)));
+  return runs.map((r, i) => {
+    let t = mayusInicioOracion(r.texto, false);
+    // Empieza oración: el primer tramo del párrafo, o el que sigue a una etiqueta como "Nota:" o "Novedad:".
+    const sigueEtiqueta = i > 0 && /:\s*$/.test(String(runs[i - 1].texto));
+    if (i === primero || sigueEtiqueta) t = t.replace(/^(\s*[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]*)([a-záéíóúüñ])/, (m, pre, ch) => pre + ch.toUpperCase());
+    return { ...r, texto: t };
+  });
+}
+
 const MESES_ES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 
 /** Fecha del parte con la fecha actual: "14 0700 a 15 0700 de OCTUBRE de 2026" (0700 del día anterior a 0700 de hoy). */
@@ -153,6 +189,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
    * runs: [{ texto, negrita }]. Devuelve el nuevo y.
    */
   function escribirParrafoMixto(runs, x, anchoMax, yInicial, tamano, centrado) {
+    runs = prepararRunsMayusculas(runs);
     doc.setFontSize(tamano);
     const espacio = doc.getStringUnitWidth(' ') * tamano / doc.internal.scaleFactor;
     const lineas = [[]];
@@ -192,7 +229,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         doc.text(w.texto, cx, y2);
         cx += doc.getStringUnitWidth(w.texto) * tamano / doc.internal.scaleFactor + (i < linea.length - 1 ? espacioJustificado : 0);
       });
-      y2 += tamano * 1.4;
+      y2 += tamano * INTERLINEADO_PDF;
     });
     return y2;
   }
@@ -297,7 +334,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     const anchoDisp = anchoUtil - (xIndent - margen);
 
     if (g.accion === 'recodifico') {
-      const verbo = cant > 1 ? 'recodificándose ' : 'recodificándose ';
+      const verbo = 'Recodificándose ';
       const cantidadTexto = `${numeroALetras(cant)} (${numeroConDigitos(cant)}) `;
       const codigoAnteriorTexto = `def. Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) `;
       const codigoNuevoTexto = `a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)}).`;
@@ -493,8 +530,8 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
 
         y = escribirParrafoMixto([{ texto: 'Posición:', negrita: true }, { texto: c.posicion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         y = escribirParrafoMixto([{ texto: 'Características:', negrita: true }, { texto: c.caracteristicas || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
-        y = escribirParrafoMixto([{ texto: 'Situación:', negrita: true }, { texto: c.situacion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         y = escribirParrafoMixto([{ texto: 'Novedad:', negrita: true }, { texto: c.novedad || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
+        y = escribirParrafoMixto([{ texto: 'Situación:', negrita: true }, { texto: c.situacion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 9);
         y += 10;
       });
       y += 4;
@@ -554,10 +591,15 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
  * avisa por consola.
  */
 function guardarCopiaEnDrive(doc, nombreArchivo) {
-  if (typeof GUARDADO_EN_DRIVE_ACTIVO === 'undefined' || !GUARDADO_EN_DRIVE_ACTIVO) return;
+  const avisar = (t, ms) => { try { UNDO.aviso(t, ms); } catch (e) { console.log(t); } };
+  if (typeof GUARDADO_EN_DRIVE_ACTIVO === 'undefined' || !GUARDADO_EN_DRIVE_ACTIVO) {
+    avisar('PDF descargado. Drive no está configurado (falta integraciones-config.js).');
+    return;
+  }
 
   const dataUri = doc.output('datauristring');
   const base64 = dataUri.split(',')[1];
+  avisar('Guardando copia en Drive…');
 
   fetch(APPS_SCRIPT_WEBAPP_URL, {
     method: 'POST',
@@ -570,9 +612,13 @@ function guardarCopiaEnDrive(doc, nombreArchivo) {
   })
     .then(r => r.json())
     .then(res => {
-      if (!res.ok) console.error('No se pudo guardar el PDF en Drive:', res.error);
+      if (res.ok) avisar('✓ Copia guardada en Drive (reemplaza la de hoy).');
+      else { console.error('Drive:', res.error); avisar('No se pudo guardar en Drive: ' + (res.error || 'error'), 6000); }
     })
-    .catch(err => console.error('No se pudo contactar el Apps Script para guardar en Drive:', err));
+    .catch(err => {
+      console.error('No se pudo contactar el Apps Script:', err);
+      avisar('No se pudo contactar a Drive (revisá URL y permisos "Cualquier usuario").', 6000);
+    });
 }
 
 /** Lista los PDFs guardados en Drive y los muestra en un modal, con link para abrir cada uno. */
