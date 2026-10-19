@@ -95,14 +95,14 @@ function abrirFormularioInspeccionEstandar(opciones) {
 
   const categoriasHtml = (opciones.incluirCategoria && !esBarcaza) ? `
     <div class="campo">
-      <label>Categoría (para el resumen)</label>
+      <label>Tipo de buque (categoría para el resumen)</label>
       <select id="insCategoria">
         <option value="pesquerosOtros" ${v.categoria === 'pesquerosOtros' ? 'selected' : ''}>Pesqueros/Otros</option>
-        <option value="porAveria" ${v.categoria === 'porAveria' ? 'selected' : ''}>Por avería</option>
         <option value="cargaPasaje" ${v.categoria === 'cargaPasaje' ? 'selected' : ''}>Buque de Carga/Pasaje</option>
         <option value="convoyesExtr" ${v.categoria === 'convoyesExtr' ? 'selected' : ''}>Convoyes/Buques Extr.</option>
         <option value="convoyArgentino" ${v.categoria === 'convoyArgentino' ? 'selected' : ''}>Convoy B/ARG</option>
       </select>
+      <p style="font-size:11.5px; color:var(--gris-500); margin-top:4px;">Si el tipo de inspección (arriba) es "Por avería", el cuadro resumen la cuenta como "Por avería" sin importar lo que elijas aquí — esto queda para saber qué clase de buque es (y, si es convoy, poder cargarle características/barcazas).</p>
     </div>` : '';
 
   const modal = document.createElement('div');
@@ -216,10 +216,10 @@ function abrirFormularioInspeccionEstandar(opciones) {
           <textarea id="insNota">${esc(v.nota || '')}</textarea>
         </div>
 
-        <div class="campo oculto" id="bloqueTieneBarcazas">
+        <div class="campo ${esBarcaza ? 'oculto' : ''}" id="bloqueTieneBarcazas">
           <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;">
             <input type="checkbox" id="insTieneBarcazas" ${barcazas.length ? 'checked' : ''} style="width:16px;height:16px;">
-            ¿El convoy tiene barcazas para cargar?
+            ¿Lleva barcazas para cargar?
           </label>
         </div>
         <div class="campo oculto" id="bloqueBarcazas">
@@ -313,16 +313,10 @@ function abrirFormularioInspeccionEstandar(opciones) {
     $('bloqueDeficiencias').classList.toggle('oculto', tipo === 'inicial');
     $('bloqueFechaID').classList.toggle('oculto', tipo !== 'seguimiento');
   }
-  $('insTipo').addEventListener('change', () => {
-    actualizarVisibilidadPorTipo();
-    // Por avería (IA) → la categoría del resumen se marca sola en "Por avería" (se puede cambiar a mano).
-    if (opciones.incluirCategoria && !esBarcaza) {
-      const cat = $('insCategoria');
-      if ($('insTipo').value === 'averia') cat.value = 'porAveria';
-      else if (cat.value === 'porAveria') cat.value = 'pesquerosOtros';
-      cat.dispatchEvent(new Event('change'));
-    }
-  });
+  // El tipo de buque (categoría) no se toca al cambiar el tipo de inspección: "Por avería" para el
+  // cuadro resumen se decide solo por el tipo de inspección (ver calcularResumenCategorias en app.js),
+  // así se puede dejar cargado que es, por ejemplo, un convoy, aunque la inspección sea por avería.
+  $('insTipo').addEventListener('change', actualizarVisibilidadPorTipo);
   actualizarVisibilidadPorTipo();
 
   $('defAccion').addEventListener('change', (e) => {
@@ -364,13 +358,14 @@ function abrirFormularioInspeccionEstandar(opciones) {
 
   renderizarChipsDeficiencias();
 
-  // ---- Convoy y barcazas (solo Convoyes/Buques Extr. y Convoy B/ARG) ----
+  // ---- Convoy (descripción del remolcador: solo Convoyes/Buques Extr. y Convoy B/ARG) ----
+  // Las barcazas, en cambio, se pueden cargar en cualquier inspección (inicial, detallada, por avería,
+  // de seguimiento, etc.) sin depender de la categoría — así "por avería" sigue contando como avería
+  // en el cuadro resumen, y no hace falta pasarla a "convoy" solo para poder cargar las barcazas.
   const esCategoriaConvoy = () => !esBarcaza && opciones.incluirCategoria && ['convoyesExtr', 'convoyArgentino'].includes($('insCategoria').value);
   function actualizarBloquesConvoy() {
-    const ver = esCategoriaConvoy();
-    $('bloqueConvoy').classList.toggle('oculto', !ver);
-    $('bloqueTieneBarcazas').classList.toggle('oculto', !ver);
-    $('bloqueBarcazas').classList.toggle('oculto', !(ver && $('insTieneBarcazas').checked));
+    $('bloqueConvoy').classList.toggle('oculto', !esCategoriaConvoy());
+    $('bloqueBarcazas').classList.toggle('oculto', !(!esBarcaza && $('insTieneBarcazas').checked));
   }
   $('insTieneBarcazas').addEventListener('change', actualizarBloquesConvoy);
   function renderizarBarcazas() {
@@ -424,10 +419,8 @@ function abrirFormularioInspeccionEstandar(opciones) {
       nota: $('insNota').value.trim()
     };
     if (opciones.incluirCategoria && !esBarcaza) datos.categoria = $('insCategoria').value;
-    if (esCategoriaConvoy()) {
-      datos.caracteristicasConvoy = $('insConvoy').value.trim();
-      datos.barcazas = $('insTieneBarcazas').checked ? barcazas : [];
-    }
+    if (esCategoriaConvoy()) datos.caracteristicasConvoy = $('insConvoy').value.trim();
+    if (!esBarcaza) datos.barcazas = $('insTieneBarcazas').checked ? barcazas : [];
     cerrarModalInspeccion(idModal);
     opciones.onGuardar(datos);
   });

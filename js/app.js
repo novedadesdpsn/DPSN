@@ -59,7 +59,10 @@ function calcularResumenCategorias() {
     Object.values(grupo.porDependencia).forEach(lista => {
       lista.forEach(insp => {
         if (insp.tipo === 'seguimiento') return;
-        const c = insp.categoria || 'pesquerosOtros';
+        // "Por avería" se decide por el tipo de inspección, no por el tipo de buque elegido en
+        // "categoría": así un convoy (o cualquier otro) inspeccionado por avería cuenta como avería,
+        // y la categoría elegida queda intacta para lo demás (texto de convoy, barcazas, etc.).
+        const c = insp.tipo === 'averia' ? 'porAveria' : (insp.categoria || 'pesquerosOtros');
         if (cat[c] !== undefined) cat[c]++;
       });
     });
