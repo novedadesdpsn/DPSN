@@ -72,6 +72,15 @@ function calcularResumenCategorias() {
   return cat;
 }
 
+/** Inspeccionados PSC: se cuenta solo (IISD + IICD), igual que las extraordinarias; IS no computa.
+ *  Si hay una corrección manual cargada, esa gana por sobre el cálculo automático. */
+function calcularInspeccionadosPSC() {
+  const rp = D.estadoRectorPuerto.resumen;
+  const auto = contarInspeccionesGrupo(D.estadoRectorPuerto);
+  const man = rp.inspeccionadosManual;
+  return (man !== undefined && man !== null && man !== '') ? (parseInt(man, 10) || 0) : auto;
+}
+
 function contarOtros() {
   let n = 0;
   Object.values(D.otros.porDependencia).forEach(lista => { n += lista.length; });
@@ -104,7 +113,7 @@ function renderInicio() {
           <div class="grid-resumen">
             <div class="stat acc-1 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-extraordinarias')"><div class="valor">${tot.diarioArg}</div><div class="etiqueta">Insp. Extraord. Argentina</div></div>
             <div class="stat acc-2 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-extraordinarias')"><div class="valor">${tot.diarioExt}</div><div class="etiqueta">Insp. Extraord. Extranjera</div></div>
-            <div class="stat acc-3 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-psc')"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
+            <div class="stat acc-3 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('insp-psc')"><div class="valor">${calcularInspeccionadosPSC()}</div><div class="etiqueta">PSC inspeccionados hoy</div></div>
             <div class="stat acc-4 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('casos-mas')"><div class="valor">${contarCasos(D.casosMAS)}</div><div class="etiqueta">Casos MAS pendientes</div></div>
             <div class="stat acc-5 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('casos-sar')"><div class="valor">${contarCasos(D.casosSAR)}</div><div class="etiqueta">Casos SAR pendientes</div></div>
             <div class="stat acc-1 stat-link" role="button" tabindex="0" title="Ir a la pestaña" onclick="mostrarPestana('otros')"><div class="valor">${contarOtros()}</div><div class="etiqueta">Otras situaciones</div></div>
@@ -245,9 +254,10 @@ function renderExtraordinarias() {
 
 function renderEstadoRectorPuerto() {
   const rp = D.estadoRectorPuerto.resumen;
+  const inspeccionadosDiario = calcularInspeccionadosPSC();
   const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
-  const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + (rp.inspeccionadosDiario || 0);
-  const pctDiario = rp.factiblesDiario ? ((rp.inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(2) : '0.00';
+  const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosDiario;
+  const pctDiario = rp.factiblesDiario ? ((inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(2) : '0.00';
   const pctAnual = factiblesAnual ? ((inspeccionadosAnual / factiblesAnual) * 100).toFixed(2) : '0.00';
   return `
     <div class="tarjeta">
@@ -260,14 +270,14 @@ function renderEstadoRectorPuerto() {
       <div class="grid-resumen">
         <div class="stat"><div class="valor">${rp.buquesIngresados}</div><div class="etiqueta">Buques extr. ingresados</div></div>
         <div class="stat"><div class="valor">${rp.factiblesDiario}</div><div class="etiqueta">Factibles (hoy)</div></div>
-        <div class="stat"><div class="valor">${rp.inspeccionadosDiario}</div><div class="etiqueta">Inspeccionados (hoy)</div></div>
+        <div class="stat"><div class="valor">${inspeccionadosDiario}</div><div class="etiqueta">Inspeccionados (hoy)</div></div>
         <div class="stat"><div class="valor">${pctDiario}%</div><div class="etiqueta">Total % (hoy)</div></div>
         <div class="stat"><div class="valor">${factiblesAnual}</div><div class="etiqueta">Factibles (anual)</div></div>
         <div class="stat"><div class="valor">${inspeccionadosAnual}</div><div class="etiqueta">Inspeccionados (anual)</div></div>
         <div class="stat"><div class="valor">${pctAnual}%</div><div class="etiqueta">Total % (anual)</div></div>
       </div>
       <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
-        Los totales % se calculan solos por regla de tres simple (inspeccionados sobre factibles). El anual se arma sumando el acumulado previo + lo de hoy — no hace falta tipearlo entero cada vez.
+        "Inspeccionados (hoy)" se suma solo a partir de las inspecciones cargadas arriba (inicial sin deficiencias + inicial con deficiencia); las de seguimiento no computan. Los totales % se calculan solos por regla de tres simple (inspeccionados sobre factibles). El anual se arma sumando el acumulado previo + lo de hoy — no hace falta tipearlo entero cada vez.
       </p>
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarResumenPSC()">Editar</button>` : ''}
     </div>

@@ -188,7 +188,10 @@ function abrirFormularioInspeccionEstandar(opciones) {
               <label>Cómo se subsanó (opcional) — una por línea, en el mismo orden que las deficiencias: la 1.ª línea corresponde a la 1.ª deficiencia, la 2.ª a la 2.ª, y así</label>
               <textarea id="defComoSubsano" placeholder="Ej: Se verificó el correcto funcionamiento del generador N.º 1."></textarea>
             </div>
-            <button type="button" class="btn-secundario" id="btnAgregarGrupoDef">+ Agregar deficiencia</button>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button type="button" class="btn-secundario" id="btnAgregarGrupoDef">+ Agregar deficiencia</button>
+              <button type="button" class="btn-secundario oculto" id="btnCancelarEdicionDef" style="color:var(--gris-500);">Cancelar edición</button>
+            </div>
           </div>
         </div>
 
@@ -242,22 +245,67 @@ function abrirFormularioInspeccionEstandar(opciones) {
     cont.innerHTML = grupos.map((g, i) => {
       const { items, extra } = paresDeficiencia(g);
       return `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; background:#fff; border:1px solid var(--gris-300); border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; background:${i === editandoIdx ? '#fff8e6' : '#fff'}; border:1px solid ${i === editandoIdx ? '#d9a21b' : 'var(--gris-300)'}; border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:12px;">
         <div>
           <div>${esc(textoGrupoDeficiencia(g, listaCodigos))}</div>
           ${items.length ? `<ol style="margin:3px 0 0 20px; padding:0; list-style:decimal;">${items.map(it => `<li>${esc(it.texto)}${it.subsano ? ` <strong>${esc(subsanoEntreParentesis(it.subsano))}</strong>` : ''}</li>`).join('')}</ol>` : ''}
           ${extra.length ? `<div style="margin-top:3px; font-weight:600;">${extra.map(esc).join('<br>')}</div>` : ''}
         </div>
-        <button type="button" data-idx="${i}" class="btnQuitarGrupo" style="background:none;border:none;color:var(--rojo);font-size:14px; flex-shrink:0;">✕</button>
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+          <button type="button" data-idx="${i}" class="btnEditarGrupo" style="background:none;border:none;color:var(--azul-medio,#2f6fb3);font-size:14px;" title="Editar">✎</button>
+          <button type="button" data-idx="${i}" class="btnQuitarGrupo" style="background:none;border:none;color:var(--rojo);font-size:14px;" title="Eliminar">✕</button>
+        </div>
       </div>
     `;
     }).join('');
     cont.querySelectorAll('.btnQuitarGrupo').forEach(btn => {
       btn.addEventListener('click', () => {
-        grupos.splice(parseInt(btn.dataset.idx, 10), 1);
+        const idx = parseInt(btn.dataset.idx, 10);
+        grupos.splice(idx, 1);
+        if (editandoIdx === idx) cancelarEdicionGrupo();
+        else if (editandoIdx !== null && editandoIdx > idx) editandoIdx--;
         renderizarChipsDeficiencias();
       });
     });
+    cont.querySelectorAll('.btnEditarGrupo').forEach(btn => {
+      btn.addEventListener('click', () => editarGrupo(parseInt(btn.dataset.idx, 10)));
+    });
+  }
+
+  // ---- Editar una deficiencia ya cargada: la carga en el cuadro de abajo en vez de borrar y recargar todo ----
+  let editandoIdx = null;
+
+  function editarGrupo(idx) {
+    const g = grupos[idx];
+    if (!g) return;
+    editandoIdx = idx;
+    $('defAccion').value = g.accion || 'detecto';
+    $('defAccion').dispatchEvent(new Event('change'));
+    $('defCantidad').value = String(g.cantidad || 1);
+    if (g.accion === 'recodifico') {
+      $('defCodigoAnterior').value = g.codigoAnterior || '';
+      $('defCodigoNuevo').value = g.codigoNuevo || '';
+    } else {
+      $('defCodigo').value = g.codigo || '';
+      $('defCodigo2').value = g.codigo2 || '';
+    }
+    $('defDescripcion').value = g.descripcionDeficiencia !== undefined ? g.descripcionDeficiencia : (g.descripcionAdicional || '');
+    $('defComoSubsano').value = g.comoSeSubsano || '';
+    $('btnAgregarGrupoDef').textContent = 'Guardar cambios en la deficiencia';
+    $('btnCancelarEdicionDef').classList.remove('oculto');
+    $('defDescripcion').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    renderizarChipsDeficiencias();
+  }
+
+  function cancelarEdicionGrupo() {
+    editandoIdx = null;
+    $('defAccion').value = 'detecto';
+    $('defAccion').dispatchEvent(new Event('change'));
+    $('defCantidad').value = '1';
+    $('defDescripcion').value = '';
+    $('defComoSubsano').value = '';
+    $('btnAgregarGrupoDef').textContent = '+ Agregar deficiencia';
+    $('btnCancelarEdicionDef').classList.add('oculto');
   }
 
   function actualizarVisibilidadPorTipo() {
@@ -293,18 +341,24 @@ function abrirFormularioInspeccionEstandar(opciones) {
     const cantidad = parseInt($('defCantidad').value, 10);
     const descripcionDeficiencia = $('defDescripcion').value.trim();
     const comoSeSubsano = $('defComoSubsano').value.trim();
+    let grupo;
     if (accion === 'recodifico') {
-      grupos.push({
+      grupo = {
         accion, cantidad, descripcionDeficiencia, comoSeSubsano,
         codigoAnterior: $('defCodigoAnterior').value,
         codigoNuevo: $('defCodigoNuevo').value
-      });
+      };
     } else {
       const codigo2 = $('defCodigo2').value;
-      grupos.push({ accion, cantidad, descripcionDeficiencia, comoSeSubsano, codigo: $('defCodigo').value, codigo2: codigo2 || null });
+      grupo = { accion, cantidad, descripcionDeficiencia, comoSeSubsano, codigo: $('defCodigo').value, codigo2: codigo2 || null };
     }
-    $('defDescripcion').value = '';
-    $('defComoSubsano').value = '';
+    if (editandoIdx !== null) { grupos[editandoIdx] = grupo; } else { grupos.push(grupo); }
+    cancelarEdicionGrupo();
+    renderizarChipsDeficiencias();
+  });
+
+  $('btnCancelarEdicionDef').addEventListener('click', () => {
+    cancelarEdicionGrupo();
     renderizarChipsDeficiencias();
   });
 

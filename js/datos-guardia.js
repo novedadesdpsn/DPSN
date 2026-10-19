@@ -1036,14 +1036,14 @@ function uiEditarResumenPSC() {
   abrirModalFormulario('Editar resumen PSC', [
     { id: 'buquesIngresados', label: 'Buques extranjeros ingresados (hoy)', default: String(rp.buquesIngresados) },
     { id: 'factiblesDiario', label: 'Factibles de ser inspeccionados (hoy)', default: String(rp.factiblesDiario) },
-    { id: 'inspeccionadosDiario', label: 'Cantidad de inspeccionados (hoy)', default: String(rp.inspeccionadosDiario) },
+    { id: 'inspeccionadosManual', label: 'Corrección manual de "Inspeccionados (hoy)" (dejar vacío para que se sume solo, a partir de las inspecciones cargadas)', default: String(rp.inspeccionadosManual !== undefined && rp.inspeccionadosManual !== null ? rp.inspeccionadosManual : '') },
     { id: 'factiblesAnualPrevio', label: 'Acumulado anual de factibles — previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.factiblesAnualPrevio || 0) },
     { id: 'inspeccionadosAnualPrevio', label: 'Acumulado anual de inspeccionados — previo a hoy (ídem, una sola vez)', default: String(rp.inspeccionadosAnualPrevio || 0) }
   ], {}, (datos) => {
     D.estadoRectorPuerto.resumen = {
       buquesIngresados: parseInt(datos.buquesIngresados, 10) || 0,
       factiblesDiario: parseInt(datos.factiblesDiario, 10) || 0,
-      inspeccionadosDiario: parseInt(datos.inspeccionadosDiario, 10) || 0,
+      inspeccionadosManual: datos.inspeccionadosManual.trim() === '' ? null : (parseInt(datos.inspeccionadosManual, 10) || 0),
       factiblesAnualPrevio: parseInt(datos.factiblesAnualPrevio, 10) || 0,
       inspeccionadosAnualPrevio: parseInt(datos.inspeccionadosAnualPrevio, 10) || 0
     };
