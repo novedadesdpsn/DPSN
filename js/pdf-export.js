@@ -82,7 +82,7 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
         <button type="button" onclick="cerrarModalExportar()">✕</button>
       </div>
       <div class="modal-todos">
-        <input type="checkbox" id="chkTodosExportar" checked>
+        <input type="checkbox" id="chkTodosExportar">
         <label for="chkTodosExportar">Seleccionar todos los ítems</label>
       </div>
       <div class="modal-lista" id="listaItemsExportar">
