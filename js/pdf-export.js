@@ -88,7 +88,7 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
       <div class="modal-lista" id="listaItemsExportar">
         ${items.map(it => `
           <label>
-            <input type="checkbox" class="chk-item-exportar" value="${esc(it.id)}" checked>
+            <input type="checkbox" class="chk-item-exportar" value="${esc(it.id)}" ${it.id === 'oficinas' ? '' : 'checked'}>
             ${esc(it.label)}
           </label>
         `).join('')}
