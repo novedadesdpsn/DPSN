@@ -232,9 +232,16 @@ function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, fila
       const marca = '(' + '*'.repeat(idx + 1) + ')';
       const s = i.salida || {}, r = i.regreso || {};
       pie.push(...lineasVuelo(i, marca));
-      const fs = diaMesDeTexto(s.fechaHora), fr = diaMesDeTexto(r.fechaHora);
-      if (fs) fechas.push(fs);
-      if (fr) fechas.push(fr);
+      // La banda de fechas toma primero el "desde / hasta" cargado; si no hay, las fechas de los vuelos.
+      const dd = partesFechaISO(i.desde), hh = partesFechaISO(i.hasta);
+      if (dd || hh) {
+        if (dd) fechas.push({ dia: dd.d, mes: dd.m });
+        if (hh) fechas.push({ dia: hh.d, mes: hh.m });
+      } else {
+        const fs = diaMesDeTexto(s.fechaHora), fr = diaMesDeTexto(r.fechaHora);
+        if (fs) fechas.push(fs);
+        if (fr) fechas.push(fr);
+      }
       return filaDe(i, marca);
     });
     let banda = '';
@@ -256,16 +263,16 @@ function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, fila
 function textoInspeccionesTecnicas() {
   return seccionesConExterior(
     D.inspeccionesTecnicas, 'Inspecciones Técnicas', 'Inspecciones al Exterior',
-    ['ESP', 'EMBARCACION', 'REQUERIMIENTO', 'LUGAR', 'INSPECTOR/MOI'],
-    (i, marca) => [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, `${i.inspector}${marca ? ' ' + marca : ''}`]
+    ['ESP', 'EMBARCACION', 'REQUERIMIENTO', 'LUGAR', 'INSPECTOR/MOI', 'FECHA'],
+    (i, marca) => [i.especialidad, i.embarcacion, i.requerimiento, i.lugar, `${i.inspector}${marca ? ' ' + marca : ''}`, textoRangoFechas(i.desde, i.hasta) || '—']
   );
 }
 
 function textoDivisionControlGestion() {
   return seccionesConExterior(
     D.divisionControlGestion, 'División Control de Gestión', 'Auditorías al Exterior',
-    ['Tipo de Auditoría', 'Embarcación/Empresa', 'Alcance', 'Lugar', 'Auditor'],
-    (a, marca) => [a.tipoAuditoria, a.embarcacion, a.alcance, a.lugar, `${a.auditor}${marca ? ' ' + marca : ''}`]
+    ['Tipo de Auditoría', 'Embarcación/Empresa', 'Alcance', 'Lugar', 'Auditor', 'Fecha'],
+    (a, marca) => [a.tipoAuditoria, a.embarcacion, a.alcance, a.lugar, `${a.auditor}${marca ? ' ' + marca : ''}`, textoRangoFechas(a.desde, a.hasta) || '—']
   );
 }
 

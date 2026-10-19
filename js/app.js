@@ -553,7 +553,7 @@ function renderInspeccionesTecnicas() {
   if (!SOLO_LECTURA_ACTUAL) html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"><button class="btn-primario" type="button" onclick="uiAgregarInspeccionTecnica()">+ Agregar inspección prevista</button><button class="btn-secundario" type="button" title="Se guarda aparte y no figura en el parte hasta confirmarla" onclick="uiPrecargar('inspeccionesTecnicas')">+ Precargar</button></div>`;
   html += precargasHtml('inspeccionesTecnicas');
   html += `<table class="tabla-datos"><thead><tr>
-    <th>Especialidad</th><th>Embarcación/Empresa</th><th>Requerimiento</th><th>Lugar</th><th>Inspector/MOI</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+    <th>Especialidad</th><th>Embarcación/Empresa</th><th>Requerimiento</th><th>Lugar</th><th>Inspector/MOI</th><th>Desde</th><th>Hasta</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   D.inspeccionesTecnicas.forEach((i, idx) => {
     html += `<tr>
@@ -566,6 +566,8 @@ function renderInspeccionesTecnicas() {
         ${tagsViaje(i)}
         ${htmlDatosExterior(i)}
       </td>
+      <td>${esc(fechaISOaCorta(i.desde))}</td>
+      <td>${esc(fechaISOaCorta(i.hasta))}</td>
       ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarInspeccionTecnica(${idx})">Editar</button>
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarInspeccionTecnica(${idx})">✕</button>
@@ -579,13 +581,14 @@ function renderInspeccionesTecnicas() {
 
 function renderDivisionControlGestion() {
   let html = `<div class="tarjeta"><h2>División Control de Gestión <span class="contador">${D.divisionControlGestion.length}</span></h2>`;
-  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarAuditoria()">+ Agregar auditoría</button>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;"><button class="btn-primario" type="button" onclick="uiAgregarAuditoria()">+ Agregar auditoría</button><button class="btn-secundario" type="button" title="Se guarda aparte, solo para vos, y no figura en el parte hasta confirmarla" onclick="uiPrecargar('divisionControlGestion')">+ Precargar</button></div>`;
+  html += precargasHtml('divisionControlGestion');
   html += `<table class="tabla-datos"><thead><tr>
-    <th>Tipo de auditoría</th><th>Embarcación/Empresa</th><th>Alcance</th><th>Lugar</th><th>Auditor</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+    <th>Tipo de auditoría</th><th>Embarcación/Empresa</th><th>Alcance</th><th>Lugar</th><th>Auditor</th><th>Desde</th><th>Hasta</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   D.divisionControlGestion.forEach((a, idx) => {
     html += `<tr>
-      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}${tagsViaje(a)}${htmlDatosExterior(a)}</td>
+      <td>${esc(a.tipoAuditoria)}</td><td>${esc(a.embarcacion)}</td><td>${esc(a.alcance)}</td><td>${esc(a.lugar)}</td><td>${esc(a.auditor)}${tagsViaje(a)}${htmlDatosExterior(a)}</td><td>${esc(fechaISOaCorta(a.desde))}</td><td>${esc(fechaISOaCorta(a.hasta))}</td>
       ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarAuditoria(${idx})">Editar</button>
         <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarAuditoria(${idx})">✕</button>

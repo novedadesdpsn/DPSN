@@ -62,10 +62,12 @@ function normalizarLicencias() {
  * puntos de restauración. Se guardan en Firestore en precargasUsuario/{uid}
  * (en modo demo, en localStorage con el DNI).
  */
+const CLAVES_PRECARGA = ['licencias', 'inspeccionesTecnicas', 'divisionControlGestion'];
+
 function normalizarPrecargas() {
   let corregido = false;
   if (!DATOS_EJEMPLO.precargas || typeof DATOS_EJEMPLO.precargas !== 'object') { DATOS_EJEMPLO.precargas = {}; corregido = true; }
-  ['licencias', 'inspeccionesTecnicas'].forEach(k => {
+  CLAVES_PRECARGA.forEach(k => {
     if (!Array.isArray(DATOS_EJEMPLO.precargas[k])) { DATOS_EJEMPLO.precargas[k] = []; corregido = true; }
   });
   return corregido;
@@ -90,8 +92,7 @@ async function cargarPrecargasPrivadas() {
       if (raw) guardado = JSON.parse(raw);
     }
     if (guardado) {
-      D.precargas.licencias = Array.isArray(guardado.licencias) ? guardado.licencias : [];
-      D.precargas.inspeccionesTecnicas = Array.isArray(guardado.inspeccionesTecnicas) ? guardado.inspeccionesTecnicas : [];
+      CLAVES_PRECARGA.forEach(k => { D.precargas[k] = Array.isArray(guardado[k]) ? guardado[k] : []; });
     }
   } catch (err) { console.error('No se pudieron leer las precargas:', err); }
 }
@@ -99,7 +100,8 @@ async function cargarPrecargasPrivadas() {
 /** Guarda SOLO las precargas del usuario (no toca el parte compartido). */
 function persistirPrecargas() {
   normalizarPrecargas();
-  const paquete = { licencias: D.precargas.licencias, inspeccionesTecnicas: D.precargas.inspeccionesTecnicas };
+  const paquete = {};
+  CLAVES_PRECARGA.forEach(k => { paquete[k] = D.precargas[k]; });
   try { localStorage.setItem(claveLocalPrecargas(), JSON.stringify(paquete)); } catch (e) { /* sin caché local */ }
   const u = (typeof obtenerSesion === 'function') ? obtenerSesion() : null;
   if (!DEMO_MODE && u && u.uid) {
@@ -231,6 +233,8 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
       ).join('')}</select>`;
     } else if (c.tipo === 'textarea') {
       controlHtml = `<textarea id="campo_${c.id}">${esc(valorActual)}</textarea>`;
+    } else if (c.tipo === 'fecha') {
+      controlHtml = `<input type="date" id="campo_${c.id}" value="${esc(valorActual)}">`;
     } else if (c.tipo === 'checkbox') {
       controlHtml = `<label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;"><input type="checkbox" id="campo_${c.id}" ${valorActual === 'si' ? 'checked' : ''} style="width:16px;height:16px;"> ${esc(c.textoCheck || 'Sí')}</label>`;
     } else {
@@ -600,7 +604,42 @@ function camposInspeccionTecnica() {
     { id: 'requerimiento', label: 'Requerimiento' },
     { id: 'lugar', label: 'Lugar' },
     { id: 'inspector', label: 'Inspector / MOI' },
+    ...camposFechasPrevistas(),
     ...camposExterior()
+  ];
+}
+
+// ---------- Fechas "desde / hasta" (inspecciones técnicas y auditorías) ----------
+const MESES_MINUSCULA = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function partesFechaISO(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? { a: parseInt(m[1], 10), m: parseInt(m[2], 10), d: parseInt(m[3], 10) } : null;
+}
+
+/** 2026-10-20 → 20/10/2026 */
+function fechaISOaCorta(iso) {
+  const p = partesFechaISO(iso);
+  return p ? `${String(p.d).padStart(2, '0')}/${String(p.m).padStart(2, '0')}/${p.a}` : '';
+}
+
+/** "Del 20 al 30 de octubre", "Del 28 de octubre al 2 de noviembre", "20 de octubre". Vacío si no hay fecha. */
+function textoRangoFechas(desdeISO, hastaISO) {
+  const a = partesFechaISO(desdeISO);
+  let b = partesFechaISO(hastaISO);
+  if (!a && !b) return '';
+  const hoyA = new Date().getFullYear();
+  const sufijo = (p) => (p.a !== hoyA ? ` de ${p.a}` : '');
+  if (!a) return `Hasta el ${b.d} de ${MESES_MINUSCULA[b.m - 1]}${sufijo(b)}`;
+  if (!b || (b.a === a.a && b.m === a.m && b.d === a.d)) return `${a.d} de ${MESES_MINUSCULA[a.m - 1]}${sufijo(a)}`;
+  if (a.a === b.a && a.m === b.m) return `Del ${a.d} al ${b.d} de ${MESES_MINUSCULA[b.m - 1]}${sufijo(b)}`;
+  return `Del ${a.d} de ${MESES_MINUSCULA[a.m - 1]}${a.a !== b.a ? ` de ${a.a}` : ''} al ${b.d} de ${MESES_MINUSCULA[b.m - 1]}${sufijo(b)}`;
+}
+
+function camposFechasPrevistas() {
+  return [
+    { id: 'desde', label: 'Desde (fecha)', tipo: 'fecha' },
+    { id: 'hasta', label: 'Hasta (fecha — dejar vacío si es un solo día)', tipo: 'fecha' }
   ];
 }
 
@@ -647,6 +686,7 @@ function construirInspeccionTecnica(datos) {
   return {
     especialidad: datos.especialidad, embarcacion: datos.embarcacion, requerimiento: datos.requerimiento,
     lugar: datos.lugar, inspector: datos.inspector,
+    desde: datos.desde || '', hasta: datos.hasta || '',
     ...construirExterior(datos)
   };
 }
@@ -664,6 +704,7 @@ function uiEditarInspeccionTecnica(indice) {
   const valoresIniciales = {
     especialidad: actual.especialidad, embarcacion: actual.embarcacion, requerimiento: actual.requerimiento,
     lugar: actual.lugar, inspector: actual.inspector,
+    desde: actual.desde || '', hasta: actual.hasta || '',
     ...valoresExterior(actual)
   };
   abrirModalFormulario('Editar inspección técnica', camposInspeccionTecnica(), valoresIniciales, (datos) => {
@@ -688,6 +729,7 @@ function camposAuditoria() {
     { id: 'alcance', label: 'Alcance (ej: Renovación)' },
     { id: 'lugar', label: 'Lugar' },
     { id: 'auditor', label: 'Auditor' },
+    ...camposFechasPrevistas(),
     ...camposExterior()
   ];
 }
@@ -695,7 +737,9 @@ function camposAuditoria() {
 function construirAuditoria(datos) {
   return {
     tipoAuditoria: datos.tipoAuditoria, embarcacion: datos.embarcacion, alcance: datos.alcance,
-    lugar: datos.lugar, auditor: datos.auditor, ...construirExterior(datos)
+    lugar: datos.lugar, auditor: datos.auditor,
+    desde: datos.desde || '', hasta: datos.hasta || '',
+    ...construirExterior(datos)
   };
 }
 
@@ -812,12 +856,30 @@ const CONFIG_PRECARGA = {
     campos: () => camposInspeccionTecnica(),
     construir: (datos) => construirInspeccionTecnica(datos),
     valores: (p) => ({ especialidad: p.especialidad, embarcacion: p.embarcacion, requerimiento: p.requerimiento, lugar: p.lugar, inspector: p.inspector, ...valoresExterior(p) }),
-    columnas: ['Especialidad', 'Embarcación/Empresa', 'Requerimiento', 'Lugar', 'Inspector/MOI'],
-    fila: (p) => [p.especialidad, p.embarcacion, p.requerimiento, p.lugar, p.inspector],
+    columnas: ['Especialidad', 'Embarcación/Empresa', 'Requerimiento', 'Lugar', 'Inspector/MOI', 'Desde', 'Hasta'],
+    fila: (p) => [p.especialidad, p.embarcacion, p.requerimiento, p.lugar, p.inspector, fechaISOaCorta(p.desde), fechaISOaCorta(p.hasta)],
     confirmar: (p) => { D.inspeccionesTecnicas.push(p); },
-    corresponde: () => false
+    corresponde: (p) => fechaPrevistaLlego(p.desde)
+  },
+  divisionControlGestion: {
+    titulo: 'auditoría',
+    campos: () => camposAuditoria(),
+    construir: (datos) => construirAuditoria(datos),
+    valores: (p) => ({ ...p, ...valoresExterior(p) }),
+    columnas: ['Tipo de auditoría', 'Embarcación/Empresa', 'Alcance', 'Lugar', 'Auditor', 'Desde', 'Hasta'],
+    fila: (p) => [p.tipoAuditoria, p.embarcacion, p.alcance, p.lugar, p.auditor, fechaISOaCorta(p.desde), fechaISOaCorta(p.hasta)],
+    confirmar: (p) => { D.divisionControlGestion.push(p); },
+    corresponde: (p) => fechaPrevistaLlego(p.desde)
   }
 };
+
+/** ¿La fecha "desde" (AAAA-MM-DD) es hoy o ya pasó? Sirve para marcar "Corresponde" en las precargas. */
+function fechaPrevistaLlego(iso) {
+  const p = partesFechaISO(iso);
+  if (!p) return false;
+  const h = new Date(); h.setHours(0, 0, 0, 0);
+  return new Date(p.a, p.m - 1, p.d) <= h;
+}
 
 function listaPrecargas(tipo) {
   if (!D.precargas) D.precargas = {};
