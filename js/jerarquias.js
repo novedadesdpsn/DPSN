@@ -22,18 +22,19 @@ const ETIQUETAS_JERARQUIA_SUPERIOR = {
   PG: 'Prefecto General', PM: 'Prefecto Mayor', PP: 'Prefecto Principal', PR: 'Prefecto',
   SP: 'Subprefecto', OP: 'Oficial Principal', OX: 'Oficial Auxiliar', OA: 'Oficial Ayudante'
 };
-// Cuerpo/Escalafón combinados (4 letras), ya en orden de antigüedad.
-const CUERPO_ESCALAFON_SUPERIOR = ['GEGE', 'GEIT', 'GEES', 'CPJU', 'CPSA', 'CPIN', 'CPTN', 'CPCT', 'CCTG'];
+// Cuerpo/Escalafón combinados (4 letras: 2 de Cuerpo + 2 de Escalafón), ya en orden de antigüedad.
+// Ojo: en "General" el Cuerpo es CG (no GE) y el Escalafón es GE — son cosas distintas.
+const CUERPO_ESCALAFON_SUPERIOR = ['CGGE', 'CGIT', 'CGES', 'CPJU', 'CPSA', 'CPIN', 'CPTN', 'CPCT', 'CCTG'];
 const ETIQUETAS_ESCALAFON_SUPERIOR = {
-  GEGE: 'Gral. (GE) — Escalafón General (GE)',
-  GEIT: 'Gral. (GE) — Escalafón Intendencia (IT)',
-  GEES: 'Gral. (GE) — Escalafón Especial (ES)',
-  CPJU: 'Profesional (CP) — Jurídico (JU)',
-  CPSA: 'Profesional (CP) — Sanidad (SA)',
-  CPIN: 'Profesional (CP) — Ingeniería (IN)',
-  CPTN: 'Profesional (CP) — Técnica Naval (TN)',
-  CPCT: 'Profesional (CP) — Científico Tecnológico (CT)',
-  CCTG: 'Complementario (CC) — Técnica General (TG)'
+  CGGE: 'Cuerpo General (CG) — Escalafón General (GE)',
+  CGIT: 'Cuerpo General (CG) — Escalafón Intendencia (IT)',
+  CGES: 'Cuerpo General (CG) — Escalafón Especial (ES)',
+  CPJU: 'Cuerpo Profesional (CP) — Jurídico (JU)',
+  CPSA: 'Cuerpo Profesional (CP) — Sanidad (SA)',
+  CPIN: 'Cuerpo Profesional (CP) — Ingeniería (IN)',
+  CPTN: 'Cuerpo Profesional (CP) — Técnica Naval (TN)',
+  CPCT: 'Cuerpo Profesional (CP) — Científico Tecnológico (CT)',
+  CCTG: 'Cuerpo Complementario (CC) — Técnica General (TG)'
 };
 
 // ---- Personal Subalterno ----
@@ -55,7 +56,11 @@ const ETIQUETAS_ESCALAFON_SUBALTERNO = {
   CCCA: 'Complementario (CC) — Control de Averías e Incendios (CA)', CCOF: 'Complementario (CC) — Oficinista (OF)', CCAE: 'Complementario (CC) — Aeronáutico (AE)'
 };
 
-// Ayuda-memoria de siglas de Escalafón solo (sin Jerarquía ni Cuerpo, que ya se saben de memoria).
+// Ayuda-memoria de siglas de Cuerpo (ojo: "General" es CG como Cuerpo y GE como Escalafón — son cosas distintas).
+const AYUDA_CUERPO_SUPERIOR = [['CG', 'General'], ['CP', 'Profesional'], ['CC', 'Complementario']];
+const AYUDA_CUERPO_SUBALTERNO = [['CG', 'General'], ['CX', 'Auxiliar'], ['CC', 'Complementario']];
+
+// Ayuda-memoria de siglas de Escalafón.
 const AYUDA_ESCALAFON_SUPERIOR = [
   ['GE', 'General'], ['IT', 'Intendencia'], ['ES', 'Especial'],
   ['JU', 'Jurídico'], ['SA', 'Sanidad'], ['IN', 'Ingeniería'], ['TN', 'Técnica Naval'], ['CT', 'Científico Tecnológico'],

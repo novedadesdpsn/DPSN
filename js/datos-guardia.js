@@ -784,8 +784,8 @@ function camposLicencia() {
   return [
     { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: OPCIONES_CATEGORIA_LICENCIA },
     {
-      id: 'jerarquia', label: 'Jerarquía (código de 6 letras: Jerarquía + Cuerpo + Escalafón — ej. PRCPJU, CICXMY)',
-      ayudaHtml: '<button type="button" class="btn-secundario" style="padding:2px 8px; font-size:11.5px; margin-top:4px;" onclick="abrirAyudaEscalafones()">¿Qué sigla de escalafón uso?</button>'
+      id: 'jerarquia', label: 'Jerarquía (código de 6 letras: Jerarquía + Cuerpo + Escalafón — ej. PRCGGE, CICXMY)',
+      ayudaHtml: '<button type="button" class="btn-secundario" style="padding:2px 8px; font-size:11.5px; margin-top:4px;" onclick="abrirAyudaEscalafones()">¿Qué sigla de cuerpo/escalafón uso?</button>'
     },
     { id: 'nombre', label: 'Apellido y Nombre' },
     { id: 'oficina', label: 'Oficina (opcional)' },
@@ -795,7 +795,7 @@ function camposLicencia() {
   ];
 }
 
-/** Ayuda-memoria de siglas de Escalafón (Jerarquía y Cuerpo no hacen falta, se saben de memoria). */
+/** Ayuda-memoria de siglas de Cuerpo y Escalafón (Jerarquía no hace falta, ya se sabe de memoria). */
 function abrirAyudaEscalafones() {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -804,13 +804,19 @@ function abrirAyudaEscalafones() {
   modal.innerHTML = `
     <div class="modal-caja">
       <div class="modal-header">
-        <h3>Siglas de Escalafón</h3>
+        <h3>Siglas de Cuerpo y Escalafón</h3>
         <button type="button" onclick="document.getElementById('modalAyudaEscalafones').remove()">✕</button>
       </div>
       <div class="modal-lista" style="font-size:13px;">
         <h4 style="margin:0 0 6px 0;">Personal Superior</h4>
+        <p style="margin:0 0 6px 0; color:var(--gris-500);">Cuerpo:</p>
+        <table style="margin-bottom:10px;">${AYUDA_CUERPO_SUPERIOR.map(filaTabla).join('')}</table>
+        <p style="margin:0 0 6px 0; color:var(--gris-500);">Escalafón:</p>
         <table style="margin-bottom:14px;">${AYUDA_ESCALAFON_SUPERIOR.map(filaTabla).join('')}</table>
         <h4 style="margin:0 0 6px 0;">Personal Subalterno</h4>
+        <p style="margin:0 0 6px 0; color:var(--gris-500);">Cuerpo:</p>
+        <table style="margin-bottom:10px;">${AYUDA_CUERPO_SUBALTERNO.map(filaTabla).join('')}</table>
+        <p style="margin:0 0 6px 0; color:var(--gris-500);">Escalafón:</p>
         <table>${AYUDA_ESCALAFON_SUBALTERNO.map(filaTabla).join('')}</table>
       </div>
       <div class="modal-footer">
