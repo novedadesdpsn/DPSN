@@ -12,7 +12,7 @@ function uiAgregarFilaSimple(clave, titulo) {
   abrirModalFormulario(titulo, [
     { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
     { id: 'gde', label: 'N.º GDE' },
-    { id: 'expediente', label: 'Expedientes en tramitación', tipo: 'textarea' }
+    { id: 'expediente', label: 'Detalle del tramite', tipo: 'textarea' }
   ], {}, (datos) => {
     D.oficinas[clave].filas.push(datos);
     persistirDatosGuardia();
