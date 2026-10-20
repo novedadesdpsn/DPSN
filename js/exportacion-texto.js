@@ -209,15 +209,33 @@ function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, fila
     return lineas;
   };
 
+  // Si dos ítems tienen exactamente el mismo vuelo (misma disposición, salida y regreso —
+  // típico de un auditor/inspector haciendo varias inspecciones en el mismo viaje), comparten
+  // una sola marca y una sola referencia al pie, en vez de repetirse una vez por cada ítem.
+  const claveVuelo = (i) => {
+    const s = i.salida || {}, r = i.regreso || {};
+    return JSON.stringify({
+      disp: i.extranjero ? (i.disposicion || '') : '',
+      s: { v: s.vuelo || '', f: s.fechaHora || '', d: s.destino || '' },
+      r: { v: r.vuelo || '', f: r.fechaHora || '', d: r.destino || '' }
+    });
+  };
+
   if (locales.length || !exterior.length) {
     // Los de vía aérea dentro del país van en la tabla local, con marca y sus vuelos debajo.
     const pieLocal = [];
     let nAerea = 0;
+    const marcaPorClaveLocal = new Map();
     const filas = locales.map(i => {
       if (!i.viaAerea) return filaDe(i, '');
-      nAerea++;
-      const marca = '(' + '*'.repeat(nAerea) + ')';
-      pieLocal.push(...lineasVuelo(i, marca));
+      const clave = claveVuelo(i);
+      let marca = marcaPorClaveLocal.get(clave);
+      if (!marca) {
+        nAerea++;
+        marca = '(' + '*'.repeat(nAerea) + ')';
+        marcaPorClaveLocal.set(clave, marca);
+        pieLocal.push(...lineasVuelo(i, marca));
+      }
       return filaDe(i, marca);
     });
     secciones.push({
@@ -229,10 +247,18 @@ function seccionesConExterior(lista, tituloLocal, tituloExterior, columnas, fila
   if (exterior.length) {
     const pie = [];
     const fechas = [];
-    const filas = exterior.map((i, idx) => {
-      const marca = '(' + '*'.repeat(idx + 1) + ')';
+    const marcaPorClaveExt = new Map();
+    let nMarca = 0;
+    const filas = exterior.map((i) => {
+      const clave = claveVuelo(i);
+      let marca = marcaPorClaveExt.get(clave);
+      if (!marca) {
+        nMarca++;
+        marca = '(' + '*'.repeat(nMarca) + ')';
+        marcaPorClaveExt.set(clave, marca);
+        pie.push(...lineasVuelo(i, marca));
+      }
       const s = i.salida || {}, r = i.regreso || {};
-      pie.push(...lineasVuelo(i, marca));
       // La banda de fechas toma primero el "desde / hasta" cargado; si no hay, las fechas de los vuelos.
       const dd = partesFechaISO(i.desde), hh = partesFechaISO(i.hasta);
       if (dd || hh) {
