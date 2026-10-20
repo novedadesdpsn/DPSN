@@ -240,7 +240,7 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
     } else {
       controlHtml = `<input type="text" id="campo_${c.id}" value="${esc(valorActual)}">`;
     }
-    div.innerHTML = (c.tipo === 'checkbox' ? '' : `<label>${esc(c.label)}</label>`) + controlHtml;
+    div.innerHTML = (c.tipo === 'checkbox' ? '' : `<label>${esc(c.label)}</label>`) + controlHtml + (c.ayudaHtml || '');
     div.dataset.campo = c.id;
     contenedor.appendChild(div);
   });
@@ -783,13 +783,42 @@ const OPCIONES_CATEGORIA_LICENCIA = [
 function camposLicencia() {
   return [
     { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: OPCIONES_CATEGORIA_LICENCIA },
-    { id: 'jerarquia', label: 'Jerarquía' },
+    {
+      id: 'jerarquia', label: 'Jerarquía (código de 6 letras: Jerarquía + Cuerpo + Escalafón — ej. PRCPJU, CICXMY)',
+      ayudaHtml: '<button type="button" class="btn-secundario" style="padding:2px 8px; font-size:11.5px; margin-top:4px;" onclick="abrirAyudaEscalafones()">¿Qué sigla de escalafón uso?</button>'
+    },
     { id: 'nombre', label: 'Apellido y Nombre' },
     { id: 'oficina', label: 'Oficina (opcional)' },
     { id: 'diagnostico', label: 'Diagnóstico (solo si es Licencia Médica)', tipo: 'textarea' },
     { id: 'inicia', label: 'Inicia' },
     { id: 'vence', label: 'Vence' }
   ];
+}
+
+/** Ayuda-memoria de siglas de Escalafón (Jerarquía y Cuerpo no hacen falta, se saben de memoria). */
+function abrirAyudaEscalafones() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modalAyudaEscalafones';
+  const filaTabla = ([sigla, nombre]) => `<tr><td style="font-weight:600; padding:3px 10px 3px 0;">${esc(sigla)}</td><td style="padding:3px 0;">${esc(nombre)}</td></tr>`;
+  modal.innerHTML = `
+    <div class="modal-caja">
+      <div class="modal-header">
+        <h3>Siglas de Escalafón</h3>
+        <button type="button" onclick="document.getElementById('modalAyudaEscalafones').remove()">✕</button>
+      </div>
+      <div class="modal-lista" style="font-size:13px;">
+        <h4 style="margin:0 0 6px 0;">Personal Superior</h4>
+        <table style="margin-bottom:14px;">${AYUDA_ESCALAFON_SUPERIOR.map(filaTabla).join('')}</table>
+        <h4 style="margin:0 0 6px 0;">Personal Subalterno</h4>
+        <table>${AYUDA_ESCALAFON_SUBALTERNO.map(filaTabla).join('')}</table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" type="button" onclick="document.getElementById('modalAyudaEscalafones').remove()">Cerrar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
 function uiAgregarLicencia() {

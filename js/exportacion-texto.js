@@ -297,7 +297,7 @@ function textoLicencias() {
         titulo,
         anchos: esMedica ? [0.11, 0.30, 0.34, 0.125, 0.125] : [0.12, 0.60, 0.14, 0.14],
         columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
-        filas: lista.map(l => {
+        filas: ordenarPorJerarquia(lista).map(l => {
           const nom = l.nombre + (l.oficina ? ` (${l.oficina})` : '');
           return esMedica ? [l.jerarquia, nom, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, nom, l.inicia, l.vence];
         })
