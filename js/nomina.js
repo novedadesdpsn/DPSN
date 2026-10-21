@@ -46,6 +46,7 @@ const NOMINA_AYUDANTES_GUARDIA = [
   'AS GONZALEZ, Sergio Alejandro',
   'AS DIAZ LEAL, Heber Marcos',
   'AS VILLALBA, Fernando Lucas',
+  'AS VILLALBA, Antonio',
   'AS DELGADO, Adrián Marcelo',
   'AS BOGARIN, Eduardo Ramón',
   'AS YUSZCZECZYN, Fabián Andrés',
