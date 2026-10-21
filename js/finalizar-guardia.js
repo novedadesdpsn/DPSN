@@ -93,11 +93,14 @@ function limpiarPestanaParaFinalizar(id) {
       const rp = D.estadoRectorPuerto.resumen;
       // Hay que calcularlo ANTES de vaciar porDependencia (el auto-cálculo lee las inspecciones de hoy).
       const inspeccionadosHoy = calcularInspeccionadosPSC();
+      normalizarCIC();
+      const cicHoy = contarCIC(D.estadoRectorPuerto);
       D.estadoRectorPuerto.resumen = {
         buquesIngresados: 0, factiblesDiario: 0, inspeccionadosManual: null,
         factiblesAnualPrevio: (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0),
         inspeccionadosAnualPrevio: (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosHoy
       };
+      D.estadoRectorPuerto.cic.totalPrevio = (D.estadoRectorPuerto.cic.totalPrevio || 0) + cicHoy;
       D.estadoRectorPuerto.porDependencia = {};
       break;
     }

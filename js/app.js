@@ -284,10 +284,10 @@ function renderEstadoRectorPuerto() {
       <p style="text-align:center; font-weight:600; margin-top:-6px; margin-bottom:12px;">${esc(cic.vigencia)}</p>
       <table class="tabla-datos">
         <thead><tr><th>Diario</th><th>Total</th></tr></thead>
-        <tbody><tr><td>${cicDiario || '--'}</td><td>${cic.total}</td></tr></tbody>
+        <tbody><tr><td>${cicDiario || '--'}</td><td>${(cic.totalPrevio || 0) + cicDiario}</td></tr></tbody>
       </table>
       <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
-        "Diario" se suma solo con cada inspección de hoy que tenga tildado "¿Se hizo CIC?". El "Total" (acumulado de toda la campaña) se carga a mano.
+        "Diario" se suma solo con cada inspección de hoy que tenga tildado "¿Se hizo CIC?". El "Total" se calcula solo (acumulado previo + lo de hoy) y pasa a formar parte del acumulado al Finalizar Guardia.
       </p>
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarCIC()">Editar</button>` : ''}
     </div>

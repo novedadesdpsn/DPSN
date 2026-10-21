@@ -81,7 +81,7 @@ function textoEstadoRectorPuerto() {
           titulo: `${cic.titulo} ${cic.vigencia}`,
           tituloDentro: true,
           columnas: ['Diario', 'Total'],
-          filas: [[cicDiario || '--', cic.total]]
+          filas: [[cicDiario || '--', (cic.totalPrevio || 0) + cicDiario]]
         }]
       }
     },

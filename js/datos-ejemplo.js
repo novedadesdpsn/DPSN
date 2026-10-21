@@ -76,7 +76,7 @@ const DATOS_EJEMPLO = {
     cic: {
       titulo: 'CIC “CAMPAÑA DE INSPECCIONES CONCENTRADAS 2026 SOBRE “SUJECIÓN DE LA CARGA”',
       vigencia: '01/09/2026 al 30/11/2026',
-      total: 22
+      totalPrevio: 29
     }
   },
 

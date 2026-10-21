@@ -55,15 +55,23 @@ function normalizarLicencias() {
   return false;
 }
 
-/** Asegura que exista el cuadro de la CIC, aunque lo guardado sea de antes de agregarlo. */
+/** Asegura que exista el cuadro de la CIC, aunque lo guardado sea de antes de agregarlo.
+ *  totalPrevio es el acumulado hasta ayer; el TOTAL que se ve en pantalla/PDF es
+ *  totalPrevio + lo cargado hoy (CIC diario). Migra el viejo campo "total" (manual) si existía. */
 function normalizarCIC() {
   if (!D.estadoRectorPuerto) return false;
   if (!D.estadoRectorPuerto.cic || typeof D.estadoRectorPuerto.cic !== 'object') {
     D.estadoRectorPuerto.cic = {
       titulo: 'CIC “CAMPAÑA DE INSPECCIONES CONCENTRADAS 2026 SOBRE “SUJECIÓN DE LA CARGA”',
       vigencia: '01/09/2026 al 30/11/2026',
-      total: 0
+      totalPrevio: 0
     };
+    return true;
+  }
+  const c = D.estadoRectorPuerto.cic;
+  if (typeof c.totalPrevio !== 'number') {
+    c.totalPrevio = typeof c.total === 'number' ? c.total : 0;
+    delete c.total;
     return true;
   }
   return false;
@@ -1127,21 +1135,23 @@ function uiEditarResumenPSC() {
   });
 }
 
-/** CIC (Campaña de Inspecciones Concentradas): título y vigencia de la campaña vigente, y el
- *  total acumulado se escribe a mano porque no siempre se tiene el número real al día. El
- *  "diario" no se edita acá: se suma solo a partir del checkbox "¿Se hizo CIC?" en cada inspección. */
+/** CIC (Campaña de Inspecciones Concentradas): título y vigencia de la campaña vigente.
+ *  El TOTAL que se ve en el cuadro y en el PDF se calcula solo (totalPrevio + lo cargado hoy);
+ *  acá solo se edita "totalPrevio" (el acumulado hasta ayer), por si hace falta corregirlo.
+ *  El "diario" no se edita acá: se suma solo a partir del checkbox "¿Se hizo CIC?" en cada
+ *  inspección, y al Finalizar Guardia ese diario pasa a sumarse dentro de totalPrevio. */
 function uiEditarCIC() {
   normalizarCIC();
   const c = D.estadoRectorPuerto.cic;
   abrirModalFormulario('Editar CIC', [
     { id: 'titulo', label: 'Título de la campaña' },
     { id: 'vigencia', label: 'Vigencia (ej: 01/09/2026 al 30/11/2026)' },
-    { id: 'total', label: 'Total acumulado de la campaña' }
-  ], { titulo: c.titulo, vigencia: c.vigencia, total: String(c.total || 0) }, (datos) => {
+    { id: 'totalPrevio', label: 'Total acumulado previo (hasta ayer, sin contar hoy)' }
+  ], { titulo: c.titulo, vigencia: c.vigencia, totalPrevio: String(c.totalPrevio || 0) }, (datos) => {
     D.estadoRectorPuerto.cic = {
       titulo: datos.titulo.trim(),
       vigencia: datos.vigencia.trim(),
-      total: parseInt(datos.total, 10) || 0
+      totalPrevio: parseInt(datos.totalPrevio, 10) || 0
     };
     persistirDatosGuardia();
     refrescarPestanaActual();
