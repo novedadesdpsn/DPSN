@@ -41,6 +41,13 @@ function contarInspeccionesGrupo(grupo) {
   return n;
 }
 
+/** Cuántas inspecciones PSC de hoy tienen tildado "¿Se hizo CIC?". */
+function contarCIC(grupo) {
+  let n = 0;
+  Object.values(grupo.porDependencia).forEach(lista => { lista.forEach(i => { if (i.cic) n++; }); });
+  return n;
+}
+
 function calcularTotalesExtraordinarias() {
   const arg = D.inspeccionesExtraordinarias.argentina;
   const ext = D.inspeccionesExtraordinarias.extranjera;
@@ -170,6 +177,7 @@ function renderInspeccionesPorDependencia(bloque, contexto) {
             ${insp.tipo === 'seguimiento'
               ? `<span class="tag seguimiento">IS de ID Fecha ${esc(insp.fechaInspMasDetallada || '—')}</span>`
               : tagTipo(insp.tipo)}
+            ${insp.cic ? '<span class="tag cic">CIC</span>' : ''}
             <strong>${esc(insp.buque.tipo)} "${esc(insp.buque.nombre)}"</strong>
             (${esc(insp.buque.matricula)}) — B/${esc(insp.buque.bandera)}
           </div>
@@ -257,6 +265,9 @@ function renderExtraordinarias() {
 
 function renderEstadoRectorPuerto() {
   const rp = D.estadoRectorPuerto.resumen;
+  normalizarCIC();
+  const cic = D.estadoRectorPuerto.cic;
+  const cicDiario = contarCIC(D.estadoRectorPuerto);
   const inspeccionadosDiario = calcularInspeccionadosPSC();
   const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
   const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosDiario;
@@ -267,6 +278,18 @@ function renderEstadoRectorPuerto() {
       <h2>Inspecciones por Estado Rector del Puerto</h2>
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarInspeccionPSC()">+ Agregar inspección</button>` : ''}
       ${renderInspeccionesPorDependencia(D.estadoRectorPuerto, 'psc')}
+    </div>
+    <div class="tarjeta">
+      <h2 style="text-align:center; text-transform:uppercase; font-size:13px;">${esc(cic.titulo)}</h2>
+      <p style="text-align:center; font-weight:600; margin-top:-6px; margin-bottom:12px;">${esc(cic.vigencia)}</p>
+      <table class="tabla-datos">
+        <thead><tr><th>Diario</th><th>Total</th></tr></thead>
+        <tbody><tr><td>${cicDiario || '--'}</td><td>${cic.total}</td></tr></tbody>
+      </table>
+      <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
+        "Diario" se suma solo con cada inspección de hoy que tenga tildado "¿Se hizo CIC?". El "Total" (acumulado de toda la campaña) se carga a mano.
+      </p>
+      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarCIC()">Editar</button>` : ''}
     </div>
     <div class="tarjeta">
       <h2>Resumen PSC (Port State Control)</h2>
@@ -317,14 +340,13 @@ function renderTarjetaCaso(c, esSAR, dependencia, indice) {
   return `
     <div class="tarjeta" style="margin-bottom:12px; background:var(--gris-100);">
       <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;">
-        <strong style="color:var(--azul-marino); font-size:14px;">${esc(c.titulo)}</strong>
+        <strong style="color:var(--azul-marino); font-size:14px;">${esc(tituloCompletoCaso(c, esSAR))}</strong>
         <div style="display:flex; gap:6px;">
           ${!esSAR && c.requiereInspeccion === 'si' ? '<span class="tag detallada">Requiere Inspección</span>' : ''}
           ${tagEstado(c.estado)}
         </div>
       </div>
       ${esSAR ? `<div style="font-size:11.5px; color:var(--gris-500); margin-top:2px;">
-        N.º de caso: ${esc(c.numeroCaso)} · Subcentro (VTS): ${esc(c.subcentroVTS)} ·
         Inicio: ${esc(c.fechaInicio)} ${c.fechaCierre ? '· Cierre: ' + esc(c.fechaCierre) : ''}
       </div>` : ''}
       <div class="texto-justificado" style="margin-top:8px; font-size:13px;"><strong>Posición:</strong> ${esc(c.posicion)}</div>

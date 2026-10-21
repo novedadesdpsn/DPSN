@@ -55,6 +55,20 @@ function normalizarLicencias() {
   return false;
 }
 
+/** Asegura que exista el cuadro de la CIC, aunque lo guardado sea de antes de agregarlo. */
+function normalizarCIC() {
+  if (!D.estadoRectorPuerto) return false;
+  if (!D.estadoRectorPuerto.cic || typeof D.estadoRectorPuerto.cic !== 'object') {
+    D.estadoRectorPuerto.cic = {
+      titulo: 'CIC “CAMPAÑA DE INSPECCIONES CONCENTRADAS 2026 SOBRE “SUJECIÓN DE LA CARGA”',
+      vigencia: '01/09/2026 al 30/11/2026',
+      total: 0
+    };
+    return true;
+  }
+  return false;
+}
+
 /**
  * Precargas (licencias e inspecciones técnicas previstas) pendientes de confirmar.
  * Son PRIVADAS de cada usuario: no forman parte del parte compartido (no están en
@@ -156,7 +170,7 @@ async function hidratarDatosGuardia() {
     } else {
       persistirDatosGuardia();
     }
-    if (normalizarOficinas() || normalizarLicencias()) persistirDatosGuardia();
+    if (normalizarOficinas() || normalizarLicencias() || normalizarCIC()) persistirDatosGuardia();
     inicializarEstadoConocido();
     await cargarPrecargasPrivadas();
     return;
@@ -176,7 +190,7 @@ async function hidratarDatosGuardia() {
     }
   }));
 
-  if (normalizarOficinas() || normalizarLicencias()) persistirDatosGuardia();
+  if (normalizarOficinas() || normalizarLicencias() || normalizarCIC()) persistirDatosGuardia();
   inicializarEstadoConocido();
   await cargarPrecargasPrivadas();
   activarEscuchaEnVivo();
@@ -328,6 +342,7 @@ function uiAgregarInspeccionPSC() {
     titulo: 'Agregar inspección PSC',
     etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
     incluirCategoria: false,
+    incluirCIC: true,
     listaCodigos: CODIGOS_MEDIDAS_PSC,
     onGuardar: (datos) => {
       const dep = datos.dependencia;
@@ -345,6 +360,7 @@ function uiEditarInspeccionPSC(dependencia, indice) {
     titulo: 'Editar inspección PSC',
     etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
     incluirCategoria: false,
+    incluirCIC: true,
     listaCodigos: CODIGOS_MEDIDAS_PSC,
     valores: { ...actual, dependencia },
     onGuardar: (datos) => {
@@ -372,13 +388,14 @@ function camposCaso(esSAR) {
   const base = [
     { id: 'dependencia', label: 'Dependencia (sigla)' },
     { id: 'estado', label: 'Estado', tipo: 'select', opciones: [{ valor: 'pendiente', etiqueta: 'Pendiente' }, { valor: 'cerrado', etiqueta: 'Cerrado' }] },
-    { id: 'titulo', label: 'Título identificatorio (ej: R/E KOETI)' }
+    { id: 'titulo', label: esSAR ? 'Motivo (ej: Tripulante accidentado, Buque a la deriva)' : 'Título identificatorio (ej: R/E KOETI)' }
   ];
   const sar = esSAR ? [
     { id: 'numeroCaso', label: 'N.º de caso' },
     { id: 'subcentroVTS', label: 'Subcentro (VTS)' },
-    { id: 'nombreBuque', label: 'Nombre del buque' },
-    { id: 'matricula', label: 'Matrícula' },
+    { id: 'tipoBuque', label: 'Tipo de buque (B/P, B/M, L/M...) — si corresponde' },
+    { id: 'nombreBuque', label: 'Nombre del buque (si corresponde)' },
+    { id: 'matricula', label: 'Matrícula / N.º IMO' },
     { id: 'bandera', label: 'Bandera' },
     { id: 'fechaInicio', label: 'Fecha de inicio' },
     { id: 'fechaCierre', label: 'Fecha de cierre (si corresponde)' }
@@ -392,6 +409,29 @@ function camposCaso(esSAR) {
     { id: 'novedad', label: 'Novedad', tipo: 'textarea' },
     { id: 'situacion', label: 'Situación', tipo: 'textarea' }
   ];
+}
+
+/**
+ * Arma el título completo de un caso MAS/SAR, combinando el motivo que se escribió
+ * con los datos del buque (si se cargaron) y la referencia del caso (si es SAR),
+ * ej: "TRIPULANTE ACCIDENTADO B/P "EJEMPLO" (MATRÍCULA) B/ARGENTINA. CASO SAR KSXX N.º XX/26."
+ * Si no hay datos de buque cargados, devuelve el título tal cual (compatible con casos viejos).
+ */
+function tituloCompletoCaso(c, esSAR) {
+  let t = (c.titulo || '').trim();
+  const finPunto = (s) => /[.]$/.test(s) ? s : s + '.';
+  if (c.nombreBuque) {
+    const tipoTxt = c.tipoBuque ? `${c.tipoBuque} ` : '';
+    const identTxt = c.matricula ? ` (${c.matricula})` : '';
+    const banderaTxt = c.bandera ? ` B/${c.bandera}` : '';
+    const buqueTxt = `${tipoTxt}"${c.nombreBuque}"${identTxt}${banderaTxt}`;
+    t = finPunto(t ? `${t} ${buqueTxt}` : buqueTxt);
+  }
+  if (esSAR && (c.numeroCaso || c.subcentroVTS)) {
+    const ref = `CASO SAR ${c.subcentroVTS || ''} N.º ${c.numeroCaso || ''}`.replace(/\s+/g, ' ').trim();
+    t = finPunto(t ? `${t} ${ref}` : ref);
+  }
+  return t || c.titulo || '';
 }
 
 function uiAgregarCaso(tipo) {
@@ -1081,6 +1121,27 @@ function uiEditarResumenPSC() {
       inspeccionadosManual: datos.inspeccionadosManual.trim() === '' ? null : (parseInt(datos.inspeccionadosManual, 10) || 0),
       factiblesAnualPrevio: parseInt(datos.factiblesAnualPrevio, 10) || 0,
       inspeccionadosAnualPrevio: parseInt(datos.inspeccionadosAnualPrevio, 10) || 0
+    };
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+/** CIC (Campaña de Inspecciones Concentradas): título y vigencia de la campaña vigente, y el
+ *  total acumulado se escribe a mano porque no siempre se tiene el número real al día. El
+ *  "diario" no se edita acá: se suma solo a partir del checkbox "¿Se hizo CIC?" en cada inspección. */
+function uiEditarCIC() {
+  normalizarCIC();
+  const c = D.estadoRectorPuerto.cic;
+  abrirModalFormulario('Editar CIC', [
+    { id: 'titulo', label: 'Título de la campaña' },
+    { id: 'vigencia', label: 'Vigencia (ej: 01/09/2026 al 30/11/2026)' },
+    { id: 'total', label: 'Total acumulado de la campaña' }
+  ], { titulo: c.titulo, vigencia: c.vigencia, total: String(c.total || 0) }, (datos) => {
+    D.estadoRectorPuerto.cic = {
+      titulo: datos.titulo.trim(),
+      vigencia: datos.vigencia.trim(),
+      total: parseInt(datos.total, 10) || 0
     };
     persistirDatosGuardia();
     refrescarPestanaActual();

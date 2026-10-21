@@ -91,10 +91,12 @@ function limpiarPestanaParaFinalizar(id) {
     }
     case 'insp-psc': {
       const rp = D.estadoRectorPuerto.resumen;
+      // Hay que calcularlo ANTES de vaciar porDependencia (el auto-cálculo lee las inspecciones de hoy).
+      const inspeccionadosHoy = calcularInspeccionadosPSC();
       D.estadoRectorPuerto.resumen = {
-        buquesIngresados: 0, factiblesDiario: 0, inspeccionadosDiario: 0,
+        buquesIngresados: 0, factiblesDiario: 0, inspeccionadosManual: null,
         factiblesAnualPrevio: (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0),
-        inspeccionadosAnualPrevio: (rp.inspeccionadosAnualPrevio || 0) + (rp.inspeccionadosDiario || 0)
+        inspeccionadosAnualPrevio: (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosHoy
       };
       D.estadoRectorPuerto.porDependencia = {};
       break;

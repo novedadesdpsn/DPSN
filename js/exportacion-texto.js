@@ -59,6 +59,9 @@ function textoExtraordinarias() {
 
 function textoEstadoRectorPuerto() {
   const rp = D.estadoRectorPuerto.resumen;
+  normalizarCIC();
+  const cic = D.estadoRectorPuerto.cic;
+  const cicDiario = contarCIC(D.estadoRectorPuerto);
   const inspeccionadosDiario = calcularInspeccionadosPSC();
   const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
   const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosDiario;
@@ -69,6 +72,17 @@ function textoEstadoRectorPuerto() {
       titulo: 'Inspecciones por Estado Rector del Puerto',
       referencias: REFERENCIAS_PSC_TEXTO,
       contenido: { tipo: 'inspecciones', grupo: D.estadoRectorPuerto, familia: 'psc' }
+    },
+    {
+      titulo: cic.titulo,
+      contenido: {
+        tipo: 'tablas',
+        tablas: [{
+          titulo: cic.vigencia,
+          columnas: ['Diario', 'Total'],
+          filas: [[cicDiario || '--', cic.total]]
+        }]
+      }
     },
     {
       titulo: 'Resumen PSC',

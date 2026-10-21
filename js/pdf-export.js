@@ -82,13 +82,13 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
         <button type="button" onclick="cerrarModalExportar()">✕</button>
       </div>
       <div class="modal-todos">
-        <input type="checkbox" id="chkTodosExportar">
+        <input type="checkbox" id="chkTodosExportar" checked>
         <label for="chkTodosExportar">Seleccionar todos los ítems</label>
       </div>
       <div class="modal-lista" id="listaItemsExportar">
         ${items.map(it => `
           <label>
-            <input type="checkbox" class="chk-item-exportar" value="${esc(it.id)}" ${it.id === 'oficinas' ? '' : 'checked'}>
+            <input type="checkbox" class="chk-item-exportar" value="${esc(it.id)}" checked>
             ${esc(it.label)}
           </label>
         `).join('')}
@@ -165,7 +165,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   function tituloSeccion(texto) {
     saltoDePaginaSiHaceFalta(26);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11.5);
+    doc.setFontSize(12.5);
     doc.setTextColor(20, 20, 20);
     doc.text(texto.toUpperCase(), anchoPagina / 2, y, { align: 'center' });
     y += 8;
@@ -235,9 +235,9 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   }
 
   function listaSimple(items) {
-    doc.setFontSize(10.5);
+    doc.setFontSize(11);
     items.forEach(item => {
-      y = escribirParrafoMixto([{ texto: '•', negrita: false }, { texto: item, negrita: false }], margen, anchoUtil - 10, y, 10.5);
+      y = escribirParrafoMixto([{ texto: '•', negrita: false }, { texto: item, negrita: false }], margen, anchoUtil - 10, y, 11);
       y += 2;
     });
     y += 6;
@@ -267,7 +267,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
 
     function dibujarEncabezado() {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.6);
+      doc.setFontSize(8.5);
       const lineasEnc = columnas.map((col, i) => doc.splitTextToSize(String(col), anchosCol[i] - 8));
       const alto = Math.max(1, ...lineasEnc.map(l => l.length)) * 9 + 8;
       doc.setFillColor(235, 235, 235);
@@ -298,7 +298,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     dibujarEncabezado();
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
+    doc.setFontSize(8.5);
     filas.forEach(fila => {
       const lineasCelda = fila.map((celda, i) => doc.splitTextToSize(String(celda), anchosCol[i] - 8));
       const alto = Math.max(1, ...lineasCelda.map(l => l.length)) * 9 + 7;
@@ -307,7 +307,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         y = margen;
         dibujarEncabezado();
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.8);
+        doc.setFontSize(8.5);
       }
       doc.setDrawColor(190, 190, 190);
       doc.rect(margen, y, anchoUtil, alto);
@@ -343,7 +343,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         { texto: cantidadTexto, negrita: true },
         { texto: codigoAnteriorTexto, negrita: false },
         { texto: codigoNuevoTexto, negrita: true }
-      ], xIndent, anchoDisp, y, 10);
+      ], xIndent, anchoDisp, y, 11);
     } else {
       const verbo = cant > 1 ? 'Se detectaron ' : 'Se detectó ';
       const cantidadTexto = `${numeroALetras(cant)} (${numeroConDigitos(cant)}) `;
@@ -354,7 +354,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         { texto: verbo, negrita: false },
         { texto: cantidadTexto, negrita: true },
         { texto: codigoTexto, negrita: true }
-      ], xIndent, anchoDisp, y, 10);
+      ], xIndent, anchoDisp, y, 11);
     }
 
     // Qué se detectó, en lista numerada; la subsanación de cada una va al lado, en negrita.
@@ -362,7 +362,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     itemsDef.forEach((it, i) => {
       const runs = [{ texto: `${i + 1})`, negrita: true }, { texto: it.texto, negrita: false }];
       if (it.subsano) runs.push({ texto: subsanoEntreParentesis(it.subsano), negrita: true });
-      y = escribirParrafoMixto(runs, xIndent + 10, anchoDisp - 10, y, 10);
+      y = escribirParrafoMixto(runs, xIndent + 10, anchoDisp - 10, y, 11);
     });
 
     // Subsanación general (no emparejada) — en negrita, aparte.
@@ -372,7 +372,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       const runsSub = m
         ? [{ texto: m[1], negrita: true }, { texto: m[2], negrita: false }]
         : [{ texto: subsano, negrita: true }];
-      y = escribirParrafoMixto(runsSub, xIndent + 10, anchoDisp - 10, y, 10);
+      y = escribirParrafoMixto(runsSub, xIndent + 10, anchoDisp - 10, y, 11);
     }
   }
 
@@ -380,7 +380,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     const deps = Object.keys(grupo.porDependencia);
     if (!deps.length) {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10.5);
+      doc.setFontSize(11);
       doc.text('NIL', margen, y);
       y += 16;
       return;
@@ -388,15 +388,16 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     deps.forEach(dep => {
       saltoDePaginaSiHaceFalta(16);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
+      doc.setFontSize(11.5);
       doc.text(`${dep}:`, margen, y);
       y += 13;
 
       grupo.porDependencia[dep].forEach(insp => {
         const listaCod = familia === 'psc' ? CODIGOS_MEDIDAS_PSC : CODIGOS_MEDIDAS;
         const marcaDe = (x) => {
-          if (familia === 'psc') return x.tipo === 'inicial' ? '(IISD)' : x.tipo === 'detallada' ? '(IICD)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
-          return x.tipo === 'inicial' ? '(II)' : x.tipo === 'detallada' ? '(ID)' : x.tipo === 'averia' ? '(IA)' : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'})`;
+          const cic = x.cic ? ' + CIC' : '';
+          if (familia === 'psc') return x.tipo === 'inicial' ? `(IISD${cic})` : x.tipo === 'detallada' ? `(IICD${cic})` : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'}${cic})`;
+          return x.tipo === 'inicial' ? `(II${cic})` : x.tipo === 'detallada' ? `(ID${cic})` : x.tipo === 'averia' ? `(IA${cic})` : `(IS de ID Fecha ${x.fechaInspMasDetallada || '—'}${cic})`;
         };
         const esConvoy = insp.categoria === 'convoyesExtr' || insp.categoria === 'convoyArgentino';
         let tituloTexto;
@@ -412,39 +413,39 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
           if (insp.proximoPuerto) tituloTexto += ` Próx. puerto: ${insp.proximoPuerto}.`;
         }
 
-        y = escribirParrafoMixto([{ texto: tituloTexto, negrita: true }], margen + 8, anchoUtil - 8, y, 10);
+        y = escribirParrafoMixto([{ texto: tituloTexto, negrita: true }], margen + 8, anchoUtil - 8, y, 11);
 
         if (esConvoy && insp.caracteristicasConvoy) {
           insp.caracteristicasConvoy.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
-            y = escribirParrafoMixto([{ texto: l, negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+            y = escribirParrafoMixto([{ texto: l, negrita: false }], margen + 8, anchoUtil - 8, y, 11);
           });
           y += 9;
         }
 
         if (insp.tipo === 'inicial') {
-          y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+          y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
         }
         (insp.deficiencias || []).forEach((g, gi) => { if (gi > 0) y += 9; grupoDeficienciaPDF(g, margen + 8, listaCod); });
 
         // La nota va debajo de la deficiencia; solo la palabra "Nota:" en negrita.
         if (insp.nota) {
-          y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: insp.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+          y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: insp.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 11);
         }
 
-        if (esConvoy && insp.barcazas && insp.barcazas.length) {
+        if (insp.barcazas && insp.barcazas.length) {
           y += 4;
           saltoDePaginaSiHaceFalta(24);
-          y = escribirParrafoMixto([{ texto: 'BARCAZAS:', negrita: true }], margen + 8, anchoUtil - 8, y, 10);
+          y = escribirParrafoMixto([{ texto: 'BARCAZAS:', negrita: true }], margen + 8, anchoUtil - 8, y, 11);
           insp.barcazas.forEach(b => {
             let t = `"${b.buque.nombre}" (${b.buque.matricula}) B/${b.buque.bandera}.`;
             if (b.tipo === 'seguimiento') t = `${marcaDe(b)} ${t}`;
-            y = escribirParrafoMixto([{ texto: t, negrita: true }], margen + 8, anchoUtil - 8, y, 10);
+            y = escribirParrafoMixto([{ texto: t, negrita: true }], margen + 8, anchoUtil - 8, y, 11);
             if (b.tipo === 'inicial') {
-              y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+              y = escribirParrafoMixto([{ texto: 'Sin registrar deficiencias.', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
             }
             (b.deficiencias || []).forEach((g, gi) => { if (gi > 0) y += 9; grupoDeficienciaPDF(g, margen + 8, listaCod); });
             if (b.nota) {
-              y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: b.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+              y = escribirParrafoMixto([{ texto: 'Nota:', negrita: true }, { texto: b.nota, negrita: false }], margen + 8, anchoUtil - 8, y, 11);
             }
             y += 4;
           });
@@ -459,7 +460,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     const deps = Object.keys(porDependencia);
     if (!deps.length) {
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.text('Sin novedades adicionales.', margen, y);
       y += 16;
       return;
@@ -467,15 +468,15 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     deps.forEach(dep => {
       saltoDePaginaSiHaceFalta(16);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
+      doc.setFontSize(11.5);
       doc.text(`${dep}:`, margen, y);
       y += 13;
       porDependencia[dep].forEach(b => {
-        y = escribirParrafoMixto([{ texto: b.titulo, negrita: true }], margen + 8, anchoUtil - 8, y, 10);
+        y = escribirParrafoMixto([{ texto: b.titulo, negrita: true }], margen + 8, anchoUtil - 8, y, 11);
         if (b.tipoBloque === 'texto') {
-          y = escribirParrafoMixto([{ texto: b.contenido || '', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+          y = escribirParrafoMixto([{ texto: b.contenido || '', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
         } else {
-          y = escribirParrafoMixto([{ texto: '(tabla — ver detalle en el sistema)', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+          y = escribirParrafoMixto([{ texto: '(tabla — ver detalle en el sistema)', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
         }
         y += 8;
       });
@@ -487,11 +488,11 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     [['GUARDIA SALIENTE:', saliente], ['GUARDIA ENTRANTE:', entrante]].forEach(([titulo, personas]) => {
       saltoDePaginaSiHaceFalta(40);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
+      doc.setFontSize(11.5);
       doc.text(titulo, margen, y);
       y += 13;
       personas.forEach(p => {
-        y = escribirParrafoMixto([{ texto: '•', negrita: false }, { texto: `${p.rol}:`, negrita: true }, { texto: p.nombre, negrita: false }], margen + 8, anchoUtil - 8, y, 10.5);
+        y = escribirParrafoMixto([{ texto: '•', negrita: false }, { texto: `${p.rol}:`, negrita: true }, { texto: p.nombre, negrita: false }], margen + 8, anchoUtil - 8, y, 11);
         y += 2;
       });
       y += 8;
@@ -502,7 +503,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     const deps = Object.keys(bloque.porDependencia);
     if (!deps.length) {
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.text('Sin casos cargados.', margen, y);
       y += 16;
       return;
@@ -510,28 +511,26 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     deps.forEach(dep => {
       saltoDePaginaSiHaceFalta(16);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
+      doc.setFontSize(11.5);
       doc.text(`${dep}:`, margen, y);
       y += 13;
 
       bloque.porDependencia[dep].forEach(c => {
         const estadoTxt = c.estado === 'pendiente' ? 'PENDIENTE' : 'CERRADO';
-        y = escribirParrafoMixto([{ texto: `${c.titulo} — ${estadoTxt}`, negrita: true }], margen + 8, anchoUtil - 8, y, 10.5);
+        y = escribirParrafoMixto([{ texto: `${tituloCompletoCaso(c, esSAR)} — ${estadoTxt}`, negrita: true }], margen + 8, anchoUtil - 8, y, 11);
 
         if (esSAR) {
           const runsSar = [
-            { texto: 'N.º de caso:', negrita: true }, { texto: (c.numeroCaso || '—') + '  ', negrita: false },
-            { texto: 'Subcentro (VTS):', negrita: true }, { texto: (c.subcentroVTS || '—') + '  ', negrita: false },
             { texto: 'Inicio:', negrita: true }, { texto: c.fechaInicio || '—', negrita: false }
           ];
           if (c.fechaCierre) { runsSar.push({ texto: '  Cierre:', negrita: true }, { texto: c.fechaCierre, negrita: false }); }
-          y = escribirParrafoMixto(runsSar, margen + 8, anchoUtil - 8, y, 9.5);
+          y = escribirParrafoMixto(runsSar, margen + 8, anchoUtil - 8, y, 10);
         }
 
-        y = escribirParrafoMixto([{ texto: 'Posición:', negrita: true }, { texto: c.posicion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
-        y = escribirParrafoMixto([{ texto: 'Características:', negrita: true }, { texto: c.caracteristicas || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
-        y = escribirParrafoMixto([{ texto: 'Novedad:', negrita: true }, { texto: c.novedad || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
-        y = escribirParrafoMixto([{ texto: 'Situación:', negrita: true }, { texto: c.situacion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 10);
+        y = escribirParrafoMixto([{ texto: 'Posición:', negrita: true }, { texto: c.posicion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
+        y = escribirParrafoMixto([{ texto: 'Características:', negrita: true }, { texto: c.caracteristicas || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
+        y = escribirParrafoMixto([{ texto: 'Novedad:', negrita: true }, { texto: c.novedad || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
+        y = escribirParrafoMixto([{ texto: 'Situación:', negrita: true }, { texto: c.situacion || '—', negrita: false }], margen + 8, anchoUtil - 8, y, 11);
         y += 10;
       });
       y += 4;

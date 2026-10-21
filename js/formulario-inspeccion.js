@@ -129,6 +129,13 @@ function abrirFormularioInspeccionEstandar(opciones) {
           </select>
         </div>
         ${categoriasHtml}
+        ${opciones.incluirCIC && !esBarcaza ? `
+        <div class="campo">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;">
+            <input type="checkbox" id="insCIC" ${v.cic ? 'checked' : ''} style="width:16px;height:16px;">
+            ¿Se hizo CIC? (Campaña de Inspecciones Concentradas)
+          </label>
+        </div>` : ''}
         <div class="fila-doble">
           <div class="campo"><label>Tipo de buque</label><input type="text" id="insBuqueTipo" value="${esc(buque.tipo || '')}" placeholder="L/M, B/P, B/M, B/T..."></div>
           <div class="campo"><label>Nombre del buque</label><input type="text" id="insBuqueNombre" value="${esc(buque.nombre || '')}"></div>
@@ -419,6 +426,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
       nota: $('insNota').value.trim()
     };
     if (opciones.incluirCategoria && !esBarcaza) datos.categoria = $('insCategoria').value;
+    if (opciones.incluirCIC && !esBarcaza) datos.cic = $('insCIC').checked;
     if (esCategoriaConvoy()) datos.caracteristicasConvoy = $('insConvoy').value.trim();
     if (!esBarcaza) datos.barcazas = $('insTieneBarcazas').checked ? barcazas : [];
     cerrarModalInspeccion(idModal);
