@@ -246,7 +246,9 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   /** Tabla con bordes reales; anchos por columna opcionales (proporciones que suman 1). */
   function tabla(columnas, filas, tituloTabla, anchos, extras) {
     extras = extras || {};
-    if (tituloTabla) {
+    const tituloFusionado = !!(tituloTabla && extras.tituloDentro);
+
+    if (tituloTabla && !tituloFusionado) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       const lineasTitulo = doc.splitTextToSize(String(tituloTabla), anchoUtil);
@@ -266,6 +268,20 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     const anchosCol = props.map(p => p * anchoUtil);
     const inicios = anchosCol.map((_, i) => anchosCol.slice(0, i).reduce((a, b) => a + b, 0));
 
+    function dibujarFilaTituloFusionado() {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      const lineas = doc.splitTextToSize(String(tituloTabla), anchoUtil - 16);
+      const alto = lineas.length * 11 + 9;
+      doc.setDrawColor(120, 120, 120);
+      doc.setLineWidth(0.5);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margen, y, anchoUtil, alto, 'FD');
+      doc.setTextColor(20, 20, 20);
+      lineas.forEach((ln, i) => doc.text(ln, anchoPagina / 2, y + 14 + i * 11, { align: 'center' }));
+      y += alto;
+    }
+
     function dibujarEncabezado() {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8.5);
@@ -284,7 +300,9 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
       y += alto;
     }
 
-    saltoDePaginaSiHaceFalta(extras.banda ? 58 : 40);
+    const altoTituloFusionado = tituloFusionado ? doc.splitTextToSize(String(tituloTabla), anchoUtil - 16).length * 11 + 9 : 0;
+    saltoDePaginaSiHaceFalta((extras.banda ? 58 : 40) + altoTituloFusionado);
+    if (tituloFusionado) dibujarFilaTituloFusionado();
     if (extras.banda) {
       doc.setFillColor(215, 215, 215);
       doc.setDrawColor(120, 120, 120);
@@ -558,7 +576,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     } else if (c && c.tipo === 'guardia') {
       guardiaPDF(c.saliente, c.entrante);
     } else if (c && c.tipo === 'tablas') {
-      c.tablas.forEach(t => tabla(t.columnas, t.filas, t.titulo, t.anchos, { banda: t.banda, pie: t.pie }));
+      c.tablas.forEach(t => tabla(t.columnas, t.filas, t.titulo, t.anchos, { banda: t.banda, pie: t.pie, tituloDentro: t.tituloDentro }));
       if (c.nota) {
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(9);

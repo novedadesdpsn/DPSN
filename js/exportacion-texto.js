@@ -78,7 +78,8 @@ function textoEstadoRectorPuerto() {
       contenido: {
         tipo: 'tablas',
         tablas: [{
-          titulo: `${cic.titulo} — ${cic.vigencia}`,
+          titulo: `${cic.titulo} ${cic.vigencia}`,
+          tituloDentro: true,
           columnas: ['Diario', 'Total'],
           filas: [[cicDiario || '--', cic.total]]
         }]
