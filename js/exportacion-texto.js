@@ -74,11 +74,11 @@ function textoEstadoRectorPuerto() {
       contenido: { tipo: 'inspecciones', grupo: D.estadoRectorPuerto, familia: 'psc' }
     },
     {
-      titulo: cic.titulo,
+      titulo: '',
       contenido: {
         tipo: 'tablas',
         tablas: [{
-          banda: cic.vigencia,
+          titulo: `${cic.titulo} — ${cic.vigencia}`,
           columnas: ['Diario', 'Total'],
           filas: [[cicDiario || '--', cic.total]]
         }]

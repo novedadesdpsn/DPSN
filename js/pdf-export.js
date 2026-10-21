@@ -82,13 +82,13 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
         <button type="button" onclick="cerrarModalExportar()">✕</button>
       </div>
       <div class="modal-todos">
-        <input type="checkbox" id="chkTodosExportar" checked>
+        <input type="checkbox" id="chkTodosExportar">
         <label for="chkTodosExportar">Seleccionar todos los ítems</label>
       </div>
       <div class="modal-lista" id="listaItemsExportar">
         ${items.map(it => `
           <label>
-            <input type="checkbox" class="chk-item-exportar" value="${esc(it.id)}" checked>
+            <input type="checkbox" class="chk-item-exportar" value="${esc(it.id)}" ${it.id === 'oficinas' ? '' : 'checked'}>
             ${esc(it.label)}
           </label>
         `).join('')}
@@ -247,11 +247,12 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   function tabla(columnas, filas, tituloTabla, anchos, extras) {
     extras = extras || {};
     if (tituloTabla) {
-      saltoDePaginaSiHaceFalta(14);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.text(tituloTabla, margen, y);
-      y += 12;
+      const lineasTitulo = doc.splitTextToSize(String(tituloTabla), anchoUtil);
+      saltoDePaginaSiHaceFalta(14 + (lineasTitulo.length - 1) * 11);
+      lineasTitulo.forEach((ln, i) => doc.text(ln, margen, y + i * 11));
+      y += lineasTitulo.length * 11 + 4;
     }
     if (!filas.length) {
       doc.setFont('helvetica', 'italic');
@@ -540,7 +541,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
   encabezadoInstitucional();
 
   secciones.forEach(sec => {
-    tituloSeccion(sec.titulo);
+    if (sec.titulo) tituloSeccion(sec.titulo);
     if (sec.referencias) referenciasSeccion(sec.referencias);
 
     const c = sec.contenido;
