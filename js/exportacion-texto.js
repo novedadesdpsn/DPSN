@@ -78,7 +78,7 @@ function textoEstadoRectorPuerto() {
       contenido: {
         tipo: 'tablas',
         tablas: [{
-          titulo: cic.vigencia,
+          banda: cic.vigencia,
           columnas: ['Diario', 'Total'],
           filas: [[cicDiario || '--', cic.total]]
         }]
