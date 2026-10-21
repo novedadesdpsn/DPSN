@@ -253,6 +253,7 @@ button{font-family:inherit; cursor:pointer;}
 .tag.abierto{ background:#fef3e0; color:var(--ambar); }
 .tag.pendiente{ background:#fef3e0; color:var(--ambar); }
 .tag.cerrado{ background:#e7f8f3; color:var(--acento); }
+.tag.cic{ background:#ffe4e8; color:var(--coral); font-weight:700; }
 
 table.tabla-datos{ width:100%; border-collapse:collapse; font-size:12.5px; }
 table.tabla-datos th{
@@ -349,7 +350,7 @@ table.tabla-datos tr:hover td{ background: #fafbfc; }
 }
 .modal-caja .modal-footer{ padding:14px 20px; border-top:1px solid var(--gris-100); display:flex; justify-content:flex-end; gap:10px; }
 
-.modal-caja.ancho{ width:min(560px,92vw); }
+.modal-caja.ancho{ width:min(760px,95vw); max-height:92vh; }
 .modal-campos{ padding:16px 20px; overflow-y:auto; flex:1; }
 .modal-campos .campo{ margin-bottom:12px; }
 .modal-campos textarea{
