@@ -16,6 +16,18 @@ function fechaHoy() {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+/** La guardia va de las 0700 de un día a las 0700 del siguiente: el parte "pertenece"
+ *  al día en que arrancó, no al día en que se hace el export (que suele ser el siguiente,
+ *  recién al cerrar la guardia). Se usa para el nombre del PDF principal. */
+function fechaInicioParte() {
+  const hoy = new Date();
+  const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+  const dd = String(ayer.getDate()).padStart(2, '0');
+  const mm = String(ayer.getMonth() + 1).padStart(2, '0');
+  const yyyy = ayer.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
 /**
  * Interlineado del PDF, como múltiplo del tamaño de letra.
  * 1.4 equivale al "1,15" de Word (que se mide sobre la altura natural de la fuente).
@@ -739,7 +751,7 @@ function abrirModalExportarGuardia() {
       secciones.push({ titulo: 'Relevo de Guardia', contenido: contenidoGuardia() });
     }
 
-    generarPDF(`Novedades DPSN ${fechaHoy()}.pdf`, 'RESUMEN DE NOVEDADES', fechaParteActual(), secciones);
+    generarPDF(`Novedades DPSN ${fechaInicioParte()}.pdf`, 'RESUMEN DE NOVEDADES', fechaParteActual(), secciones);
     archivarParteDelDia();
   });
 }

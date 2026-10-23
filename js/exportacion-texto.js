@@ -114,7 +114,7 @@ function textoOtros() {
 function textoOficinas() {
   const doc = D.oficinas.documentacion;
   const secciones = [{
-    titulo: `Documentación — Trámites en Análisis (${fechaHoy()})`,
+    titulo: `Documentación — Trámites en Análisis (${fechaInicioParte()})`,
     contenido: {
       tipo: 'tablas',
       tablas: [{

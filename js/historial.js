@@ -21,11 +21,27 @@ function fechaISOHoy() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Junta el estado actual de todas las secciones para guardarlo como una foto del día. */
+/** La guardia va de las 0700 de un día a las 0700 del siguiente: lo que pasó durante
+ *  ese lapso "pertenece" al día en que arrancó la guardia (el de ayer, si se exporta/
+ *  finaliza recién al otro día), no al día en que se hace el export. */
+function fechaISOInicioParte() {
+  const hoy = new Date();
+  const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+  return `${ayer.getFullYear()}-${String(ayer.getMonth() + 1).padStart(2, '0')}-${String(ayer.getDate()).padStart(2, '0')}`;
+}
+
+function fechaVisualInicioParte() {
+  const hoy = new Date();
+  const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+  return `${String(ayer.getDate()).padStart(2, '0')}-${String(ayer.getMonth() + 1).padStart(2, '0')}-${ayer.getFullYear()}`;
+}
+
+/** Junta el estado actual de todas las secciones para guardarlo como una foto del día,
+ *  fechada con el día en que arrancó la guardia (no el día en que se exporta/archiva). */
 function construirInstantaneaDelDia() {
   const datos = {};
   SECCIONES_PERSISTIDAS.forEach(clave => { datos[clave] = DATOS_EJEMPLO[clave]; });
-  return { fecha: fechaISOHoy(), fechaVisual: fechaHoy(), datos };
+  return { fecha: fechaISOInicioParte(), fechaVisual: fechaVisualInicioParte(), datos };
 }
 
 /** Se llama automáticamente al exportar el PDF de Guardias. No bloquea la descarga si falla. */
