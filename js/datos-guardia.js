@@ -217,9 +217,10 @@ function activarEscuchaEnVivo() {
   });
 }
 
-/** Abre el selector de fecha nativo (calendario) y vuelca lo elegido, en formato DD/MM/AAAA,
- *  en el campo de texto indicado — sin reemplazar la posibilidad de tipear la fecha a mano. */
-function abrirSelectorFecha(idCampoTexto) {
+/** Abre el selector de fecha nativo (calendario) justo debajo del botón 📅 que lo dispara,
+ *  y vuelca lo elegido, en formato DD/MM/AAAA, en el campo de texto indicado — sin reemplazar
+ *  la posibilidad de tipear la fecha a mano. */
+function abrirSelectorFecha(idCampoTexto, boton) {
   let aux = document.getElementById('auxSelectorFecha');
   if (!aux) {
     aux = document.createElement('input');
@@ -230,7 +231,15 @@ function abrirSelectorFecha(idCampoTexto) {
     aux.style.pointerEvents = 'none';
     aux.style.width = '1px';
     aux.style.height = '1px';
+    aux.style.zIndex = '-1';
     document.body.appendChild(aux);
+  }
+  // Lo posicionamos pegado al botón clickeado para que el desplegable del calendario
+  // aparezca ahí mismo, no en la esquina de la página.
+  if (boton && boton.getBoundingClientRect) {
+    const r = boton.getBoundingClientRect();
+    aux.style.top = r.bottom + 'px';
+    aux.style.left = r.left + 'px';
   }
   aux.onchange = () => {
     const campo = document.getElementById(idCampoTexto);
@@ -292,8 +301,8 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
       controlHtml = `<label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;"><input type="checkbox" id="campo_${c.id}" ${valorActual === 'si' ? 'checked' : ''} style="width:16px;height:16px;"> ${esc(c.textoCheck || 'Sí')}</label>`;
     } else if (c.conCalendario) {
       controlHtml = `<div style="display:flex; gap:6px; align-items:center;">
+        <button type="button" class="btn-secundario" style="padding:4px 10px; font-size:15px; line-height:1;" onclick="abrirSelectorFecha('campo_${c.id}', this)" title="Elegir fecha del calendario">📅</button>
         <input type="text" id="campo_${c.id}" value="${esc(valorActual)}" style="flex:1;">
-        <button type="button" class="btn-secundario" style="padding:4px 10px; font-size:15px; line-height:1;" onclick="abrirSelectorFecha('campo_${c.id}')" title="Elegir fecha del calendario">📅</button>
       </div>`;
     } else {
       controlHtml = `<input type="text" id="campo_${c.id}" value="${esc(valorActual)}">`;
