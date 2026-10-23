@@ -15,7 +15,7 @@ const CODIGOS_MEDIDAS = [
   { codigo: "70", descripcion: "Sociedad de clasificación informada." },
   { codigo: "85", descripcion: "Investigación de una transgresión a exigencias de descarga (MARPOL 73/78)." },
   { codigo: "95", descripcion: "Emisión de la carta de advertencia." },
-  { codigo: "99", descripcion: "Otros (especificar en un lenguaje claro)." }
+  { codigo: "99", descripcion: "Otros." }
 ];
 
 function descripcionCodigo(codigo) {
@@ -41,7 +41,7 @@ const CODIGOS_MEDIDAS_PSC = [
   { codigo: "55", descripcion: "Estado de bandera consultado." },
   { codigo: "70", descripcion: "Sociedad de clasificación informada." },
   { codigo: "85", descripcion: "Investigación de una transgresión a exigencias de descarga (MARPOL 73/78)." },
-  { codigo: "99", descripcion: "Otros (especificar en un lenguaje claro)." }
+  { codigo: "99", descripcion: "Otros." }
 ];
 
 function descripcionCodigoPSC(codigo) {

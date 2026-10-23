@@ -14,7 +14,11 @@ function cerrarModalInspeccion(id) {
 }
 
 function opcionesCodigoHtml(lista) {
-  return (lista || CODIGOS_MEDIDAS).map(c => `<option value="${c.codigo}">${c.codigo} — ${esc(c.descripcion)}</option>`).join('');
+  // Código 99 ("Otros.") se ve distinto solo acá, en el desplegable de carga: recuerda que
+  // hay que especificar en lenguaje claro. En el sistema y el PDF, la descripción queda "Otros".
+  return (lista || CODIGOS_MEDIDAS).map(c =>
+    `<option value="${c.codigo}">${c.codigo} — ${c.codigo === '99' ? 'Otros (especificar en lenguaje claro)' : esc(c.descripcion)}</option>`
+  ).join('');
 }
 
 function opcionesCantidadHtml() {

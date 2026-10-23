@@ -217,6 +217,37 @@ function activarEscuchaEnVivo() {
   });
 }
 
+/** Abre el selector de fecha nativo (calendario) y vuelca lo elegido, en formato DD/MM/AAAA,
+ *  en el campo de texto indicado — sin reemplazar la posibilidad de tipear la fecha a mano. */
+function abrirSelectorFecha(idCampoTexto) {
+  let aux = document.getElementById('auxSelectorFecha');
+  if (!aux) {
+    aux = document.createElement('input');
+    aux.type = 'date';
+    aux.id = 'auxSelectorFecha';
+    aux.style.position = 'fixed';
+    aux.style.opacity = '0';
+    aux.style.pointerEvents = 'none';
+    aux.style.width = '1px';
+    aux.style.height = '1px';
+    document.body.appendChild(aux);
+  }
+  aux.onchange = () => {
+    const campo = document.getElementById(idCampoTexto);
+    if (campo && aux.value) {
+      const [a, m, d] = aux.value.split('-');
+      campo.value = `${d}/${m}/${a}`;
+    }
+  };
+  aux.value = '';
+  if (typeof aux.showPicker === 'function') {
+    try { aux.showPicker(); } catch (e) { aux.focus(); aux.click(); }
+  } else {
+    aux.focus();
+    aux.click();
+  }
+}
+
 // ---------- Modal de formulario genérico ----------
 function cerrarModalFormulario() {
   const m = document.getElementById('modalFormulario');
@@ -259,6 +290,11 @@ function abrirModalFormulario(titulo, campos, valores, onGuardar) {
       controlHtml = `<input type="date" id="campo_${c.id}" value="${esc(valorActual)}">`;
     } else if (c.tipo === 'checkbox') {
       controlHtml = `<label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;"><input type="checkbox" id="campo_${c.id}" ${valorActual === 'si' ? 'checked' : ''} style="width:16px;height:16px;"> ${esc(c.textoCheck || 'Sí')}</label>`;
+    } else if (c.conCalendario) {
+      controlHtml = `<div style="display:flex; gap:6px; align-items:center;">
+        <input type="text" id="campo_${c.id}" value="${esc(valorActual)}" style="flex:1;">
+        <button type="button" class="btn-secundario" style="padding:4px 10px; font-size:15px; line-height:1;" onclick="abrirSelectorFecha('campo_${c.id}')" title="Elegir fecha del calendario">📅</button>
+      </div>`;
     } else {
       controlHtml = `<input type="text" id="campo_${c.id}" value="${esc(valorActual)}">`;
     }
@@ -838,8 +874,8 @@ function camposLicencia() {
     { id: 'nombre', label: 'Apellido y Nombre' },
     { id: 'oficina', label: 'Oficina (opcional)' },
     { id: 'diagnostico', label: 'Diagnóstico (solo si es Licencia Médica)', tipo: 'textarea' },
-    { id: 'inicia', label: 'Inicia' },
-    { id: 'vence', label: 'Vence' }
+    { id: 'inicia', label: 'Inicia', conCalendario: true },
+    { id: 'vence', label: 'Vence', conCalendario: true }
   ];
 }
 
