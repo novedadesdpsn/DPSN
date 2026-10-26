@@ -1182,12 +1182,12 @@ function uiEditarResumenPSC() {
   normalizarResumenPSC();
   const rp = D.estadoRectorPuerto.resumen;
   abrirModalFormulario('Editar resumen PSC', [
-    { id: 'buquesIngresadosDiario', label: 'Buques extranjeros ingresados (hoy)', default: String(rp.buquesIngresadosDiario || 0) },
-    { id: 'buquesIngresadosAnualPrevio', label: 'Acumulado anual de buques ingresados — previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.buquesIngresadosAnualPrevio || 0) },
-    { id: 'factiblesDiario', label: 'Factibles de ser inspeccionados (hoy)', default: String(rp.factiblesDiario) },
-    { id: 'inspeccionadosManual', label: 'Corrección manual de "Inspecciones del día" (dejar vacío para que se sume solo, a partir de las inspecciones cargadas)', default: String(rp.inspeccionadosManual !== undefined && rp.inspeccionadosManual !== null ? rp.inspeccionadosManual : '') },
-    { id: 'factiblesAnualPrevio', label: 'Acumulado anual de factibles — previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.factiblesAnualPrevio || 0) },
-    { id: 'inspeccionadosAnualPrevio', label: 'Acumulado anual de inspeccionados — previo a hoy (ídem, una sola vez)', default: String(rp.inspeccionadosAnualPrevio || 0) }
+    { id: 'inspeccionadosManual', label: '① INSPECCIONES DEL DÍA — corrección manual (dejar vacío para que se sume solo, a partir de las inspecciones cargadas arriba)', default: String(rp.inspeccionadosManual !== undefined && rp.inspeccionadosManual !== null ? rp.inspeccionadosManual : '') },
+    { id: 'buquesIngresadosDiario', label: '② TOTAL BUQUES INGRESADOS — ingresados hoy', default: String(rp.buquesIngresadosDiario || 0) },
+    { id: 'buquesIngresadosAnualPrevio', label: '② TOTAL BUQUES INGRESADOS — acumulado previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.buquesIngresadosAnualPrevio || 0) },
+    { id: 'factiblesDiario', label: '③ TOTAL FACTIBLES — factibles hoy', default: String(rp.factiblesDiario) },
+    { id: 'factiblesAnualPrevio', label: '③ TOTAL FACTIBLES — acumulado previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.factiblesAnualPrevio || 0) },
+    { id: 'inspeccionadosAnualPrevio', label: '④ TOTAL INSPECCIONADOS — acumulado previo a hoy (lo de hoy sale del campo ① de arriba; ídem, una sola vez)', default: String(rp.inspeccionadosAnualPrevio || 0) }
   ], {}, (datos) => {
     D.estadoRectorPuerto.resumen = {
       buquesIngresadosDiario: parseInt(datos.buquesIngresadosDiario, 10) || 0,
