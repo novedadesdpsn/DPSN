@@ -58,14 +58,15 @@ function textoExtraordinarias() {
 }
 
 function textoEstadoRectorPuerto() {
+  normalizarResumenPSC();
   const rp = D.estadoRectorPuerto.resumen;
   normalizarCIC();
   const cic = D.estadoRectorPuerto.cic;
   const cicDiario = contarCIC(D.estadoRectorPuerto);
   const inspeccionadosDiario = calcularInspeccionadosPSC();
+  const buquesIngresadosTotal = (rp.buquesIngresadosAnualPrevio || 0) + (rp.buquesIngresadosDiario || 0);
   const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
   const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosDiario;
-  const pctDiario = rp.factiblesDiario ? ((inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(2) : '0.00';
   const pctAnual = factiblesAnual ? ((inspeccionadosAnual / factiblesAnual) * 100).toFixed(2) : '0.00';
   return [
     {
@@ -91,8 +92,8 @@ function textoEstadoRectorPuerto() {
         tipo: 'tablas',
         nota: '(Cálculo automático)',
         tablas: [{
-          columnas: ['Buq. Extr. Ingresados', 'Factibles (hoy)', 'Insp. (hoy)', 'Total % (hoy)', 'Factibles (anual)', 'Insp. (anual)', 'Total % (anual)'],
-          filas: [[rp.buquesIngresados, rp.factiblesDiario, inspeccionadosDiario, pctDiario + '%', factiblesAnual, inspeccionadosAnual, pctAnual + '%']]
+          columnas: ['Inspecciones del Día', 'Total Buques Ingresados', 'Total Factibles', 'Total Inspeccionados', '% Parcial Anual'],
+          filas: [[inspeccionadosDiario, buquesIngresadosTotal, factiblesAnual, inspeccionadosAnual, pctAnual + '%']]
         }]
       }
     }

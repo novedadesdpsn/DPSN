@@ -72,7 +72,7 @@ const DATOS_EJEMPLO = {
         }
       ]
     },
-    resumen: { buquesIngresados: 6, factiblesDiario: 3, inspeccionadosManual: null, factiblesAnualPrevio: 1800, inspeccionadosAnualPrevio: 881 },
+    resumen: { buquesIngresadosDiario: 6, buquesIngresadosAnualPrevio: 940, factiblesDiario: 3, inspeccionadosManual: null, factiblesAnualPrevio: 1800, inspeccionadosAnualPrevio: 881 },
     cic: {
       titulo: 'CIC “CAMPAÑA DE INSPECCIONES CONCENTRADAS 2026 SOBRE “SUJECIÓN DE LA CARGA”',
       vigencia: '01/09/2026 al 30/11/2026',

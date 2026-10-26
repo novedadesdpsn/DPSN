@@ -264,14 +264,15 @@ function renderExtraordinarias() {
 }
 
 function renderEstadoRectorPuerto() {
+  normalizarResumenPSC();
   const rp = D.estadoRectorPuerto.resumen;
   normalizarCIC();
   const cic = D.estadoRectorPuerto.cic;
   const cicDiario = contarCIC(D.estadoRectorPuerto);
   const inspeccionadosDiario = calcularInspeccionadosPSC();
+  const buquesIngresadosTotal = (rp.buquesIngresadosAnualPrevio || 0) + (rp.buquesIngresadosDiario || 0);
   const factiblesAnual = (rp.factiblesAnualPrevio || 0) + (rp.factiblesDiario || 0);
   const inspeccionadosAnual = (rp.inspeccionadosAnualPrevio || 0) + inspeccionadosDiario;
-  const pctDiario = rp.factiblesDiario ? ((inspeccionadosDiario / rp.factiblesDiario) * 100).toFixed(2) : '0.00';
   const pctAnual = factiblesAnual ? ((inspeccionadosAnual / factiblesAnual) * 100).toFixed(2) : '0.00';
   return `
     <div class="tarjeta">
@@ -294,16 +295,14 @@ function renderEstadoRectorPuerto() {
     <div class="tarjeta">
       <h2>Resumen PSC (Port State Control)</h2>
       <div class="grid-resumen">
-        <div class="stat"><div class="valor">${rp.buquesIngresados}</div><div class="etiqueta">Buques extr. ingresados</div></div>
-        <div class="stat"><div class="valor">${rp.factiblesDiario}</div><div class="etiqueta">Factibles (hoy)</div></div>
-        <div class="stat"><div class="valor">${inspeccionadosDiario}</div><div class="etiqueta">Inspeccionados (hoy)</div></div>
-        <div class="stat"><div class="valor">${pctDiario}%</div><div class="etiqueta">Total % (hoy)</div></div>
-        <div class="stat"><div class="valor">${factiblesAnual}</div><div class="etiqueta">Factibles (anual)</div></div>
-        <div class="stat"><div class="valor">${inspeccionadosAnual}</div><div class="etiqueta">Inspeccionados (anual)</div></div>
-        <div class="stat"><div class="valor">${pctAnual}%</div><div class="etiqueta">Total % (anual)</div></div>
+        <div class="stat"><div class="valor">${inspeccionadosDiario}</div><div class="etiqueta">Inspecciones del día</div></div>
+        <div class="stat"><div class="valor">${buquesIngresadosTotal}</div><div class="etiqueta">Total buques ingresados</div></div>
+        <div class="stat"><div class="valor">${factiblesAnual}</div><div class="etiqueta">Total factibles</div></div>
+        <div class="stat"><div class="valor">${inspeccionadosAnual}</div><div class="etiqueta">Total inspeccionados</div></div>
+        <div class="stat"><div class="valor">${pctAnual}%</div><div class="etiqueta">% parcial anual</div></div>
       </div>
       <p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">
-        "Inspeccionados (hoy)" se suma solo a partir de las inspecciones cargadas arriba (inicial sin deficiencias + inicial con deficiencia); las de seguimiento no computan. Los totales % se calculan solos por regla de tres simple (inspeccionados sobre factibles). El anual se arma sumando el acumulado previo + lo de hoy — no hace falta tipearlo entero cada vez.
+        "Inspecciones del día" se suma solo a partir de las inspecciones cargadas arriba (inicial sin deficiencias + inicial con deficiencia); las de seguimiento no computan. "% parcial anual" se calcula solo (inspeccionados anual sobre factibles anual). Los totales de buques ingresados, factibles e inspeccionados se arman sumando el acumulado previo + lo de hoy — no hace falta tipearlos enteros cada vez.
       </p>
       ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario" type="button" style="margin-top:10px;" onclick="uiEditarResumenPSC()">Editar</button>` : ''}
     </div>
