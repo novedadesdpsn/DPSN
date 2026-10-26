@@ -55,6 +55,25 @@ function normalizarLicencias() {
   return false;
 }
 
+/** Migra "Buques Ingresados" de ser un contador que se reinicia cada día a ser un acumulado
+ *  anual (mismo mecanismo que Factibles e Inspeccionados): buquesIngresadosAnualPrevio + lo de hoy. */
+function normalizarResumenPSC() {
+  if (!D.estadoRectorPuerto) return false;
+  const rp = D.estadoRectorPuerto.resumen;
+  if (!rp) return false;
+  let cambio = false;
+  if (rp.buquesIngresadosDiario === undefined) {
+    rp.buquesIngresadosDiario = typeof rp.buquesIngresados === 'number' ? rp.buquesIngresados : 0;
+    delete rp.buquesIngresados;
+    cambio = true;
+  }
+  if (rp.buquesIngresadosAnualPrevio === undefined) {
+    rp.buquesIngresadosAnualPrevio = 0;
+    cambio = true;
+  }
+  return cambio;
+}
+
 /** Asegura que exista el cuadro de la CIC, aunque lo guardado sea de antes de agregarlo.
  *  totalPrevio es el acumulado hasta ayer; el TOTAL que se ve en pantalla/PDF es
  *  totalPrevio + lo cargado hoy (CIC diario). Migra el viejo campo "total" (manual) si existía. */
@@ -178,7 +197,7 @@ async function hidratarDatosGuardia() {
     } else {
       persistirDatosGuardia();
     }
-    if (normalizarOficinas() || normalizarLicencias() || normalizarCIC()) persistirDatosGuardia();
+    if (normalizarOficinas() || normalizarLicencias() || normalizarCIC() || normalizarResumenPSC()) persistirDatosGuardia();
     inicializarEstadoConocido();
     await cargarPrecargasPrivadas();
     return;
@@ -198,7 +217,7 @@ async function hidratarDatosGuardia() {
     }
   }));
 
-  if (normalizarOficinas() || normalizarLicencias() || normalizarCIC()) persistirDatosGuardia();
+  if (normalizarOficinas() || normalizarLicencias() || normalizarCIC() || normalizarResumenPSC()) persistirDatosGuardia();
   inicializarEstadoConocido();
   await cargarPrecargasPrivadas();
   activarEscuchaEnVivo();
@@ -1160,16 +1179,19 @@ function uiEditarResumenExtraordinarias() {
 }
 
 function uiEditarResumenPSC() {
+  normalizarResumenPSC();
   const rp = D.estadoRectorPuerto.resumen;
   abrirModalFormulario('Editar resumen PSC', [
-    { id: 'buquesIngresados', label: 'Buques extranjeros ingresados (hoy)', default: String(rp.buquesIngresados) },
+    { id: 'buquesIngresadosDiario', label: 'Buques extranjeros ingresados (hoy)', default: String(rp.buquesIngresadosDiario || 0) },
+    { id: 'buquesIngresadosAnualPrevio', label: 'Acumulado anual de buques ingresados — previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.buquesIngresadosAnualPrevio || 0) },
     { id: 'factiblesDiario', label: 'Factibles de ser inspeccionados (hoy)', default: String(rp.factiblesDiario) },
-    { id: 'inspeccionadosManual', label: 'Corrección manual de "Inspeccionados (hoy)" (dejar vacío para que se sume solo, a partir de las inspecciones cargadas)', default: String(rp.inspeccionadosManual !== undefined && rp.inspeccionadosManual !== null ? rp.inspeccionadosManual : '') },
+    { id: 'inspeccionadosManual', label: 'Corrección manual de "Inspecciones del día" (dejar vacío para que se sume solo, a partir de las inspecciones cargadas)', default: String(rp.inspeccionadosManual !== undefined && rp.inspeccionadosManual !== null ? rp.inspeccionadosManual : '') },
     { id: 'factiblesAnualPrevio', label: 'Acumulado anual de factibles — previo a hoy (se carga una sola vez al implementar, y después no hace falta tocarlo)', default: String(rp.factiblesAnualPrevio || 0) },
     { id: 'inspeccionadosAnualPrevio', label: 'Acumulado anual de inspeccionados — previo a hoy (ídem, una sola vez)', default: String(rp.inspeccionadosAnualPrevio || 0) }
   ], {}, (datos) => {
     D.estadoRectorPuerto.resumen = {
-      buquesIngresados: parseInt(datos.buquesIngresados, 10) || 0,
+      buquesIngresadosDiario: parseInt(datos.buquesIngresadosDiario, 10) || 0,
+      buquesIngresadosAnualPrevio: parseInt(datos.buquesIngresadosAnualPrevio, 10) || 0,
       factiblesDiario: parseInt(datos.factiblesDiario, 10) || 0,
       inspeccionadosManual: datos.inspeccionadosManual.trim() === '' ? null : (parseInt(datos.inspeccionadosManual, 10) || 0),
       factiblesAnualPrevio: parseInt(datos.factiblesAnualPrevio, 10) || 0,
