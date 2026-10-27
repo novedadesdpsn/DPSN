@@ -32,10 +32,11 @@ function textoGrupoDeficiencia(g, lista) {
   if (g.accion === 'recodifico') {
     return `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)})`;
   }
+  const verbo = g.accion === 'mantiene' ? 'Mantiene' : 'Se detectó';
   if (g.codigo2) {
-    return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo}/${g.codigo2} (${descripcionEnLista(g.codigo, lista)} - ${descripcionEnLista(g.codigo2, lista)})`;
+    return `${verbo} ${cant} deficiencia(s) Cód. ${g.codigo}/${g.codigo2} (${descripcionEnLista(g.codigo, lista)} - ${descripcionEnLista(g.codigo2, lista)})`;
   }
-  return `Se detectó ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)})`;
+  return `${verbo} ${cant} deficiencia(s) Cód. ${g.codigo} (${descripcionEnLista(g.codigo, lista)})`;
 }
 
 function lineasDescripcionGrupo(g) {
@@ -89,6 +90,9 @@ function codigosDeGrupo(g) {
 function abrirFormularioInspeccionEstandar(opciones) {
   const idModal = opciones.idModal || 'modalInspeccion';
   const esBarcaza = !!opciones.esBarcaza;
+  // ERP no lleva barcazas: los remolcadores con barcazas están sujetos al Acuerdo de Hidrovía,
+  // así que esa inspección es Extraordinaria, no de Estado Rector de Puerto.
+  const incluirBarcazas = opciones.incluirBarcazas !== false;
   cerrarModalInspeccion(idModal);
   const v = opciones.valores || {};
   let barcazas = (v.barcazas || []).slice();
@@ -168,6 +172,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
                 <label>Acción</label>
                 <select id="defAccion">
                   <option value="detecto">Se detectó</option>
+                  <option value="mantiene">Mantiene</option>
                   <option value="recodifico">Se recodificó</option>
                 </select>
               </div>
@@ -227,7 +232,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
           <textarea id="insNota">${esc(v.nota || '')}</textarea>
         </div>
 
-        <div class="campo ${esBarcaza ? 'oculto' : ''}" id="bloqueTieneBarcazas">
+        <div class="campo ${(esBarcaza || !incluirBarcazas) ? 'oculto' : ''}" id="bloqueTieneBarcazas">
           <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:600;">
             <input type="checkbox" id="insTieneBarcazas" ${barcazas.length ? 'checked' : ''} style="width:16px;height:16px;">
             ¿Lleva barcazas para cargar?
@@ -376,7 +381,7 @@ function abrirFormularioInspeccionEstandar(opciones) {
   const esCategoriaConvoy = () => !esBarcaza && opciones.incluirCategoria && ['convoyesExtr', 'convoyArgentino'].includes($('insCategoria').value);
   function actualizarBloquesConvoy() {
     $('bloqueConvoy').classList.toggle('oculto', !esCategoriaConvoy());
-    $('bloqueBarcazas').classList.toggle('oculto', !(!esBarcaza && $('insTieneBarcazas').checked));
+    $('bloqueBarcazas').classList.toggle('oculto', !(incluirBarcazas && !esBarcaza && $('insTieneBarcazas').checked));
   }
   $('insTieneBarcazas').addEventListener('change', actualizarBloquesConvoy);
   function renderizarBarcazas() {

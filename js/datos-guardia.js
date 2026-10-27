@@ -415,6 +415,7 @@ function uiAgregarInspeccionPSC() {
     etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
     incluirCategoria: false,
     incluirCIC: true,
+    incluirBarcazas: false,
     listaCodigos: CODIGOS_MEDIDAS_PSC,
     onGuardar: (datos) => {
       const dep = datos.dependencia;
@@ -433,6 +434,7 @@ function uiEditarInspeccionPSC(dependencia, indice) {
     etiquetasTipo: { inicial: 'IISD — Inicial sin deficiencias', detallada: 'IICD — Inicial con deficiencia', seguimiento: 'IS — Seguimiento' },
     incluirCategoria: false,
     incluirCIC: true,
+    incluirBarcazas: false,
     listaCodigos: CODIGOS_MEDIDAS_PSC,
     valores: { ...actual, dependencia },
     onGuardar: (datos) => {

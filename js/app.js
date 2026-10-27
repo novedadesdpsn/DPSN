@@ -748,6 +748,9 @@ async function iniciarDashboard() {
   if (!DEMO_MODE && usuario.administradorGlobal) {
     document.getElementById('btnAuditoria').classList.remove('oculto');
   }
+  if (!DEMO_MODE) {
+    document.getElementById('btnCambiarClave').classList.remove('oculto');
+  }
 
   // Armar la barra de pestañas superior
   const nav = document.getElementById('tabsNav');

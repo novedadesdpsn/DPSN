@@ -376,7 +376,10 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
         { texto: codigoNuevoTexto, negrita: true }
       ], xIndent, anchoDisp, y, 11);
     } else {
-      const verbo = cant > 1 ? 'Se detectaron ' : 'Se detectó ';
+      const esMantiene = g.accion === 'mantiene';
+      const verbo = esMantiene
+        ? (cant > 1 ? 'Se mantienen ' : 'Se mantiene ')
+        : (cant > 1 ? 'Se detectaron ' : 'Se detectó ');
       const cantidadTexto = `${numeroALetras(cant)} (${numeroConDigitos(cant)}) `;
       const codigoTexto = g.codigo2
         ? `def. Cód. ${g.codigo}-${g.codigo2} (${descripcionEnLista(g.codigo, lista)}-${descripcionEnLista(g.codigo2, lista)}).`
