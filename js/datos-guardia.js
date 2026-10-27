@@ -153,7 +153,7 @@ function persistirPrecargas() {
 
 function filasRNBUVacias() {
   const f = (nroOrden) => ({ nroOrden, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 });
-  return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), aprobarFolio: f(8), darSalida: f(11) };
+  return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), aprobarFolio: f(8), corregirDatosSib: f(10), darSalida: f(11) };
 }
 
 function normalizarOficinas() {
@@ -178,6 +178,11 @@ function normalizarOficinas() {
   if (!o.sinDefinir1) { o.sinDefinir1 = {}; corregido = true; }
   if (!o.registroNacionalBuques || !o.registroNacionalBuques.filas || !o.registroNacionalBuques.filas.buscarBuque) {
     o.registroNacionalBuques = { filas: filasRNBUVacias() };
+    corregido = true;
+  } else if (!o.registroNacionalBuques.filas.corregirDatosSib) {
+    // Fila nueva (Corregir Datos SIB, nro. orden 10): se agrega sin tocar
+    // los números que ya estaban cargados en las demás filas.
+    o.registroNacionalBuques.filas.corregirDatosSib = { nroOrden: 10, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 };
     corregido = true;
   }
   if (o.sinDefinir2) { delete o.sinDefinir2; corregido = true; }

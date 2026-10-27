@@ -233,6 +233,7 @@ const DATOS_EJEMPLO = {
         ingresarGde:  { nroOrden: 2,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
         verificar:    { nroOrden: 3,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
         aprobarFolio: { nroOrden: 8,  matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
+        corregirDatosSib: { nroOrden: 10, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 },
         darSalida:    { nroOrden: 11, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 }
       }
     }

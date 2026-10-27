@@ -161,7 +161,7 @@ function textoOficinas() {
     }
   }, (() => {
     const r = D.oficinas.registroNacionalBuques.filas;
-    const defs = [['buscarBuque', 'Buscar Buque'], ['ingresarGde', 'Ingresar GDE/CUDAP'], ['verificar', 'Verificar Datos / Normalizar'], ['aprobarFolio', 'Aprobar Folio'], ['darSalida', 'Dar Salida']];
+    const defs = [['buscarBuque', 'Buscar Buque'], ['ingresarGde', 'Ingresar GDE/CUDAP'], ['verificar', 'Verificar Datos / Normalizar'], ['aprobarFolio', 'Aprobar Folio'], ['corregirDatosSib', 'Corregir Datos SIB'], ['darSalida', 'Dar Salida']];
     const cols = ['matr', 'tran', 'vent', 'medJud', 'cbioMotor', 'otros'];
     const sumaFila = f => cols.reduce((a, k) => a + (f[k] || 0), 0);
     const totales = cols.map(k => defs.reduce((a, [fk]) => a + (r[fk][k] || 0), 0));

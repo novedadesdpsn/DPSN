@@ -451,6 +451,7 @@ function renderOficinas() {
     ['ingresarGde', 'Ingresar GDE/CUDAP'],
     ['verificar', 'Verificar Datos / Normalizar'],
     ['aprobarFolio', 'Aprobar Folio'],
+    ['corregirDatosSib', 'Corregir Datos SIB'],
     ['darSalida', 'Dar Salida']
   ];
   const columnasRNBU = [['matr', 'MATR'], ['tran', 'TRAN'], ['vent', 'VENT'], ['medJud', 'MED. JUD.'], ['cbioMotor', 'CBIO MOTOR'], ['otros', 'OTROS']];
@@ -911,7 +912,8 @@ async function iniciarDashboard() {
   document.getElementById('rolPill').textContent = soloLectura ? 'Solo lectura' : 'Administrador';
   document.body.classList.toggle('modo-lectura', soloLectura);
 
-  document.getElementById('btnExportarGlobal').onclick = abrirModalExportarGuardia;
+  document.getElementById('btnExportarGlobal').onclick = () => abrirModalExportarGuardia();
+  document.getElementById('btnVistaPreviaExportar').onclick = () => abrirModalExportarGuardia({ vistaPrevia: true });
   if (typeof GUARDADO_EN_DRIVE_ACTIVO !== 'undefined' && GUARDADO_EN_DRIVE_ACTIVO) {
     document.getElementById('btnPDFsArchivados').classList.remove('oculto');
   }

@@ -82,7 +82,7 @@ function cerrarModalExportar() {
   if (m) m.remove();
 }
 
-function abrirModalExportarGenerico(titulo, items, onExportar) {
+function abrirModalExportarGenerico(titulo, items, onExportar, textoBoton) {
   cerrarModalExportar();
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
@@ -107,7 +107,7 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
       </div>
       <div class="modal-footer">
         <button class="btn-secundario" type="button" onclick="cerrarModalExportar()">Cancelar</button>
-        <button class="btn-primario" type="button" id="btnConfirmarExportar">Exportar PDF</button>
+        <button class="btn-primario" type="button" id="btnConfirmarExportar">${esc(textoBoton || 'Exportar PDF')}</button>
       </div>
     </div>
   `;
@@ -130,8 +130,15 @@ function abrirModalExportarGenerico(titulo, items, onExportar) {
  * Genera el PDF. `secciones` es un array de:
  * { titulo, referencias?, contenido }
  * `contenido.tipo` puede ser: 'lista' | 'inspecciones' | 'casos' | 'tablas' | 'texto'
+ *
+ * `opciones.vistaPrevia`: true abre el PDF en una pestaña nueva para mirarlo,
+ * en vez de descargarlo y mandar una copia a Drive (que además archiva una
+ * "foto" del día en el historial — eso es justo lo que una vista previa a
+ * mitad de guardia no debería hacer, para no pisar esa foto con datos
+ * todavía incompletos).
  */
-function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
+function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones, opciones) {
+  const vistaPrevia = !!(opciones && opciones.vistaPrevia);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const margen = 48;
@@ -613,6 +620,12 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones) {
     doc.text(`Página ${p} de ${totalPaginas}`, anchoPagina - margen, altoPagina - 24, { align: 'right' });
   }
 
+  if (vistaPrevia) {
+    window.open(doc.output('bloburl'), '_blank');
+    try { UNDO.aviso('Vista previa generada — no se descargó ni se guardó en Drive ni en el historial.', 3500); } catch (e) { /* no hace falta bloquear por esto */ }
+    return;
+  }
+
   doc.save(nombreArchivo);
   guardarCopiaEnDrive(doc, nombreArchivo);
 }
@@ -731,12 +744,25 @@ const REFERENCIAS_PSC_TEXTO = referenciasRuns([
 const ORDEN_EXPORTACION = ['insp-extraordinarias', 'insp-psc', 'casos-mas', 'casos-sar', 'otros', 'oficinas', 'buques-detencion', 'insp-tecnicas', 'control-gestion', 'licencias', 'cursos'];
 
 // ---------- Exportar desde Guardias (todo el parte diario) ----------
-function abrirModalExportarGuardia() {
+// `opciones.vistaPrevia`: true es el botón "Vista previa" de la barra —
+// arma el mismo PDF con lo cargado hasta ese momento, pero solo para
+// mirarlo: no descarga el archivo, no manda copia a Drive (que
+// reemplaza la de hoy) y no archiva una foto del día en el historial
+// (lo que usan Asistente y Estadísticas). Así se puede revisar cómo
+// va quedando el parte a mitad de guardia sin pisar nada de eso con
+// datos todavía incompletos — el archivo "real" sigue siendo el que
+// se genera con "Exportar PDF" al cerrar la guardia.
+function abrirModalExportarGuardia(opciones) {
+  const vistaPrevia = !!(opciones && opciones.vistaPrevia === true);
+
   // "estadisticas" y "asistente" no entran: son herramientas de
   // análisis/búsqueda, no secciones del parte diario que se firma.
   const pestanasExportables = PESTANAS.filter(p => p.id !== 'estadisticas' && p.id !== 'asistente');
   const items = pestanasExportables.map(p => ({ id: p.id, label: p.etiqueta }));
-  abrirModalExportarGenerico('Exportar Novedades DPSN', items, (seleccionados) => {
+  const tituloModal = vistaPrevia ? 'Vista previa de Novedades DPSN' : 'Exportar Novedades DPSN';
+  const textoBoton = vistaPrevia ? 'Generar vista previa' : 'Exportar PDF';
+
+  abrirModalExportarGenerico(tituloModal, items, (seleccionados) => {
     let secciones = [];
 
     if (seleccionados.includes('inicio')) {
@@ -754,7 +780,7 @@ function abrirModalExportarGuardia() {
       secciones.push({ titulo: 'Relevo de Guardia', contenido: contenidoGuardia() });
     }
 
-    generarPDF(`Novedades DPSN ${fechaInicioParte()}.pdf`, 'RESUMEN DE NOVEDADES', fechaParteActual(), secciones);
-    archivarParteDelDia();
-  });
+    generarPDF(`Novedades DPSN ${fechaInicioParte()}.pdf`, 'RESUMEN DE NOVEDADES', fechaParteActual(), secciones, { vistaPrevia });
+    if (!vistaPrevia) archivarParteDelDia();
+  }, textoBoton);
 }
