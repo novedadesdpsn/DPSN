@@ -39,6 +39,17 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    // Foto de perfil: cada usuario puede subir/cambiar SOLO la suya
+    // (documento con su propio uid). Cualquier usuario logueado puede
+    // leer cualquier foto (para poder mostrarla, por ejemplo, en una
+    // futura lista de personal). Separado de /usuarios a propósito,
+    // para no tocar esa colección (que guarda permisos) y no darle
+    // a nadie más permiso de escritura que el de su propia foto.
+    match /fotosPerfil/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Puntos de restauración (copias completas del parte, automáticas
     // y manual). Solo administradores pueden leer, crear y borrar.
     match /puntosRestauracion/{punto} {

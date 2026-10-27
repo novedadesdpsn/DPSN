@@ -12,20 +12,52 @@
 <div class="dash">
   <div class="dash-topbar">
     <div class="marca">
-      <div class="escudo-mini"><img src="assets/icon-001.png" alt="Prefectura Naval Argentina"></div>
+      <div class="escudo-mini"><img src="assets/icon-003-dpsn-3d.png" alt="Dirección de Policía de Seguridad de la Navegación"></div>
     </div>
     <div class="usuario-info">
-      <span id="nombreUsuario">—</span>
-      <span class="rol-pill" id="rolPill">—</span>
-      <button type="button" id="btnDeshacer" disabled title="No hay cambios para deshacer">↶ Deshacer</button>
-      <button type="button" id="btnRehacer" disabled title="No hay cambios para rehacer">↷ Rehacer</button>
-      <button type="button" id="btnRestauracion" title="Puntos de restauración">Restauración</button>
-      <button type="button" id="btnExportarGlobal">Exportar PDF</button>
-      <button type="button" id="btnPDFsArchivados" class="oculto" onclick="abrirModalPDFsArchivados()">PDFs archivados</button>
-      <button type="button" id="btnAuditoria" class="oculto" onclick="abrirModalAuditoria()">Actividad</button>
-      <a href="https://gis.prefecturanaval.gob.ar/gc" target="_blank" rel="noopener" id="btnGuardacostas" style="text-decoration:none;">Guardacostas 4.0</a>
-      <button type="button" id="btnCambiarClave" class="oculto" onclick="uiCambiarContrasena()">Cambiar contraseña</button>
-      <button type="button" id="btnCerrarSesion">Salir</button>
+      <button type="button" id="btnDeshacer" class="btn-topbar" disabled title="No hay cambios para deshacer">↶ Deshacer</button>
+      <button type="button" id="btnRehacer" class="btn-topbar" disabled title="No hay cambios para rehacer">↷ Rehacer</button>
+      <button type="button" id="btnExportarGlobal" class="btn-topbar btn-topbar-primario">Exportar PDF</button>
+
+      <div class="menu-despl" id="menuLinks">
+        <button type="button" class="btn-topbar" id="btnToggleLinks" title="Links de interés">
+          Links de interés
+          <svg class="icono-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="panel-despl oculto" id="panelLinks">
+          <a href="https://gis.prefecturanaval.gob.ar/gc" target="_blank" rel="noopener" id="btnGuardacostas" class="item-despl" title="Abre en otra pestaña">
+            Guardacostas 4.0
+            <svg class="nota-item" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+          </a>
+          <button type="button" id="btnPDFsArchivados" class="item-despl oculto" onclick="abrirModalPDFsArchivados()">PDFs archivados</button>
+          <button type="button" id="btnAuditoria" class="item-despl oculto" onclick="abrirModalAuditoria()">Actividad</button>
+          <button type="button" id="btnRestauracion" class="item-despl" title="Puntos de restauración">Restauración</button>
+        </div>
+      </div>
+
+      <div class="menu-despl" id="menuUsuario">
+        <button type="button" class="btn-avatar" id="btnToggleUsuario" title="Mi cuenta">
+          <span class="avatar-chip" id="avatarChip">—</span>
+        </button>
+        <div class="panel-despl panel-usuario oculto" id="panelUsuario">
+          <div class="panel-usuario-cabecera">
+            <div class="avatar-grande-wrap">
+              <span class="avatar-grande" id="avatarGrande">—</span>
+              <button type="button" class="avatar-editar" id="btnCambiarFoto" title="Cambiar foto de perfil">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+              </button>
+              <input type="file" id="inputFotoPerfil" accept="image/*" class="oculto">
+            </div>
+            <div class="panel-usuario-nombre" id="nombreUsuario">—</div>
+            <span class="rol-pill" id="rolPill">—</span>
+          </div>
+          <div class="panel-usuario-acciones">
+            <button type="button" id="btnCambiarClave" class="item-despl oculto" onclick="uiCambiarContrasena()">Cambiar contraseña</button>
+            <div class="divisor-despl"></div>
+            <button type="button" id="btnCerrarSesion" class="item-despl item-despl-peligro">Cerrar sesión</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
