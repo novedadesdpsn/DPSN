@@ -1,0 +1,4 @@
+# Clave de cuenta de servicio de Firebase (Admin SDK) — da acceso total
+# al proyecto. Nunca se sube al repositorio, se queda solo en tu máquina.
+herramientas-admin/service-account.json
+node_modules/
