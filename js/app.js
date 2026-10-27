@@ -636,7 +636,9 @@ function renderDivisionControlGestion() {
 
 function textoPersonalCurso(personal) {
   if (!personal || !personal.length) return '—';
-  return personal.map(p => esc(p.jerarquia ? `${p.jerarquia} ${p.nombre}`.trim() : p.nombre)).join('<br>');
+  return personal.map(p =>
+    `<div class="fila-persona-curso">${esc(p.jerarquia ? `${p.jerarquia} ${p.nombre}`.trim() : p.nombre)}</div>`
+  ).join('');
 }
 
 function tablaCursosHtml(lista, etiquetaColNombre) {
@@ -647,7 +649,7 @@ function tablaCursosHtml(lista, etiquetaColNombre) {
   lista.forEach(c => {
     const idx = D.cursos.indexOf(c);
     html += `<tr>
-      <td>${textoPersonalCurso(c.personal)}</td>
+      <td class="col-personal-curso">${textoPersonalCurso(c.personal)}</td>
       <td>${esc(c.nombreCurso)}${c.descripcion ? `<div class="texto-justificado" style="font-size:11px; color:var(--gris-500);">${esc(c.descripcion)}</div>` : ''}</td>
       <td>${c.modalidad === 'presencial' ? 'Presencial' + (c.lugar ? ` — ${esc(c.lugar)}` : '') : 'Virtual'}</td>
       <td>${esc(c.fechaInicio)}</td><td>${esc(c.fechaFin)}</td>
