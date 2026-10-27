@@ -349,17 +349,33 @@ function textoLicencias() {
 }
 
 function textoCursos() {
+  normalizarCursos();
   if (!D.cursos.length) return [];
-  return [{
-    titulo: 'Cursos / Comisiones',
-    contenido: {
-      tipo: 'tablas',
-      tablas: [{
-        columnas: ['Personal', 'Curso', 'Modalidad', 'Inicio', 'Fin'],
-        filas: D.cursos.map(c => [c.personal, c.nombreCurso, c.modalidad === 'presencial' ? `Presencial — ${c.lugar}` : 'Virtual', c.fechaInicio, c.fechaFin])
-      }]
-    }
-  }];
+
+  const textoPersonal = (personal) => (personal && personal.length)
+    ? personal.map(p => (p.jerarquia ? `${p.jerarquia} ${p.nombre}`.trim() : p.nombre)).join('\n')
+    : '—';
+  const filasDe = (lista) => lista.map(c =>
+    [textoPersonal(c.personal), c.nombreCurso, c.modalidad === 'presencial' ? `Presencial — ${c.lugar}` : 'Virtual', c.fechaInicio, c.fechaFin]
+  );
+
+  const cursos = D.cursos.filter(c => (c.tipo || 'curso') === 'curso');
+  const comisiones = D.cursos.filter(c => c.tipo === 'comision');
+  const bloques = [];
+
+  if (cursos.length) {
+    bloques.push({
+      titulo: 'Cursos',
+      contenido: { tipo: 'tablas', tablas: [{ columnas: ['Personal', 'Curso', 'Modalidad', 'Inicio', 'Fin'], filas: filasDe(cursos) }] }
+    });
+  }
+  if (comisiones.length) {
+    bloques.push({
+      titulo: 'Comisiones',
+      contenido: { tipo: 'tablas', tablas: [{ columnas: ['Personal', 'Comisión', 'Modalidad', 'Inicio', 'Fin'], filas: filasDe(comisiones) }] }
+    });
+  }
+  return bloques;
 }
 
 // Mapa pestaña → función que arma el/los bloque(s) para exportar.

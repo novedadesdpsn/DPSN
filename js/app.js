@@ -634,30 +634,48 @@ function renderDivisionControlGestion() {
   return html;
 }
 
+function textoPersonalCurso(personal) {
+  if (!personal || !personal.length) return '—';
+  return personal.map(p => esc(p.jerarquia ? `${p.jerarquia} ${p.nombre}`.trim() : p.nombre)).join('<br>');
+}
+
+function tablaCursosHtml(lista, etiquetaColNombre) {
+  if (!lista.length) return '<div class="placeholder-panel">Todavía no hay registros cargados.</div>';
+  let html = `<table class="tabla-datos"><thead><tr>
+    <th>Personal</th><th>${esc(etiquetaColNombre)}</th><th>Modalidad</th><th>Inicio</th><th>Fin</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
+  </tr></thead><tbody>`;
+  lista.forEach(c => {
+    const idx = D.cursos.indexOf(c);
+    html += `<tr>
+      <td>${textoPersonalCurso(c.personal)}</td>
+      <td>${esc(c.nombreCurso)}${c.descripcion ? `<div class="texto-justificado" style="font-size:11px; color:var(--gris-500);">${esc(c.descripcion)}</div>` : ''}</td>
+      <td>${c.modalidad === 'presencial' ? 'Presencial' + (c.lugar ? ` — ${esc(c.lugar)}` : '') : 'Virtual'}</td>
+      <td>${esc(c.fechaInicio)}</td><td>${esc(c.fechaFin)}</td>
+      ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarCurso(${idx})">Editar</button>
+        <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarCurso(${idx})">✕</button>
+      </td>` : ''}
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  return html;
+}
+
 function renderCursos() {
-  let html = `<div class="tarjeta"><h2>Cursos / Comisiones <span class="contador">${D.cursos.length}</span></h2>`;
+  normalizarCursos();
+  const cursos = D.cursos.filter(c => (c.tipo || 'curso') === 'curso');
+  const comisiones = D.cursos.filter(c => c.tipo === 'comision');
+
+  let html = `<div class="tarjeta"><h2>Cursos <span class="contador">${cursos.length}</span></h2>`;
   if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarCurso()">+ Agregar nuevo curso</button>`;
-  if (!D.cursos.length) {
-    html += '<div class="placeholder-panel">Todavía no hay cursos ni comisiones cargados.</div>';
-  } else {
-    html += `<table class="tabla-datos"><thead><tr>
-      <th>Personal</th><th>Curso</th><th>Modalidad</th><th>Inicio</th><th>Fin</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}
-    </tr></thead><tbody>`;
-    D.cursos.forEach((c, idx) => {
-      html += `<tr>
-        <td>${esc(c.personal)}</td>
-        <td>${esc(c.nombreCurso)}${c.descripcion ? `<div class="texto-justificado" style="font-size:11px; color:var(--gris-500);">${esc(c.descripcion)}</div>` : ''}</td>
-        <td>${c.modalidad === 'presencial' ? 'Presencial' + (c.lugar ? ` — ${esc(c.lugar)}` : '') : 'Virtual'}</td>
-        <td>${esc(c.fechaInicio)}</td><td>${esc(c.fechaFin)}</td>
-        ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
-          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarCurso(${idx})">Editar</button>
-          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarCurso(${idx})">✕</button>
-        </td>` : ''}
-      </tr>`;
-    });
-    html += `</tbody></table>`;
-  }
+  html += tablaCursosHtml(cursos, 'Curso');
   html += `</div>`;
+
+  html += `<div class="tarjeta"><h2>Comisiones <span class="contador">${comisiones.length}</span></h2>`;
+  if (!SOLO_LECTURA_ACTUAL) html += `<button class="btn-primario" type="button" style="margin-bottom:12px;" onclick="uiAgregarComision()">+ Agregar nueva Comisión</button>`;
+  html += tablaCursosHtml(comisiones, 'Comisión');
+  html += `</div>`;
+
   return html;
 }
 
@@ -724,6 +742,156 @@ const PESTANAS = [
   { id: 'cursos', grupo: 'Gestión', etiqueta: 'Cursos / Comisiones', render: renderCursos }
 ];
 
+// ============================================================
+// BARRA SUPERIOR — menús desplegables (Links de interés / Usuario)
+// y foto de perfil
+// ============================================================
+// La foto se guarda achicada (160x160) en dos lugares:
+//  - localStorage de este navegador: para que se vea al instante,
+//    sin esperar a Firestore, y como respaldo si por algún motivo
+//    falla la escritura/lectura en la nube.
+//  - Firestore (colección "fotosPerfil", documento = uid del usuario):
+//    así la foto viaja con el usuario a cualquier computadora donde
+//    entre. No usa Firebase Storage (no hace falta activarlo ni
+//    configurarlo aparte) — al ser una imagen chica, entra sin
+//    problema dentro de un documento de Firestore (límite 1 MiB).
+// En modo demo no hay Firestore real, así que ahí solo se usa
+// localStorage.
+
+function claveFotoPerfil(usuario) {
+  return `novedades_dpsn_foto_${usuario.dni}`;
+}
+
+function refFotoPerfil(usuario) {
+  return db.collection('fotosPerfil').doc(usuario.uid);
+}
+
+async function cargarFotoPerfilDesdeFirestore(usuario) {
+  if (DEMO_MODE || !usuario.uid) return;
+  try {
+    const doc = await refFotoPerfil(usuario).get();
+    if (doc.exists && doc.data().foto) {
+      try { localStorage.setItem(claveFotoPerfil(usuario), doc.data().foto); } catch (e) { /* localStorage no disponible */ }
+      renderizarAvatar(usuario);
+    }
+  } catch (err) {
+    console.log('No se pudo traer la foto de perfil guardada en la nube:', err);
+  }
+}
+
+function inicialesUsuario(usuario) {
+  const nombre = (usuario.nombre || '').trim();
+  if (!nombre) return (usuario.dni || '—').slice(0, 2).toUpperCase();
+  const porComa = nombre.split(',').map(s => s.trim()).filter(Boolean);
+  if (porComa.length >= 2) return (porComa[0][0] + porComa[1][0]).toUpperCase();
+  const palabras = nombre.split(/\s+/).filter(Boolean);
+  if (palabras.length >= 2) return (palabras[0][0] + palabras[1][0]).toUpperCase();
+  return nombre.slice(0, 2).toUpperCase();
+}
+
+function renderizarAvatar(usuario) {
+  const iniciales = inicialesUsuario(usuario);
+  let foto = null;
+  try { foto = localStorage.getItem(claveFotoPerfil(usuario)); } catch (e) { /* localStorage no disponible */ }
+  [document.getElementById('avatarChip'), document.getElementById('avatarGrande')].forEach(el => {
+    if (!el) return;
+    if (foto) {
+      el.style.backgroundImage = `url(${foto})`;
+      el.textContent = '';
+    } else {
+      el.style.backgroundImage = '';
+      el.textContent = iniciales;
+    }
+  });
+}
+
+function procesarFotoPerfil(usuario, archivo) {
+  if (!archivo) return;
+  if (!archivo.type.startsWith('image/')) { alert('Elegí un archivo de imagen (jpg, png...).'); return; }
+  const lector = new FileReader();
+  lector.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const tam = 160;
+      const canvas = document.createElement('canvas');
+      canvas.width = tam; canvas.height = tam;
+      const ctx = canvas.getContext('2d');
+      const lado = Math.min(img.width, img.height);
+      const sx = (img.width - lado) / 2, sy = (img.height - lado) / 2;
+      ctx.drawImage(img, sx, sy, lado, lado, 0, 0, tam, tam);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      try {
+        localStorage.setItem(claveFotoPerfil(usuario), dataUrl);
+        renderizarAvatar(usuario);
+      } catch (err) {
+        alert('No se pudo guardar la foto en este navegador (puede que no haya espacio disponible).');
+        return;
+      }
+      if (!DEMO_MODE && usuario.uid) {
+        refFotoPerfil(usuario).set({ foto: dataUrl, actualizado: new Date().toISOString() })
+          .then(() => UNDO.aviso('Foto de perfil actualizada.'))
+          .catch(err => {
+            console.log('No se pudo guardar la foto en la nube:', err);
+            UNDO.aviso('La foto quedó guardada en esta computadora, pero no se pudo subir a la nube.', 3500);
+          });
+      }
+    };
+    img.onerror = () => alert('No se pudo leer esa imagen. Probá con otro archivo.');
+    img.src = e.target.result;
+  };
+  lector.readAsDataURL(archivo);
+}
+
+function iniciarMenuUsuario(usuario) {
+  renderizarAvatar(usuario);
+  cargarFotoPerfilDesdeFirestore(usuario);
+  document.getElementById('btnToggleUsuario').title =
+    `${usuario.jerarquia ? usuario.jerarquia + ' ' : ''}${usuario.nombre || usuario.dni}`;
+
+  document.getElementById('btnCambiarFoto').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('inputFotoPerfil').click();
+  });
+  document.getElementById('inputFotoPerfil').addEventListener('change', (e) => {
+    const archivo = e.target.files && e.target.files[0];
+    procesarFotoPerfil(usuario, archivo);
+    e.target.value = '';
+    document.getElementById('panelUsuario').classList.add('oculto');
+  });
+}
+
+function iniciarMenusDesplegables() {
+  const menus = [
+    { boton: 'btnToggleLinks', panel: 'panelLinks' },
+    { boton: 'btnToggleUsuario', panel: 'panelUsuario' }
+  ];
+  function cerrarTodos() {
+    menus.forEach(m => {
+      const panel = document.getElementById(m.panel);
+      if (panel) panel.classList.add('oculto');
+    });
+  }
+  menus.forEach(m => {
+    const boton = document.getElementById(m.boton);
+    const panel = document.getElementById(m.panel);
+    if (!boton || !panel) return;
+    boton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const estabaAbierto = !panel.classList.contains('oculto');
+      cerrarTodos();
+      if (!estabaAbierto) panel.classList.remove('oculto');
+    });
+    panel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Clickear una opción del menú (que no sea el botón de cambiar foto,
+      // que tiene su propia lógica) cierra el desplegable.
+      if (e.target.closest('.item-despl')) cerrarTodos();
+    });
+  });
+  document.addEventListener('click', cerrarTodos);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarTodos(); });
+}
+
 async function iniciarDashboard() {
   const usuario = requerirSesion();
   if (!usuario) return;
@@ -751,6 +919,9 @@ async function iniciarDashboard() {
   if (!DEMO_MODE) {
     document.getElementById('btnCambiarClave').classList.remove('oculto');
   }
+
+  iniciarMenuUsuario(usuario);
+  iniciarMenusDesplegables();
 
   // Armar la barra de pestañas superior
   const nav = document.getElementById('tabsNav');

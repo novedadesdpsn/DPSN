@@ -194,8 +194,31 @@ const DATOS_EJEMPLO = {
   // y queda guardado en el navegador (localStorage).
   buquesDetencionMapa: [],
 
-  // Cursos del personal (designación, fechas, modalidad)
-  cursos: [],
+  // Cursos y Comisiones del personal (designación, fechas, modalidad).
+  // "tipo" distingue 'curso' de 'comision'; "personal" es una lista
+  // de { jerarquia, nombre } (puede haber más de una persona).
+  cursos: [
+    {
+      tipo: 'curso',
+      personal: [{ jerarquia: 'Cabo 1.º', nombre: 'Pérez, Juan' }, { jerarquia: 'Suboficial', nombre: 'Gómez, Ana' }],
+      nombreCurso: 'Curso de Inspector PSC',
+      descripcion: '',
+      fechaInicio: '03/11/2026',
+      fechaFin: '07/11/2026',
+      modalidad: 'presencial',
+      lugar: 'Prefectura Zona Río de la Plata'
+    },
+    {
+      tipo: 'comision',
+      personal: [{ jerarquia: 'Oficial Principal', nombre: 'Piccoli, Agustín' }],
+      nombreCurso: 'Comisión de servicio — Relevamiento Hidrovía',
+      descripcion: '',
+      fechaInicio: '10/11/2026',
+      fechaFin: '12/11/2026',
+      modalidad: 'virtual',
+      lugar: ''
+    }
+  ],
 
   // Oficinas: cada una carga sus propios bloques de texto o tabla,
   // agrupados por nombre de oficina.

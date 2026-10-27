@@ -197,7 +197,7 @@ async function hidratarDatosGuardia() {
     } else {
       persistirDatosGuardia();
     }
-    if (normalizarOficinas() || normalizarLicencias() || normalizarCIC() || normalizarResumenPSC()) persistirDatosGuardia();
+    if (normalizarOficinas() || normalizarLicencias() || normalizarCIC() || normalizarResumenPSC() || normalizarCursos()) persistirDatosGuardia();
     inicializarEstadoConocido();
     await cargarPrecargasPrivadas();
     return;
@@ -217,7 +217,7 @@ async function hidratarDatosGuardia() {
     }
   }));
 
-  if (normalizarOficinas() || normalizarLicencias() || normalizarCIC() || normalizarResumenPSC()) persistirDatosGuardia();
+  if (normalizarOficinas() || normalizarLicencias() || normalizarCIC() || normalizarResumenPSC() || normalizarCursos()) persistirDatosGuardia();
   inicializarEstadoConocido();
   await cargarPrecargasPrivadas();
   activarEscuchaEnVivo();
@@ -1107,47 +1107,165 @@ function confirmarTodasPrecargas(tipo) {
   refrescarPestanaActual();
 }
 
-// ---------- Cursos ----------
-function camposCurso() {
-  return [
-    { id: 'personal', label: 'Personal designado' },
-    { id: 'nombreCurso', label: 'Nombre del curso' },
-    { id: 'descripcion', label: 'Descripción (opcional)', tipo: 'textarea' },
-    { id: 'fechaInicio', label: 'Fecha de inicio' },
-    { id: 'fechaFin', label: 'Fecha de finalización' },
-    { id: 'modalidad', label: 'Modalidad', tipo: 'select', opciones: [{ valor: 'virtual', etiqueta: 'Virtual' }, { valor: 'presencial', etiqueta: 'Presencial' }] },
-    { id: 'lugar', label: 'Lugar de realización (si es presencial)' }
-  ];
+// ---------- Cursos / Comisiones ----------
+// "tipo" distingue 'curso' de 'comision' (misma estructura, solo cambia
+// la etiqueta del campo "nombreCurso" en el formulario: "Nombre del
+// curso" vs. "Comisión"). "personal" es una lista de { jerarquia, nombre }
+// para poder listar a más de una persona designada, en vez de un solo
+// texto genérico.
+function normalizarCursos() {
+  if (!Array.isArray(D.cursos)) return false;
+  let cambio = false;
+  D.cursos.forEach(c => {
+    if (!c.tipo) { c.tipo = 'curso'; cambio = true; }
+    if (!Array.isArray(c.personal)) {
+      const texto = (typeof c.personal === 'string' ? c.personal : '').trim();
+      c.personal = texto ? [{ jerarquia: '', nombre: texto }] : [];
+      cambio = true;
+    }
+  });
+  return cambio;
 }
 
-function construirCurso(datos) {
-  return {
-    personal: datos.personal, nombreCurso: datos.nombreCurso, descripcion: datos.descripcion,
-    fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin, modalidad: datos.modalidad,
-    lugar: datos.modalidad === 'presencial' ? datos.lugar : ''
-  };
+function cerrarModalCurso() {
+  const m = document.getElementById('modalCurso');
+  if (m) m.remove();
+}
+
+function abrirFormularioCurso(tipo, indice) {
+  cerrarModalCurso();
+  const esComision = tipo === 'comision';
+  const actual = (indice !== undefined && indice !== null) ? D.cursos[indice] : null;
+  let personal = actual && actual.personal.length ? actual.personal.map(p => ({ ...p })) : [{ jerarquia: '', nombre: '' }];
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modalCurso';
+  const $ = (id) => modal.querySelector('#' + id);
+  modal.innerHTML = `
+    <div class="modal-caja ancho">
+      <div class="modal-header">
+        <h3>${esc(actual ? (esComision ? 'Editar comisión' : 'Editar curso') : (esComision ? 'Agregar nueva Comisión' : 'Agregar nuevo curso'))}</h3>
+        <button type="button" onclick="cerrarModalCurso()">✕</button>
+      </div>
+      <div class="modal-campos">
+        <div class="campo">
+          <label>Personal designado</label>
+          <div id="listaPersonalCurso" style="margin-bottom:8px;"></div>
+          <button type="button" class="btn-secundario" id="btnAgregarPersonaCurso">+ Agregar persona</button>
+        </div>
+        <div class="campo">
+          <label>${esComision ? 'Comisión' : 'Nombre del curso'}</label>
+          <input type="text" id="curNombre" value="${esc(actual ? actual.nombreCurso : '')}">
+        </div>
+        <div class="campo">
+          <label>Descripción (opcional)</label>
+          <textarea id="curDescripcion">${esc(actual ? (actual.descripcion || '') : '')}</textarea>
+        </div>
+        <div class="fila-doble">
+          <div class="campo">
+            <label>Fecha de inicio</label>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button type="button" class="btn-secundario" style="padding:4px 10px; font-size:15px; line-height:1;" onclick="abrirSelectorFecha('curFechaInicio', this)" title="Elegir fecha del calendario">📅</button>
+              <input type="text" id="curFechaInicio" value="${esc(actual ? actual.fechaInicio : '')}" style="flex:1;">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Fecha de finalización</label>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button type="button" class="btn-secundario" style="padding:4px 10px; font-size:15px; line-height:1;" onclick="abrirSelectorFecha('curFechaFin', this)" title="Elegir fecha del calendario">📅</button>
+              <input type="text" id="curFechaFin" value="${esc(actual ? actual.fechaFin : '')}" style="flex:1;">
+            </div>
+          </div>
+        </div>
+        <div class="campo">
+          <label>Modalidad</label>
+          <select id="curModalidad">
+            <option value="virtual" ${(!actual || actual.modalidad !== 'presencial') ? 'selected' : ''}>Virtual</option>
+            <option value="presencial" ${(actual && actual.modalidad === 'presencial') ? 'selected' : ''}>Presencial</option>
+          </select>
+        </div>
+        <div class="campo ${(actual && actual.modalidad === 'presencial') ? '' : 'oculto'}" id="curBloqueLugar">
+          <label>Lugar de realización</label>
+          <input type="text" id="curLugar" value="${esc(actual ? (actual.lugar || '') : '')}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" type="button" onclick="cerrarModalCurso()">Cancelar</button>
+        <button class="btn-primario" type="button" id="btnGuardarCurso">Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  function renderizarPersonalCurso() {
+    const cont = $('listaPersonalCurso');
+    cont.innerHTML = personal.map((p, i) => `
+      <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+        <input type="text" class="personaJerarquia" data-idx="${i}" placeholder="Jerarquía" value="${esc(p.jerarquia)}" style="flex:0.4;">
+        <input type="text" class="personaNombre" data-idx="${i}" placeholder="Apellido y nombre" value="${esc(p.nombre)}" style="flex:0.6;">
+        <button type="button" class="btnQuitarPersonaCurso" data-idx="${i}" style="background:none;border:none;color:var(--rojo);font-size:14px;" title="Quitar">✕</button>
+      </div>
+    `).join('');
+    cont.querySelectorAll('.personaJerarquia').forEach(inp => inp.addEventListener('input', () => { personal[parseInt(inp.dataset.idx, 10)].jerarquia = inp.value; }));
+    cont.querySelectorAll('.personaNombre').forEach(inp => inp.addEventListener('input', () => { personal[parseInt(inp.dataset.idx, 10)].nombre = inp.value; }));
+    cont.querySelectorAll('.btnQuitarPersonaCurso').forEach(btn => btn.addEventListener('click', () => {
+      personal.splice(parseInt(btn.dataset.idx, 10), 1);
+      if (!personal.length) personal.push({ jerarquia: '', nombre: '' });
+      renderizarPersonalCurso();
+    }));
+  }
+  renderizarPersonalCurso();
+
+  $('btnAgregarPersonaCurso').addEventListener('click', () => {
+    personal.push({ jerarquia: '', nombre: '' });
+    renderizarPersonalCurso();
+  });
+
+  $('curModalidad').addEventListener('change', (e) => {
+    $('curBloqueLugar').classList.toggle('oculto', e.target.value !== 'presencial');
+  });
+
+  $('btnGuardarCurso').addEventListener('click', () => {
+    const modalidad = $('curModalidad').value;
+    const personalLimpio = personal
+      .map(p => ({ jerarquia: p.jerarquia.trim(), nombre: p.nombre.trim() }))
+      .filter(p => p.jerarquia || p.nombre);
+    const datos = {
+      tipo,
+      personal: personalLimpio,
+      nombreCurso: $('curNombre').value.trim(),
+      descripcion: $('curDescripcion').value.trim(),
+      fechaInicio: $('curFechaInicio').value.trim(),
+      fechaFin: $('curFechaFin').value.trim(),
+      modalidad,
+      lugar: modalidad === 'presencial' ? $('curLugar').value.trim() : ''
+    };
+    cerrarModalCurso();
+    if (indice !== undefined && indice !== null) {
+      D.cursos[indice] = datos;
+    } else {
+      D.cursos.push(datos);
+    }
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
 }
 
 function uiAgregarCurso() {
-  abrirModalFormulario('Agregar nuevo curso', camposCurso(), {}, (datos) => {
-    D.cursos.push(construirCurso(datos));
-    persistirDatosGuardia();
-    refrescarPestanaActual();
-  });
+  abrirFormularioCurso('curso', null);
+}
+
+function uiAgregarComision() {
+  abrirFormularioCurso('comision', null);
 }
 
 function uiEditarCurso(indice) {
-  const actual = D.cursos[indice];
-  const valoresIniciales = { ...actual, modalidad: actual.modalidad || 'virtual' };
-  abrirModalFormulario('Editar curso', camposCurso(), valoresIniciales, (datos) => {
-    D.cursos[indice] = construirCurso(datos);
-    persistirDatosGuardia();
-    refrescarPestanaActual();
-  });
+  abrirFormularioCurso(D.cursos[indice].tipo || 'curso', indice);
 }
 
 function eliminarCurso(indice) {
-  if (!confirm('¿Eliminar este curso?')) return;
+  if (!confirm('¿Eliminar este registro?')) return;
   D.cursos.splice(indice, 1);
   persistirDatosGuardia();
   refrescarPestanaActual();
