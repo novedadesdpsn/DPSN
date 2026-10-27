@@ -182,21 +182,77 @@ button{font-family:inherit; cursor:pointer;}
 .escudo-mini{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; }
 .escudo-mini img{ width:100%; height:100%; object-fit:contain; }
 
-.dash-topbar .usuario-info{ display:flex; align-items:center; gap:12px; font-size:12.5px; }
+.dash-topbar .usuario-info{ display:flex; align-items:center; gap:8px; font-size:12.5px; }
 .dash-topbar .usuario-info .rol-pill{
   background: rgba(255,255,255,0.12); padding:3px 10px; border-radius:12px;
   font-size:11px; text-transform:uppercase; letter-spacing:0.4px;
 }
-.dash-topbar .usuario-info button,
-.dash-topbar .usuario-info a{
-  background:none; border:1px solid rgba(255,255,255,0.35);
-  color:var(--blanco); padding:5px 12px; border-radius:var(--radio);
-  font-size:12px; display:inline-block;
+
+/* Botones sueltos de la barra (Deshacer / Rehacer / Exportar PDF) y los
+   dos botones que abren un menú desplegable (Links de interés / Usuario).
+   Prefijados con 3 clases a propósito, para pisar cualquier estilo
+   genérico de versiones anteriores sin depender del orden en el archivo. */
+.dash-topbar .usuario-info .btn-topbar{
+  background:none; border:1px solid rgba(255,255,255,0.22);
+  color: var(--gris-300, #cbd5e1); padding:7px 12px; border-radius:var(--radio);
+  font-size:12px; font-family:inherit; display:inline-flex; align-items:center; gap:6px;
+  cursor:pointer;
 }
-.dash-topbar .usuario-info button:hover,
-.dash-topbar .usuario-info a:hover{ background: rgba(255,255,255,0.12); }
-#btnGuardacostas{ border-color: var(--coral); color: #ffd7dc; font-weight:600; }
-#btnExportarGlobal{ border-color: var(--acento); color: var(--acento-claro); font-weight:600; }
+.dash-topbar .usuario-info .btn-topbar:hover{ background: rgba(255,255,255,0.1); color:#fff; }
+.dash-topbar .usuario-info .btn-topbar:disabled{ opacity:0.4; cursor:default; }
+.dash-topbar .usuario-info .btn-topbar:disabled:hover{ background:none; color: var(--gris-300, #cbd5e1); }
+.dash-topbar .usuario-info .btn-topbar-primario{ border-color: var(--acento); color: var(--acento-claro); font-weight:700; }
+.dash-topbar .usuario-info .btn-topbar-primario:hover{ background: rgba(20,184,166,0.14); }
+.dash-topbar .usuario-info .icono-chevron{ width:11px; height:11px; flex-shrink:0; }
+
+/* Menú desplegable genérico (Links de interés / Usuario) */
+.dash-topbar .usuario-info .menu-despl{ position:relative; }
+.dash-topbar .usuario-info .panel-despl{
+  position:absolute; top: calc(100% + 10px); right:0;
+  background:#fff; border-radius:12px; box-shadow:0 12px 32px rgba(11,22,38,0.30);
+  min-width:230px; z-index:80; overflow:hidden; padding:6px;
+}
+.dash-topbar .usuario-info .item-despl{
+  display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box;
+  background:none; border:none; text-align:left;
+  padding:10px 12px; border-radius:8px; font-size:13px; font-weight:600;
+  color: var(--azul-medio); cursor:pointer; text-decoration:none; font-family:inherit;
+}
+.dash-topbar .usuario-info .item-despl:hover{ background: var(--gris-100); }
+.dash-topbar .usuario-info .item-despl-peligro{ color: var(--rojo); }
+.dash-topbar .usuario-info .item-despl .nota-item{ margin-left:auto; flex-shrink:0; font-size:10.5px; font-weight:500; color: var(--gris-500); }
+.dash-topbar .usuario-info .divisor-despl{ height:1px; background:var(--gris-100); margin:4px 8px; }
+
+/* Botón avatar + su panel */
+.dash-topbar .usuario-info .btn-avatar{ background:none; border:none; padding:0; cursor:pointer; line-height:0; }
+.dash-topbar .usuario-info .avatar-chip{
+  width:34px; height:34px; border-radius:50%; overflow:hidden;
+  background: linear-gradient(135deg, var(--azul-medio), var(--azul-oscuro));
+  border:1.5px solid rgba(94,234,212,0.55);
+  color: var(--acento-claro); font-family: var(--fuente-display); font-weight:700; font-size:12px;
+  display:flex; align-items:center; justify-content:center; background-size:cover; background-position:center;
+}
+.dash-topbar .usuario-info .panel-usuario{ min-width:260px; padding:0; }
+.dash-topbar .usuario-info .panel-usuario-cabecera{
+  background: var(--azul-marino); padding:22px 18px 18px;
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.dash-topbar .usuario-info .avatar-grande-wrap{ position:relative; width:72px; height:72px; }
+.dash-topbar .usuario-info .avatar-grande{
+  width:72px; height:72px; border-radius:50%; overflow:hidden;
+  background: linear-gradient(135deg, var(--azul-medio), var(--azul-oscuro));
+  color: var(--acento-claro); font-family: var(--fuente-display); font-weight:700; font-size:22px;
+  display:flex; align-items:center; justify-content:center; background-size:cover; background-position:center;
+}
+.dash-topbar .usuario-info .avatar-editar{
+  position:absolute; right:-2px; bottom:-2px; width:26px; height:26px; border-radius:50%;
+  background: var(--acento); border:2px solid var(--azul-marino); color:#06201c;
+  display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
+}
+.dash-topbar .usuario-info .avatar-editar svg{ width:13px; height:13px; }
+.dash-topbar .usuario-info .avatar-editar:hover{ background: var(--acento-claro); }
+.dash-topbar .usuario-info .panel-usuario-nombre{ color:#fff; font-weight:700; font-size:13.5px; text-align:center; }
+.dash-topbar .usuario-info .panel-usuario-acciones{ padding:8px; }
 
 .dash-tabs-nav{
   background: var(--azul-oscuro);
