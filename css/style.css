@@ -320,6 +320,17 @@ table.tabla-datos th{
 table.tabla-datos td{ text-align:center; vertical-align:middle; padding:8px 10px; border-bottom:1px solid var(--gris-100); }
 table.tabla-datos tr:hover td{ background: #fafbfc; }
 
+/* Columna "Personal" de Cursos/Comisiones: con varias personas se ve
+   mejor alineada a la izquierda y con una por línea, en vez de todo
+   centrado y amontonado. */
+table.tabla-datos td.col-personal-curso{ text-align:left; }
+table.tabla-datos td.col-personal-curso .fila-persona-curso{
+  text-transform:none; line-height:1.5;
+}
+table.tabla-datos td.col-personal-curso .fila-persona-curso + .fila-persona-curso{
+  margin-top:4px; padding-top:4px; border-top:1px dashed var(--gris-300);
+}
+
 .grid-resumen{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:14px; }
 .stat{
   background: var(--gris-100); border-radius: var(--radio); padding:20px 14px;
