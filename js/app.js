@@ -98,9 +98,7 @@ function contarOtros() {
 }
 
 function contarLicenciasTotal() {
-  const L = D.licencias;
-  return L.anuales.length + L.medicas.length + L.tareasAdecuadas.length +
-    L.extraordinaria.length + L.comisiones.length + L.noComputables.length;
+  return todasLasCategoriasLicencia().reduce((n, c) => n + (D.licencias[c.clave] || []).length, 0);
 }
 
 function renderInicio() {
@@ -683,35 +681,28 @@ function renderCursos() {
 }
 
 function renderLicencias() {
-  const secciones = [
-    ['Licencia Anual', D.licencias.anuales, 'anuales'],
-    ['Licencia Médica', D.licencias.medicas, 'medicas'],
-    ['Tareas Adecuadas', D.licencias.tareasAdecuadas, 'tareasAdecuadas'],
-    ['Licencia Extraordinaria', D.licencias.extraordinaria, 'extraordinaria'],
-    ['Comisiones', D.licencias.comisiones, 'comisiones'],
-    ['Licencias No Computables', D.licencias.noComputables, 'noComputables'],
-    ['Asuntos Personales', D.licencias.personales, 'personales']
-  ];
+  const categorias = todasLasCategoriasLicencia();
   let html = '';
   if (!SOLO_LECTURA_ACTUAL) html += `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"><button class="btn-primario" type="button" onclick="uiAgregarLicencia()">+ Agregar licencia</button><button class="btn-secundario" type="button" title="Se guarda aparte y no figura en el parte hasta confirmarla" onclick="uiPrecargar('licencias')">+ Precargar licencia</button></div>`;
   html += precargasHtml('licencias');
   // Solo se muestran las categorías que tienen personal cargado.
-  const conDatos = secciones.filter(([, lista]) => lista.length);
+  const conDatos = categorias.filter(c => (D.licencias[c.clave] || []).length);
   if (!conDatos.length) html += '<div class="placeholder-panel">No hay licencias cargadas.</div>';
-  conDatos.forEach(([titulo, lista, clave]) => {
-    const esMedica = clave === 'medicas';
-    html += `<div class="tarjeta"><h2>${esc(titulo)} <span class="contador">${lista.length}</span></h2>`;
-    html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${esMedica ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
+  conDatos.forEach(c => {
+    const lista = D.licencias[c.clave] || [];
+    const conDiagnostico = !!c.diagnostico;
+    html += `<div class="tarjeta"><h2>${esc(c.etiqueta)} <span class="contador">${lista.length}</span></h2>`;
+    html += `<table class="tabla-datos"><thead><tr><th>Jerarquía</th><th>Apellido y Nombre</th>${conDiagnostico ? '<th>Diagnóstico</th>' : ''}<th>Inicia</th><th>Vence</th>${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
     // Siempre visibles ordenados por antigüedad: Personal Superior primero, después Subalterno;
     // lo no reconocido (texto libre viejo, typos) queda al final, alfabético.
     const indicesOrdenados = lista.map((l, idx) => idx).sort((ia, ib) => compararPorJerarquia(lista[ia].jerarquia, lista[ib].jerarquia));
     indicesOrdenados.forEach((idx) => {
       const l = lista[idx];
       html += `<tr>
-        <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}${l.oficina ? ` (${esc(l.oficina)})` : ''}</td>${esMedica ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
+        <td>${esc(l.jerarquia)}</td><td>${esc(l.nombre)}${l.oficina ? ` (${esc(l.oficina)})` : ''}</td>${conDiagnostico ? `<td>${esc(l.diagnostico || '')}</td>` : ''}<td>${esc(l.inicia)}</td><td>${esc(l.vence)}</td>
         ${!SOLO_LECTURA_ACTUAL ? `<td style="display:flex; gap:4px;">
-          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${clave}',${idx})">Editar</button>
-          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${clave}',${idx})">✕</button>
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="uiEditarLicencia('${c.clave}',${idx})">Editar</button>
+          <button type="button" class="btn-secundario" style="padding:2px 8px;" onclick="eliminarLicencia('${c.clave}',${idx})">✕</button>
         </td>` : ''}
       </tr>`;
     });

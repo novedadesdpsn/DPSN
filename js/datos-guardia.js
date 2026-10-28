@@ -45,14 +45,26 @@ function persistirDatosGuardia() {
  * faltan subsecciones. Devuelve true si tuvo que arreglar algo,
  * para que quien la llame vuelva a guardar el dato ya corregido.
  */
-/** Asegura que exista la categoría "personales" aunque lo guardado sea de antes de agregarla. */
+/** Migra la estructura de Licencias al listado completo de 20 categorías oficiales:
+ *  renombra las categorías viejas que tienen equivalente directo en el listado nuevo
+ *  (sin perder los registros ya cargados en cada una) y crea vacías las que falten. */
 function normalizarLicencias() {
   if (!D.licencias) return false;
-  if (!Array.isArray(D.licencias.personales)) {
-    D.licencias.personales = [];
-    return true;
-  }
-  return false;
+  let cambio = false;
+  const RENOMBRES = { anuales: 'anual', medicas: 'enfermedad', noComputables: 'noComputable', personales: 'asuntosPersonales' };
+  Object.keys(RENOMBRES).forEach(viejo => {
+    if (!Object.prototype.hasOwnProperty.call(D.licencias, viejo)) return;
+    const nuevo = RENOMBRES[viejo];
+    if (Array.isArray(D.licencias[viejo]) && D.licencias[viejo].length) {
+      D.licencias[nuevo] = [...(D.licencias[nuevo] || []), ...D.licencias[viejo]];
+    }
+    delete D.licencias[viejo];
+    cambio = true;
+  });
+  CATEGORIAS_LICENCIA.forEach(c => {
+    if (!Array.isArray(D.licencias[c.clave])) { D.licencias[c.clave] = []; cambio = true; }
+  });
+  return cambio;
 }
 
 /** Migra "Buques Ingresados" de ser un contador que se reinicia cada día a ser un acumulado
@@ -887,31 +899,67 @@ function eliminarAuditoria(indice) {
 }
 
 // ---------- Licencias ----------
-const MAPA_CATEGORIA_LICENCIA = {
-  anual: 'anuales', medica: 'medicas', tareasAdecuadas: 'tareasAdecuadas',
-  extraordinaria: 'extraordinaria', comisiones: 'comisiones', noComputable: 'noComputables', personales: 'personales'
+// Listado completo y fijo de categorías de licencia. "clave" es también el nombre del
+// array dentro de D.licencias donde se guardan sus registros. "diagnostico: true"
+// muestra el campo de diagnóstico en el formulario (por ahora, solo Licencia Enfermedad).
+const CATEGORIAS_LICENCIA = [
+  { clave: 'anual', etiqueta: 'Licencia Anual' },
+  { clave: 'invernal', etiqueta: 'Licencia Invernal' },
+  { clave: 'noComputable', etiqueta: 'Licencia No Computable' },
+  { clave: 'atencionFamiliar', etiqueta: 'Licencia Atención Familiar' },
+  { clave: 'asuntosPersonales', etiqueta: 'Licencia Asuntos Personales' },
+  { clave: 'ordinaria', etiqueta: 'Licencia Ordinaria' },
+  { clave: 'nacimientoHijo', etiqueta: 'Licencia por Nacimiento Hijo/a' },
+  { clave: 'extraccionSangre', etiqueta: 'Licencia Extracción de Sangre' },
+  { clave: 'enfermedad', etiqueta: 'Licencia Enfermedad', diagnostico: true },
+  { clave: 'estudio', etiqueta: 'Licencia por Estudio' },
+  { clave: 'gravidezSimple', etiqueta: 'Licencia por Gravidez Simple' },
+  { clave: 'gravidezMultiple', etiqueta: 'Licencia por Gravidez Múltiple' },
+  { clave: 'lactancia', etiqueta: 'Licencia Lactancia' },
+  { clave: 'ginecomamaria', etiqueta: 'Licencia Ginecomamaria' },
+  { clave: 'tareasAdecuadas', etiqueta: 'Licencia Tareas Adecuadas' },
+  { clave: 'fallecimiento1', etiqueta: 'Licencia Fallecimiento 1°' },
+  { clave: 'fallecimiento2', etiqueta: 'Licencia Fallecimiento 2°' },
+  { clave: 'fallecimiento3', etiqueta: 'Licencia Fallecimiento 3°' },
+  { clave: 'matrimonio', etiqueta: 'Licencia por Matrimonio' },
+  { clave: 'asuntosPrivadosUrgentes', etiqueta: 'Licencia Asuntos Privados y Urgentes' }
+];
+
+// Categorías que ya no están en el listado oficial de arriba (quedaron afuera al
+// ampliarlo a las 20 de hoy) pero que pueden seguir teniendo gente cargada de antes
+// de este cambio: no se pierden ni se mezclan con otra categoría, se siguen mostrando
+// con su propio cuadro y solo dejan de aparecer en el desplegable cuando queden vacías.
+const CATEGORIAS_LICENCIA_HEREDADAS = {
+  extraordinaria: 'Licencia Extraordinaria (categoría anterior)',
+  comisiones: 'Comisiones (categoría anterior — ahora tiene su propia pestaña)'
 };
 
-const OPCIONES_CATEGORIA_LICENCIA = [
-  { valor: 'anual', etiqueta: 'Licencia Anual' }, { valor: 'medica', etiqueta: 'Licencia Médica' },
-  { valor: 'tareasAdecuadas', etiqueta: 'Tareas Adecuadas' }, { valor: 'extraordinaria', etiqueta: 'Licencia Extraordinaria' },
-  { valor: 'comisiones', etiqueta: 'Comisiones' }, { valor: 'noComputable', etiqueta: 'Licencia No Computable' },
-  { valor: 'personales', etiqueta: 'Asuntos Personales' }
-];
+/** Las 20 categorías oficiales + las heredadas que todavía tengan algo cargado. */
+function todasLasCategoriasLicencia() {
+  const heredadasConDatos = Object.keys(CATEGORIAS_LICENCIA_HEREDADAS)
+    .filter(clave => Array.isArray(D.licencias[clave]) && D.licencias[clave].length)
+    .map(clave => ({ clave, etiqueta: CATEGORIAS_LICENCIA_HEREDADAS[clave] }));
+  return [...CATEGORIAS_LICENCIA, ...heredadasConDatos];
+}
 
 function camposLicencia() {
   return [
-    { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: OPCIONES_CATEGORIA_LICENCIA },
+    { id: 'categoria', label: 'Categoría', tipo: 'select', opciones: todasLasCategoriasLicencia().map(c => ({ valor: c.clave, etiqueta: c.etiqueta })) },
     {
       id: 'jerarquia', label: 'Jerarquía (código de 6 letras: Jerarquía + Cuerpo + Escalafón — ej. PRCGGE, CICXMY)',
       ayudaHtml: '<button type="button" class="btn-secundario" style="padding:2px 8px; font-size:11.5px; margin-top:4px;" onclick="abrirAyudaEscalafones()">¿Qué sigla de cuerpo/escalafón uso?</button>'
     },
     { id: 'nombre', label: 'Apellido y Nombre' },
     { id: 'oficina', label: 'Oficina (opcional)' },
-    { id: 'diagnostico', label: 'Diagnóstico (solo si es Licencia Médica)', tipo: 'textarea' },
+    { id: 'diagnostico', label: 'Diagnóstico (solo si es Licencia Enfermedad)', tipo: 'textarea' },
     { id: 'inicia', label: 'Inicia', conCalendario: true },
     { id: 'vence', label: 'Vence', conCalendario: true }
   ];
+}
+
+/** true si la categoría (por clave) tiene que mostrar/guardar el campo Diagnóstico. */
+function categoriaLicenciaConDiagnostico(clave) {
+  return !!(CATEGORIAS_LICENCIA.find(c => c.clave === clave) || {}).diagnostico;
 }
 
 /** Ayuda-memoria de siglas de Cuerpo y Escalafón (Jerarquía no hace falta, ya se sabe de memoria). */
@@ -948,10 +996,11 @@ function abrirAyudaEscalafones() {
 
 function uiAgregarLicencia() {
   abrirModalFormulario('Agregar licencia', camposLicencia(), {}, (datos) => {
-    const clave = MAPA_CATEGORIA_LICENCIA[datos.categoria];
+    const clave = datos.categoria;
+    if (!D.licencias[clave]) D.licencias[clave] = [];
     D.licencias[clave].push({
       jerarquia: datos.jerarquia, nombre: datos.nombre, oficina: datos.oficina, inicia: datos.inicia, vence: datos.vence,
-      diagnostico: datos.categoria === 'medica' ? datos.diagnostico : ''
+      diagnostico: categoriaLicenciaConDiagnostico(clave) ? datos.diagnostico : ''
     });
     persistirDatosGuardia();
     refrescarPestanaActual();
@@ -960,13 +1009,13 @@ function uiAgregarLicencia() {
 
 function uiEditarLicencia(claveActual, indice) {
   const actual = D.licencias[claveActual][indice];
-  const categoriaActual = Object.keys(MAPA_CATEGORIA_LICENCIA).find(k => MAPA_CATEGORIA_LICENCIA[k] === claveActual);
-  abrirModalFormulario('Editar licencia', camposLicencia(), { ...actual, categoria: categoriaActual }, (datos) => {
+  abrirModalFormulario('Editar licencia', camposLicencia(), { ...actual, categoria: claveActual }, (datos) => {
     D.licencias[claveActual].splice(indice, 1);
-    const claveNueva = MAPA_CATEGORIA_LICENCIA[datos.categoria];
+    const claveNueva = datos.categoria;
+    if (!D.licencias[claveNueva]) D.licencias[claveNueva] = [];
     D.licencias[claveNueva].push({
       jerarquia: datos.jerarquia, nombre: datos.nombre, oficina: datos.oficina, inicia: datos.inicia, vence: datos.vence,
-      diagnostico: datos.categoria === 'medica' ? datos.diagnostico : ''
+      diagnostico: categoriaLicenciaConDiagnostico(claveNueva) ? datos.diagnostico : ''
     });
     persistirDatosGuardia();
     refrescarPestanaActual();
@@ -990,7 +1039,7 @@ function fechaDesdeTexto(t) {
 
 function licenciaDesdePrecarga(p) {
   return { jerarquia: p.jerarquia, nombre: p.nombre, oficina: p.oficina, inicia: p.inicia, vence: p.vence,
-    diagnostico: p.categoria === 'medica' ? (p.diagnostico || '') : '' };
+    diagnostico: categoriaLicenciaConDiagnostico(p.categoria) ? (p.diagnostico || '') : '' };
 }
 
 const CONFIG_PRECARGA = {
@@ -1001,8 +1050,8 @@ const CONFIG_PRECARGA = {
       diagnostico: datos.diagnostico, inicia: datos.inicia, vence: datos.vence }),
     valores: (p) => ({ ...p }),
     columnas: ['Categoría', 'Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
-    fila: (p) => [(OPCIONES_CATEGORIA_LICENCIA.find(o => o.valor === p.categoria) || {}).etiqueta || '', p.jerarquia, p.nombre + (p.oficina ? ` (${p.oficina})` : ''), p.inicia, p.vence],
-    confirmar: (p) => { const clave = MAPA_CATEGORIA_LICENCIA[p.categoria]; if (!D.licencias[clave]) D.licencias[clave] = []; D.licencias[clave].push(licenciaDesdePrecarga(p)); },
+    fila: (p) => [(todasLasCategoriasLicencia().find(o => o.clave === p.categoria) || {}).etiqueta || '', p.jerarquia, p.nombre + (p.oficina ? ` (${p.oficina})` : ''), p.inicia, p.vence],
+    confirmar: (p) => { const clave = p.categoria; if (!D.licencias[clave]) D.licencias[clave] = []; D.licencias[clave].push(licenciaDesdePrecarga(p)); },
     corresponde: (p) => { const f = fechaDesdeTexto(p.inicia); const h = new Date(); h.setHours(0, 0, 0, 0); return !!f && f <= h; }
   },
   inspeccionesTecnicas: {

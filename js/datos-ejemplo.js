@@ -266,26 +266,43 @@ const DATOS_EJEMPLO = {
   ],
 
   licencias: {
-    anuales: [
+    anual: [
       { jerarquia: "PPCGGE", nombre: "INSAURRALDE, CESAR ADRIAN (SNAV)", inicia: "27/07/2026", vence: "05/08/2026" },
       { jerarquia: "PPCGESMA", nombre: "SOSA, MARIO ALEJANDRO (PRAC)", inicia: "27/07/2026", vence: "05/08/2026" }
     ],
-    medicas: [
+    invernal: [],
+    noComputable: [
+      { jerarquia: "ATCGOF", nombre: "ROBLEDO, DARIO MAXIMILIANO (TNAV)", inicia: "03/08/2026", vence: "07/08/2026" }
+    ],
+    atencionFamiliar: [],
+    asuntosPersonales: [],
+    ordinaria: [],
+    nacimientoHijo: [],
+    extraccionSangre: [],
+    enfermedad: [
       { jerarquia: "CICGOF", nombre: "HERMOSILLA, FÁTIMA MARÍA (RNBU)", diagnostico: "Traumatismo tobillo derecho", inicia: "02/07/2026", vence: "Turno médico 05/08/2026" }
     ],
+    estudio: [],
+    gravidezSimple: [],
+    gravidezMultiple: [],
+    lactancia: [],
+    ginecomamaria: [],
     tareasAdecuadas: [
       { jerarquia: "PRCPIN", nombre: "ETCHEVERRY, ALFREDO (TNAV) — Diag. IAM c/colocación de stent", inicia: "20/07/2026", vence: "Turno médico 07/08/2026" }
     ],
+    fallecimiento1: [],
+    fallecimiento2: [],
+    fallecimiento3: [],
+    matrimonio: [],
+    asuntosPrivadosUrgentes: [],
+    // Categorías anteriores: ya no se pueden elegir para una licencia nueva, pero se
+    // conservan para no perder lo que ya estaba cargado (ver normalizarLicencias()).
     extraordinaria: [
       { jerarquia: "PMCPRSIN", nombre: "CUBISINO, JUAN CARLOS (RPOL)", inicia: "01/03/2026", vence: "31/08/2026" }
     ],
     comisiones: [
       { jerarquia: "ASCGNA", nombre: "LIZONDO, CRISTIAN (RNBU) — Comisión Aguas Blancas", inicia: "10/06/2026", vence: "08/08/2026" }
-    ],
-    noComputables: [
-      { jerarquia: "ATCGOF", nombre: "ROBLEDO, DARIO MAXIMILIANO (TNAV)", inicia: "03/08/2026", vence: "07/08/2026" }
-    ],
-    personales: []
+    ]
   },
 
   guardia: {

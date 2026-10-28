@@ -320,30 +320,25 @@ function textoDivisionControlGestion() {
 }
 
 function textoLicencias() {
-  const grupos = [
-    ['Licencia Anual', D.licencias.anuales, false],
-    ['Licencia Médica', D.licencias.medicas, true],
-    ['Tareas Adecuadas', D.licencias.tareasAdecuadas, false],
-    ['Licencia Extraordinaria', D.licencias.extraordinaria, false],
-    ['Comisiones', D.licencias.comisiones, false],
-    ['Licencias No Computables', D.licencias.noComputables, false],
-    ['Asuntos Personales', D.licencias.personales, false]
-  ];
-  const conDatos = grupos.filter(([, lista]) => lista.length);
+  const conDatos = todasLasCategoriasLicencia().filter(c => (D.licencias[c.clave] || []).length);
   if (!conDatos.length) return [];
   return [{
     titulo: 'Licencias',
     contenido: {
       tipo: 'tablas',
-      tablas: conDatos.map(([titulo, lista, esMedica]) => ({
-        titulo,
-        anchos: esMedica ? [0.11, 0.30, 0.34, 0.125, 0.125] : [0.12, 0.60, 0.14, 0.14],
-        columnas: esMedica ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
-        filas: ordenarPorJerarquia(lista).map(l => {
-          const nom = l.nombre + (l.oficina ? ` (${l.oficina})` : '');
-          return esMedica ? [l.jerarquia, nom, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, nom, l.inicia, l.vence];
-        })
-      }))
+      tablas: conDatos.map(c => {
+        const lista = D.licencias[c.clave] || [];
+        const conDiagnostico = !!c.diagnostico;
+        return {
+          titulo: c.etiqueta,
+          anchos: conDiagnostico ? [0.11, 0.30, 0.34, 0.125, 0.125] : [0.12, 0.60, 0.14, 0.14],
+          columnas: conDiagnostico ? ['Jerarquía', 'Apellido y Nombre', 'Diagnóstico', 'Inicia', 'Vence'] : ['Jerarquía', 'Apellido y Nombre', 'Inicia', 'Vence'],
+          filas: ordenarPorJerarquia(lista).map(l => {
+            const nom = l.nombre + (l.oficina ? ` (${l.oficina})` : '');
+            return conDiagnostico ? [l.jerarquia, nom, l.diagnostico || '', l.inicia, l.vence] : [l.jerarquia, nom, l.inicia, l.vence];
+          })
+        };
+      })
     }
   }];
 }
