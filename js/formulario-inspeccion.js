@@ -30,9 +30,10 @@ function opcionesCantidadHtml() {
 function textoGrupoDeficiencia(g, lista) {
   const cant = g.cantidad || 1;
   if (g.accion === 'recodifico') {
-    return `Se recodificó ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)})`;
+    const verbo = cant > 1 ? 'Se recodificaron' : 'Se recodificó';
+    return `${verbo} ${cant} deficiencia(s) Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)})`;
   }
-  const verbo = g.accion === 'mantiene' ? 'Mantiene' : 'Se detectó';
+  const verbo = g.accion === 'mantiene' ? 'Mantiene' : (cant > 1 ? 'Se detectaron' : 'Se detectó');
   if (g.codigo2) {
     return `${verbo} ${cant} deficiencia(s) Cód. ${g.codigo}/${g.codigo2} (${descripcionEnLista(g.codigo, lista)} - ${descripcionEnLista(g.codigo2, lista)})`;
   }

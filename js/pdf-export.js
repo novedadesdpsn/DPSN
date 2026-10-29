@@ -372,7 +372,7 @@ function generarPDF(nombreArchivo, tituloVisible, subtitulo, secciones, opciones
     const anchoDisp = anchoUtil - (xIndent - margen);
 
     if (g.accion === 'recodifico') {
-      const verbo = 'Recodificándose ';
+      const verbo = cant > 1 ? 'Se recodificaron ' : 'Se recodificó ';
       const cantidadTexto = `${numeroALetras(cant)} (${numeroConDigitos(cant)}) `;
       const codigoAnteriorTexto = `def. Cód. ${g.codigoAnterior} (${descripcionEnLista(g.codigoAnterior, lista)}) `;
       const codigoNuevoTexto = `a Cód. ${g.codigoNuevo} (${descripcionEnLista(g.codigoNuevo, lista)}).`;
