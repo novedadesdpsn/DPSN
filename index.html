@@ -11,19 +11,18 @@
 <div class="login-page">
   <div class="login-stage" id="loginStage">
 
+    <div class="login-glow" id="loginGlow"></div>
+
     <div class="login-logo-central" id="loginLogo">
-      <img src="assets/icon-002-transparente.png" alt="Dirección de Policía de Seguridad de la Navegación">
+      <img src="assets/icon-003-dpsn-3d.png" alt="Dirección de Policía de Seguridad de la Navegación">
+      <div class="login-identidad">
+        <div class="login-identidad-eyebrow">Prefectura Naval Argentina</div>
+        <div class="login-identidad-sub">Dirección de Policía de Seguridad de la Navegación</div>
+      </div>
     </div>
 
     <div class="login-card" id="loginCard">
-      <div class="login-crest">
-        <h1>Iniciar sesión</h1>
-      </div>
-
-      <div class="tipo-acceso">
-        <button type="button" class="activo" data-tipo="admin">Administrador</button>
-        <button type="button" data-tipo="lector">Solo visualización</button>
-      </div>
+      <div class="login-card-titulo">Iniciar sesión</div>
 
       <div class="login-error" id="loginError"></div>
 
@@ -38,8 +37,6 @@
         </div>
         <button type="submit" class="btn-ingresar">Ingresar al sistema</button>
       </form>
-
-      <div class="login-footer">Prefectura Naval Argentina</div>
     </div>
 
   </div>
@@ -52,13 +49,6 @@
 <script src="js/roles.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  document.querySelectorAll('.tipo-acceso button').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('.tipo-acceso button').forEach(x => x.classList.remove('activo'));
-      b.classList.add('activo');
-    });
-  });
-
   if (obtenerSesion()) {
     window.location.href = "dashboard.html";
   }
