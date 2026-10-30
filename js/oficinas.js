@@ -12,9 +12,22 @@ function uiAgregarFilaSimple(clave, titulo) {
   abrirModalFormulario(titulo, [
     { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
     { id: 'gde', label: 'N.º GDE' },
-    { id: 'expediente', label: 'Detalle del tramite', tipo: 'textarea' }
+    { id: 'expediente', label: 'Detalle del trámite', tipo: 'textarea' }
   ], {}, (datos) => {
     D.oficinas[clave].filas.push(datos);
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarFilaSimple(clave, indice, titulo) {
+  const actual = D.oficinas[clave].filas[indice];
+  abrirModalFormulario(titulo, [
+    { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
+    { id: 'gde', label: 'N.º GDE' },
+    { id: 'expediente', label: 'Detalle del trámite', tipo: 'textarea' }
+  ], actual, (datos) => {
+    D.oficinas[clave].filas[indice] = datos;
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -47,6 +60,27 @@ function uiAgregarTramiteAnalisis() {
   });
 }
 
+function uiEditarTramiteAnalisis(indice) {
+  const actual = D.oficinas.documentacion.tramitesAnalisis[indice];
+  abrirModalFormulario('Editar trámite en análisis', [
+    { id: 'numero', label: 'N.º' },
+    { id: 'vuelve', label: 'Vuelve' },
+    { id: 'ingresoProgebu', label: 'Ingreso en PROGEBU' },
+    { id: 'usuarioSolicitante', label: 'Usuario Solicitante' },
+    { id: 'vtoCnsn', label: 'Vto. CNSN / Prórroga' },
+    { id: 'tramite', label: 'Trámite' },
+    { id: 'servicio', label: 'Servicio' },
+    { id: 'nombre', label: 'Nombre' },
+    { id: 'especialidades', label: 'Especialidades' },
+    { id: 'solicita', label: 'Solicita', tipo: 'textarea' },
+    { id: 'observacion', label: 'Observación', tipo: 'textarea' }
+  ], actual, (datos) => {
+    D.oficinas.documentacion.tramitesAnalisis[indice] = datos;
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
 function uiAgregarCertificadoArqueo() {
   abrirModalFormulario('Agregar solicitud de certificado de arqueo', [
     { id: 'numeroIngreso', label: 'N.º Ingreso' },
@@ -56,6 +90,21 @@ function uiAgregarCertificadoArqueo() {
     { id: 'solicita', label: 'Solicita', tipo: 'textarea' }
   ], {}, (datos) => {
     D.oficinas.documentacion.certificadosArqueo.push(datos);
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarCertificadoArqueo(indice) {
+  const actual = D.oficinas.documentacion.certificadosArqueo[indice];
+  abrirModalFormulario('Editar solicitud de certificado de arqueo', [
+    { id: 'numeroIngreso', label: 'N.º Ingreso' },
+    { id: 'usuarioSolicitante', label: 'Usuario Solicitante' },
+    { id: 'servicio', label: 'Servicio' },
+    { id: 'nombre', label: 'Nombre' },
+    { id: 'solicita', label: 'Solicita', tipo: 'textarea' }
+  ], actual, (datos) => {
+    D.oficinas.documentacion.certificadosArqueo[indice] = datos;
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
@@ -71,6 +120,22 @@ function uiAgregarGiradoTNAV() {
     { id: 'solicita', label: 'Solicita', tipo: 'textarea' }
   ], {}, (datos) => {
     D.oficinas.documentacion.giradosTNAV.push(datos);
+    persistirDatosGuardia();
+    refrescarPestanaActual();
+  });
+}
+
+function uiEditarGiradoTNAV(indice) {
+  const actual = D.oficinas.documentacion.giradosTNAV[indice];
+  abrirModalFormulario('Editar girado a TNAV', [
+    { id: 'numero', label: 'N.º' },
+    { id: 'fecha', label: 'Fecha', default: fechaHoy().replace(/-/g, '/') },
+    { id: 'usuario', label: 'Usuario' },
+    { id: 'servicio', label: 'Servicio' },
+    { id: 'nombreMatricula', label: 'Nombre y Matrícula' },
+    { id: 'solicita', label: 'Solicita', tipo: 'textarea' }
+  ], actual, (datos) => {
+    D.oficinas.documentacion.giradosTNAV[indice] = datos;
     persistirDatosGuardia();
     refrescarPestanaActual();
   });
