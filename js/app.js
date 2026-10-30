@@ -390,56 +390,82 @@ function renderOtros() {
 }
 
 // ---------- Oficinas ----------
-function renderOficinas() {
-  const tablaConFilas = (columnas, camposFila, filas, onEliminar) => {
-    let html = `<table class="tabla-datos"><thead><tr>${columnas.map(c => `<th>${esc(c)}</th>`).join('')}${!SOLO_LECTURA_ACTUAL ? '<th></th>' : ''}</tr></thead><tbody>`;
-    filas.forEach((fila, idx) => {
-      html += `<tr>${camposFila.map(campo => `<td>${esc(fila[campo] || '')}</td>`).join('')}`;
-      if (!SOLO_LECTURA_ACTUAL) html += `<td><button type="button" class="btn-secundario no-imprimir" style="padding:2px 8px;" onclick="${onEliminar(idx)}">✕</button></td>`;
-      html += `</tr>`;
-    });
-    html += `</tbody></table>`;
-    return html;
-  };
+// Tabla genérica de filas (global: también la usa el importador de Excel
+// para mostrar la vista previa antes de confirmar la importación).
+// opts: { onEditar: idx => 'onclick...', anchos: ['12%','28%','60%'] }
+function tablaConFilas(columnas, camposFila, filas, onEliminar, opts) {
+  opts = opts || {};
+  const mostrarAcciones = !SOLO_LECTURA_ACTUAL && typeof onEliminar === 'function';
+  const colgroup = opts.anchos
+    ? `<colgroup>${opts.anchos.map(a => `<col style="width:${a}">`).join('')}${mostrarAcciones ? '<col style="width:66px">' : ''}</colgroup>`
+    : '';
+  let html = `<table class="tabla-datos"${opts.anchos ? ' style="table-layout:fixed;"' : ''}>${colgroup}<thead><tr>${columnas.map(c => `<th>${esc(c)}</th>`).join('')}${mostrarAcciones ? '<th></th>' : ''}</tr></thead><tbody>`;
+  filas.forEach((fila, idx) => {
+    html += `<tr>${camposFila.map(campo => `<td>${esc(fila[campo] || '')}</td>`).join('')}`;
+    if (mostrarAcciones) {
+      html += `<td class="no-imprimir" style="white-space:nowrap;">`;
+      if (opts.onEditar) html += `<button type="button" class="btn-secundario" style="padding:2px 7px;margin-right:4px;" onclick="${opts.onEditar(idx)}" title="Editar">✎</button>`;
+      html += `<button type="button" class="btn-secundario" style="padding:2px 7px;" onclick="${onEliminar(idx)}" title="Eliminar">✕</button>`;
+      html += `</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  return html;
+}
 
+function renderOficinas() {
   // Documentación
   const doc = D.oficinas.documentacion;
+  const botonesIngreso = (onclickManual) => !SOLO_LECTURA_ACTUAL
+    ? `<button class="btn-secundario no-imprimir" type="button" style="margin:8px 0;" onclick="${onclickManual}">+ Ingreso manual</button>`
+    : '';
   let bloqueDocumentacion = `
     <div class="tarjeta" id="bloqueDocumentacion">
       <h2>Documentación <button class="btn-secundario no-imprimir" type="button" onclick="imprimirBloqueOficina('bloqueDocumentacion')">Imprimir</button></h2>
+      ${!SOLO_LECTURA_ACTUAL ? `<div class="no-imprimir" style="margin-bottom:6px;"><button class="btn-secundario" type="button" onclick="uiAbrirImportarExcelDocumentacion()">⇪ Importar Excel</button></div>` : ''}
 
-      <h3 style="font-size:13px; color:var(--azul-marino); margin:14px 0 8px;">Trámites en Análisis — ${esc(fechaHoy())}</h3>
+      <h3 style="font-size:13px; color:var(--azul-marino); margin:14px 0 4px;">Trámites en Análisis — ${esc(fechaHoy())}</h3>
+      ${botonesIngreso('uiAgregarTramiteAnalisis()')}
       ${doc.tramitesAnalisis.length
         ? tablaConFilas(['N.º', 'Vuelve', 'Ingreso PROGEBU', 'Usuario Sol.', 'Vto. CNSN/Prórroga', 'Trámite', 'Servicio', 'Nombre', 'Especialidades', 'Solicita', 'Observación'],
             ['numero', 'vuelve', 'ingresoProgebu', 'usuarioSolicitante', 'vtoCnsn', 'tramite', 'servicio', 'nombre', 'especialidades', 'solicita', 'observacion'],
-            doc.tramitesAnalisis, idx => `eliminarFilaDocumentacion('tramitesAnalisis',${idx})`)
+            doc.tramitesAnalisis, idx => `eliminarFilaDocumentacion('tramitesAnalisis',${idx})`,
+            { onEditar: idx => `uiEditarTramiteAnalisis(${idx})` })
         : '<div class="placeholder-panel">Sin trámites cargados.</div>'}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarTramiteAnalisis()">+ Agregar trámite</button>` : ''}
 
-      <h3 style="font-size:13px; color:var(--azul-marino); margin:20px 0 8px;">Solicitudes Certificados de Arqueo</h3>
+      <h3 style="font-size:13px; color:var(--azul-marino); margin:20px 0 4px;">Solicitudes Certificados de Arqueo</h3>
+      ${botonesIngreso('uiAgregarCertificadoArqueo()')}
       ${doc.certificadosArqueo.length
         ? tablaConFilas(['N.º Ingreso', 'Usuario Sol.', 'Servicio', 'Nombre', 'Solicita'],
             ['numeroIngreso', 'usuarioSolicitante', 'servicio', 'nombre', 'solicita'],
-            doc.certificadosArqueo, idx => `eliminarFilaDocumentacion('certificadosArqueo',${idx})`)
+            doc.certificadosArqueo, idx => `eliminarFilaDocumentacion('certificadosArqueo',${idx})`,
+            { onEditar: idx => `uiEditarCertificadoArqueo(${idx})` })
         : '<div class="placeholder-panel">Sin solicitudes cargadas.</div>'}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarCertificadoArqueo()">+ Agregar solicitud</button>` : ''}
 
-      <h3 style="font-size:13px; color:var(--azul-marino); margin:20px 0 8px;">Girados a TNAV</h3>
+      <h3 style="font-size:13px; color:var(--azul-marino); margin:20px 0 4px;">Girados a TNAV</h3>
+      ${botonesIngreso('uiAgregarGiradoTNAV()')}
       ${doc.giradosTNAV.length
         ? tablaConFilas(['N.º', 'Fecha', 'Usuario', 'Servicio', 'Nombre y Matrícula', 'Solicita'],
             ['numero', 'fecha', 'usuario', 'servicio', 'nombreMatricula', 'solicita'],
-            doc.giradosTNAV, idx => `eliminarFilaDocumentacion('giradosTNAV',${idx})`)
+            doc.giradosTNAV, idx => `eliminarFilaDocumentacion('giradosTNAV',${idx})`,
+            { onEditar: idx => `uiEditarGiradoTNAV(${idx})` })
         : '<div class="placeholder-panel">Sin registros.</div>'}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarGiradoTNAV()">+ Agregar girado</button>` : ''}
     </div>`;
 
   const bloqueSimple = (clave, idBloque, titulo) => `
     <div class="tarjeta" id="${idBloque}">
       <h2>${esc(titulo)} <button class="btn-secundario no-imprimir" type="button" onclick="imprimirBloqueOficina('${idBloque}')">Imprimir</button></h2>
+      ${!SOLO_LECTURA_ACTUAL ? `
+        <div class="no-imprimir" style="display:flex; gap:8px; margin-bottom:12px;">
+          <button class="btn-secundario" type="button" onclick="uiAgregarFilaSimple('${clave}','Ingreso manual — ${esc(titulo)}')">+ Ingreso manual</button>
+          <button class="btn-secundario" type="button" onclick="uiAbrirImportarExcelSimple('${clave}','${esc(titulo)}')">⇪ Importar Excel</button>
+        </div>` : ''}
       ${D.oficinas[clave].filas.length
-        ? tablaConFilas(['Fecha', 'GDE', 'Expedientes en tramitación'], ['fecha', 'gde', 'expediente'], D.oficinas[clave].filas, idx => `eliminarFilaSimple('${clave}',${idx})`)
+        ? tablaConFilas(['Fecha', 'GDE', 'Detalle del trámite'], ['fecha', 'gde', 'expediente'], D.oficinas[clave].filas,
+            idx => `eliminarFilaSimple('${clave}',${idx})`,
+            { onEditar: idx => `uiEditarFilaSimple('${clave}',${idx},'Editar — ${esc(titulo)}')`, anchos: ['13%', '27%', '60%'] })
         : '<div class="placeholder-panel">Sin expedientes cargados.</div>'}
-      ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-secundario no-imprimir" type="button" style="margin-top:8px;" onclick="uiAgregarFilaSimple('${clave}','Agregar expediente — ${esc(titulo)}')">+ Agregar expediente</button>` : ''}
     </div>`;
 
   // Registro Nacional de Buques — tabla editable + referencias + gráfico de sectores
