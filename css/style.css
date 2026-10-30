@@ -473,6 +473,16 @@ table.tabla-datos td.col-personal-curso .fila-persona-curso + .fila-persona-curs
 }
 .fila-doble{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
+.zona-drop{
+  border:1.5px dashed var(--gris-300); border-radius: var(--radio);
+  padding:26px 20px; text-align:center; transition: border-color .12s, background .12s;
+}
+.zona-drop.arrastrando{ border-color: var(--acento); background:#f0fdfa; }
+.zona-drop-texto{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+.zona-drop-texto strong{ font-size:13.5px; color:var(--azul-marino); }
+.zona-drop-texto span{ font-size:11.5px; color:var(--gris-500); }
+.zona-drop-nombre{ margin-top:10px; font-size:12px; font-weight:600; color:var(--acento); }
+
 @media (max-width: 700px){
   .dash-contenido{ padding:14px; }
 }
