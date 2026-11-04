@@ -165,7 +165,7 @@ function persistirPrecargas() {
 
 function filasRNBUVacias() {
   const f = (nroOrden) => ({ nroOrden, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 });
-  return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), generarAsiento: f(7), aprobarFolio: f(8), corregirDatosSib: f(10), darSalida: f(11) };
+  return { buscarBuque: f(1), ingresarGde: f(2), verificar: f(3), cargarDatos: f(5), calificarDocumentacion: f(6), generarAsiento: f(7), aprobarFolio: f(8), corregirDatosSib: f(10), darSalida: f(11) };
 }
 
 function normalizarOficinas() {
@@ -202,6 +202,18 @@ function normalizarOficinas() {
       // Fila "Generar Asiento" (nro. orden 7): se había perdido en un cambio
       // anterior; se repone sin tocar los números de las demás filas.
       o.registroNacionalBuques.filas.generarAsiento = { nroOrden: 7, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 };
+      corregido = true;
+    }
+    if (!o.registroNacionalBuques.filas.cargarDatos) {
+      // Fila nueva "Cargar Datos" (nro. orden 5): se agrega sin tocar
+      // los números que ya estaban cargados en las demás filas.
+      o.registroNacionalBuques.filas.cargarDatos = { nroOrden: 5, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 };
+      corregido = true;
+    }
+    if (!o.registroNacionalBuques.filas.calificarDocumentacion) {
+      // Fila nueva "Calificar Documentación" (nro. orden 6): se agrega sin tocar
+      // los números que ya estaban cargados en las demás filas.
+      o.registroNacionalBuques.filas.calificarDocumentacion = { nroOrden: 6, matr: 0, tran: 0, vent: 0, medJud: 0, cbioMotor: 0, otros: 0 };
       corregido = true;
     }
   }

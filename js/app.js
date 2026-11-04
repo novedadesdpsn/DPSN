@@ -475,6 +475,8 @@ function renderOficinas() {
     ['buscarBuque', 'Buscar Buque'],
     ['ingresarGde', 'Ingresar GDE/CUDAP'],
     ['verificar', 'Verificar Datos / Normalizar'],
+    ['cargarDatos', 'Cargar Datos'],
+    ['calificarDocumentacion', 'Calificar Documentación'],
     ['generarAsiento', 'Generar Asiento'],
     ['aprobarFolio', 'Aprobar Folio'],
     ['corregirDatosSib', 'Corregir Datos SIB'],
