@@ -310,3 +310,45 @@ function eliminarBuqueDetencionMapa(idx) {
   persistirDatosGuardia();
   refrescarPestanaActual();
 }
+
+/** Lista de todos los buques cargados en el mapa, con acceso directo a Editar/Eliminar
+ *  cada uno — para cuando un pin no se ve en el mapa (ubicación mal cargada, superpuesto
+ *  con otro pin, etc.) y por eso no se puede abrir haciendo clic ahí. */
+function uiListaEditarBuquesDetencionMapa() {
+  cerrarModalInspeccion();
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'modalInspeccion';
+  const filas = D.buquesDetencionMapa;
+  modal.innerHTML = `
+    <div class="modal-caja ancho">
+      <div class="modal-header"><h3>Editar buques cargados</h3><button type="button" onclick="cerrarModalInspeccion()">✕</button></div>
+      <div class="modal-campos">
+        ${filas.length ? filas.map((b, idx) => {
+          const sinUbicacion = !Number.isFinite(b.lat) || !Number.isFinite(b.lon) || (b.lat === 0 && b.lon === 0);
+          return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--gris-100);">
+            <div style="font-size:12.5px; min-width:0;">
+              <strong>${esc(b.tipoBuque)} "${esc(b.nombre)}"</strong> ${sinUbicacion ? '<span style="color:var(--rojo,#dc4a3f); font-weight:700;">⚠ sin ubicación en el mapa</span>' : ''}<br>
+              <span style="color:var(--gris-500);">${esc(b.prefecturaZona)} — ${esc(b.dependencia)} · ${esc(b.fecha)}</span>
+            </div>
+            <div style="display:flex; gap:6px; flex-shrink:0;">
+              <button type="button" class="btn-secundario" style="padding:4px 10px;" onclick="uiAgregarBuqueDetencionMapa(${idx})">Editar</button>
+              <button type="button" class="btn-secundario" style="padding:4px 10px;" onclick="_eliminarDesdeListaBuquesMapa(${idx})">Eliminar</button>
+            </div>
+          </div>`;
+        }).join('') : '<div class="placeholder-panel">Todavía no cargaste ningún buque.</div>'}
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secundario" type="button" onclick="cerrarModalInspeccion()">Cerrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+/** Eliminar desde la lista de "Editar cargados": vuelve a dibujar la lista
+ *  después (se haya borrado o no) para que los índices queden al día. */
+function _eliminarDesdeListaBuquesMapa(idx) {
+  eliminarBuqueDetencionMapa(idx);
+  uiListaEditarBuquesDetencionMapa();
+}

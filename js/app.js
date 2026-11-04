@@ -111,7 +111,8 @@ function renderInicio() {
         <div class="tarjeta mapa-tarjeta">
           <h2>Buques con Detención <span class="contador">${D.buquesDetencionMapa.length}</span></h2>
           <div id="mapaBuquesDetencion" class="mapa-contenedor"></div>
-          ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-top:10px; width:100%;" onclick="uiAgregarBuqueDetencionMapa()">+ Agregar nuevo</button>` : ''}
+          ${!SOLO_LECTURA_ACTUAL ? `<button class="btn-primario" type="button" style="margin-top:10px; width:100%;" onclick="uiAgregarBuqueDetencionMapa()">+ Agregar nuevo</button>
+          <button class="btn-secundario" type="button" style="margin-top:8px; width:100%;" onclick="uiListaEditarBuquesDetencionMapa()">Editar cargados</button>` : ''}
         </div>
       </div>
 
@@ -588,7 +589,7 @@ function renderBuquesDetencion() {
     </tr>`;
   });
   html += `</tbody></table>`;
-  html += `<p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">Los buques con detención se cargan y se editan desde el mapa del Inicio ("+ Agregar nuevo" y "Editar" en el cuadro de cada buque); acá se listan automáticamente.</p>`;
+  html += `<p style="font-size:11.5px; color:var(--gris-500); margin-top:10px;">Los buques con detención se cargan y se editan desde el mapa del Inicio ("+ Agregar nuevo" y "Editar cargados"); acá se listan automáticamente.</p>`;
   html += `</div>`;
   return html;
 }
