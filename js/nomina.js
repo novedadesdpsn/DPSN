@@ -45,6 +45,6 @@ const NOMINA_AYUDANTES_GUARDIA = [
   'AS YUSZCZECZYN, Fabián Andrés',
   'AS MAIDANA, Juan Leandro',
   'AS TAUMEHIMER, Damián Enrique',
-  'AS GOYHENECHE, Víctor Hugo'
+  'AS GOYHENECHE, Víctor Hugo',
   'AS CABRERA, Paola Elena'
 ];
