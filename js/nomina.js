@@ -1,12 +1,5 @@
 // ============================================================
 // NÓMINA DE PERSONAL — Guardia DPSN
-// ============================================================
-// Se usa para armar los desplegables de Jefe de Servicio y
-// Ayudante de Guardia (saliente/entrante) en el resumen de Inicio.
-// La figura de "Oficial de Guardia" se dio de baja: todo el
-// personal superior de la lista pasa a Jefe de Servicio, y el
-// personal subalterno a Ayudante de Guardia.
-// ============================================================
 
 const NOMINA_JEFES_SERVICIO = [
   'SP MON, Franco Emmanuel',
@@ -53,4 +46,5 @@ const NOMINA_AYUDANTES_GUARDIA = [
   'AS MAIDANA, Juan Leandro',
   'AS TAUMEHIMER, Damián Enrique',
   'AS GOYHENECHE, Víctor Hugo'
+  'AS CABRERA, Paola Elena'
 ];
