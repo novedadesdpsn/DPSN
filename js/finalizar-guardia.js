@@ -142,9 +142,137 @@ async function ejecutarFinalizarGuardia(seleccion, jefe, ayte) {
     entrante: [
       { rol: 'Jefe de Servicio', nombre: jefe },
       { rol: 'Ayudante de Guardia', nombre: ayte }
-    ]
+    ],
+    // Para que la finalización automática del mediodía (ver más abajo)
+    // sepa que hoy ya se hizo el finalizado "a mano" y no vuelva a correr.
+    ultimaFinalizacion: fechaHoyISO_()
   };
   persistirDatosGuardia();
   refrescarPestanaActual();
   UNDO.aviso('Guardia finalizada. Podés revertirla con "Deshacer".');
+}
+
+// ============================================================
+// FINALIZACIÓN AUTOMÁTICA AL MEDIODÍA
+// ============================================================
+// Si para las 12:00 (hora local de la computadora) no se hizo ningún
+// "Finalizar Guardia" en el día (ni a mano ni por este mismo chequeo),
+// el sistema limpia automáticamente, sin pedir nada: Inspecciones
+// Extraordinarias, Estado Rector de Puerto (EREP), los casos MAS/SAR
+// marcados "Cerrado" (los "Pendiente" NO se tocan, siguen con
+// continuidad) y las licencias cuyo vencimiento (fecha DD/MM/AAAA
+// completa) ya pasó o es hoy. NO cambia el Jefe de Servicio ni el
+// Ayudante de Guardia: eso sigue siendo siempre manual, con el botón
+// de siempre.
+//
+// Como este sitio no tiene servidor propio, esto corre en el
+// navegador de quien tenga el sistema abierto (y permiso de edición):
+// se revisa apenas se entra y, si se deja la pestaña abierta, cada
+// pocos minutos. Si nadie abrió el sistema ese día, corre apenas
+// alguien lo abre, aunque ya sea de tarde — y limpia lo que haya que
+// limpiar a esa hora, no solo "lo de las 12:00 en punto".
+// ============================================================
+
+const INTERVALO_CHEQUEO_FIN_AUTO_MIN = 5;
+
+function fechaHoyISO_() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Convierte "DD/MM/AAAA" a Date (medianoche local). Devuelve null si el
+ * texto no es EXACTAMENTE esa forma — por ejemplo "Turno médico
+ * 05/08/2026" no cuenta: no se puede asumir con certeza cuál es la
+ * fecha real de vencimiento, así que esas licencias no se tocan solas.
+ */
+function fechaDDMMAAAAaDate_(texto) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((texto || '').trim());
+  if (!m) return null;
+  const dd = Number(m[1]), mm = Number(m[2]), yyyy = Number(m[3]);
+  const f = new Date(yyyy, mm - 1, dd);
+  if (f.getFullYear() !== yyyy || f.getMonth() !== mm - 1 || f.getDate() !== dd) return null;
+  return f;
+}
+
+/**
+ * Saca de un bloque de casos (D.casosMAS o D.casosSAR) los que están
+ * marcados "Cerrado". Los "Pendiente" quedan intactos. Devuelve cuántos
+ * sacó.
+ */
+function limpiarCasosCerrados_(bloque) {
+  let sacados = 0;
+  if (!bloque || !bloque.porDependencia) return 0;
+  Object.keys(bloque.porDependencia).forEach(dep => {
+    const antes = bloque.porDependencia[dep].length;
+    bloque.porDependencia[dep] = bloque.porDependencia[dep].filter(c => c.estado !== 'cerrado');
+    sacados += antes - bloque.porDependencia[dep].length;
+    if (!bloque.porDependencia[dep].length) delete bloque.porDependencia[dep];
+  });
+  return sacados;
+}
+
+/**
+ * Saca de D.licencias (todas las categorías, incluidas las viejas que ya
+ * no se pueden elegir para una licencia nueva) las que YA PASARON — es
+ * decir, cuyo "vence" es ANTERIOR al día de hoy (fecha estrictamente
+ * menor, no "hoy o antes"). Una licencia que vence hoy mismo todavía
+ * tiene que verse en el parte de hoy (que arranca a las 07:00 y sigue
+ * hasta las 07:00 de mañana), así que no se toca hasta el chequeo del
+ * día siguiente. Las que tienen un vencimiento que no es una fecha
+ * limpia (ej. "Turno médico...") tampoco se tocan: se siguen borrando a
+ * mano. Devuelve cuántas sacó.
+ */
+function limpiarLicenciasVencidas_(hoyMedianoche) {
+  let sacadas = 0;
+  if (!D.licencias) return 0;
+  Object.keys(D.licencias).forEach(cat => {
+    if (!Array.isArray(D.licencias[cat])) return;
+    D.licencias[cat] = D.licencias[cat].filter(lic => {
+      const f = fechaDDMMAAAAaDate_(lic.vence);
+      if (!f) return true; // no se puede determinar con certeza: se conserva
+      const vencida = f < hoyMedianoche; // estrictamente anterior a hoy: "hoy" todavía no pasó
+      if (vencida) sacadas++;
+      return !vencida;
+    });
+  });
+  return sacadas;
+}
+
+/**
+ * Corre el chequeo. Si corresponde, limpia las 4 cosas de arriba y deja
+ * un aviso (y queda, como siempre, en Auditoría y se puede revertir con
+ * "Deshacer" o desde "Restaurar").
+ */
+async function chequearFinalizacionAutomatica() {
+  if (typeof SOLO_LECTURA_ACTUAL !== 'undefined' && SOLO_LECTURA_ACTUAL) return; // que no lo dispare quien solo mira
+  const ahora = new Date();
+  if (ahora.getHours() < 12) return;
+  const hoy = fechaHoyISO_();
+  if (((D.guardia || {}).ultimaFinalizacion || '') === hoy) return; // hoy ya se hizo (a mano o automático)
+
+  try { if (typeof crearPuntoRestauracion === 'function') await crearPuntoRestauracion('auto', 'Antes de la finalización automática del mediodía'); } catch (e) { console.error(e); }
+  try { if (typeof archivarParteDelDia === 'function') await archivarParteDelDia(); } catch (e) { console.error('No se pudo archivar antes de la finalización automática:', e); }
+
+  limpiarPestanaParaFinalizar('insp-extraordinarias');
+  limpiarPestanaParaFinalizar('insp-psc');
+  const cerradosMAS = limpiarCasosCerrados_(D.casosMAS);
+  const cerradosSAR = limpiarCasosCerrados_(D.casosSAR);
+  const hoyMedianoche = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const licenciasVencidas = limpiarLicenciasVencidas_(hoyMedianoche);
+
+  D.guardia.ultimaFinalizacion = hoy;
+  persistirDatosGuardia();
+  refrescarPestanaActual();
+
+  const partes = ['Insp. Extraordinarias y Estado Rector de Puerto'];
+  if (cerradosMAS || cerradosSAR) partes.push(`${cerradosMAS + cerradosSAR} caso(s) MAS/SAR cerrado(s)`);
+  if (licenciasVencidas) partes.push(`${licenciasVencidas} licencia(s) vencida(s)`);
+  if (typeof UNDO !== 'undefined') UNDO.aviso(`Finalización automática del mediodía: se limpió ${partes.join(', ')}. Podés revertirlo con "Deshacer" o desde "Restaurar".`);
+}
+
+/** Se llama una vez al entrar al dashboard. Chequea al toque y después cada pocos minutos, por si se deja la pestaña abierta justo cuando cruza el mediodía. */
+function iniciarFinalizacionAutomatica() {
+  chequearFinalizacionAutomatica();
+  setInterval(chequearFinalizacionAutomatica, INTERVALO_CHEQUEO_FIN_AUTO_MIN * 60 * 1000);
 }
