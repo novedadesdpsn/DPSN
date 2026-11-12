@@ -1439,7 +1439,10 @@ function uiEditarGuardia() {
       entrante: [
         { rol: 'Jefe de Servicio', nombre: datos.entranteJefe },
         { rol: 'Ayudante de Guardia', nombre: datos.entranteAyte }
-      ]
+      ],
+      // Conservar esto: si no, la finalización automática del mediodía
+      // "olvida" que hoy ya se hizo y se vuelve a disparar de nuevo.
+      ultimaFinalizacion: D.guardia.ultimaFinalizacion
     };
     persistirDatosGuardia();
     refrescarPestanaActual();
