@@ -962,7 +962,6 @@ async function iniciarDashboard() {
 
   UNDO.iniciar();
   iniciarPuntosRestauracion();
-  iniciarFinalizacionAutomatica();
   mostrarPestana(PESTANAS[0].id);
   document.getElementById('btnCerrarSesion').addEventListener('click', cerrarSesion);
 }
