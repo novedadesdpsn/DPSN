@@ -8,7 +8,14 @@ let SOLO_LECTURA_ACTUAL = false;
 function esc(html) {
   const d = document.createElement('div');
   d.textContent = html ?? '';
-  return d.innerHTML;
+  // Ojo: textContent->innerHTML escapa & < > pero NO las comillas. Si el texto
+  // tiene una comilla doble (muy común: nombres de buque entre comillas, ej.
+  // B/P "ATLANTIC STAR") y esto se usa dentro de un atributo value="...", esa
+  // comilla cierra el atributo antes de tiempo y el navegador corta todo lo
+  // que sigue — eso era lo que truncaba/borraba el título de los casos
+  // MAS/SAR al reabrir el formulario de edición. Por eso también se escapan
+  // las comillas acá.
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function renderLineasDescripcionHtml(g) {
